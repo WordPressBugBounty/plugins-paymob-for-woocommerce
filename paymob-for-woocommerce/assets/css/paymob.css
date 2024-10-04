@@ -1,0 +1,31 @@
+#paymob-logo{
+/* 	width: auto !important;
+	height:24px !important;
+	margin-inline-start: auto  !important ; */
+	max-width: 70px  !important;
+	float: right  !important;
+	padding-top: 6px !important;
+}
+
+.payment_method_paymob label{
+/* 	display: flex !important ; */
+/* 	justify-content: space-between; */
+/* 	width:100% !important ; */
+	flex-grow:1 !important ;
+	align-items: end !important ;
+	margin-inline-start: 0.25rem  !important;
+/* 	margin-bottom:0  !important; */
+}
+
+li.payment_method_paymob div.payment_method_paymob
+{
+	display: flex !important ;
+	flex-wrap: wrap !important ;
+}
+
+/* firefox */
+@-moz-document url-prefix() {
+	#paymob-logo {
+		margin-left: auto !important;
+	}
+}

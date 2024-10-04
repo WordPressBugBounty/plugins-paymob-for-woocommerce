@@ -1,0 +1,44 @@
+== Changelog ==
+
+This file will contains only old changelogs. For newer versions, you can check readme.txt file.
+
+2024-06-06 - version 1.0.10
+Add accept callback alongside flash callback
+Add changes for WooCommerce marketplace compatibility
+
+2024-05-12 - version 1.0.9
+Fix Egypt expiry time
+WooCommerce marketplace compatibility
+
+2024-04-14 - version 1.0.8
+Change the description in item Array
+Add the origin title for block
+
+2024-03-11 - version 1.0.7
+Add Paymob PHP Library
+Add currencies in integration IDs at Admin
+Filter payment methods at checkout according to the selected currency 
+Apply fix for WooCommerce block compatibility
+
+2024-02-08 - version 1.0.6
+Fix WooCommerce High-Performance Order Storage (HPOS) compatibility
+
+2024-01-29 - version 1.0.5
+Add Css styling for Logo and title in the checkout page
+
+2024-01-24 - version 1.0.4
+Change the Paymob default logo
+
+2024-01-16 - version 1.0.3
+Hot-fix in creating payment from admin
+
+2023-12-12 - version 1.0.2
+Add Arabic translation
+Add payment method in admin note 
+Add extra validation in paymob admin setting
+
+2023-11-26 - version 1.0.1
+Apply fix to load only flash inetgration IDs in the Paymob settings
+
+2023-11-19 - version 1.0.0
+Initiate Paymob WooCommerce Plugin

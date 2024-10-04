@@ -1,0 +1,218 @@
+# Copyright (C) 2023 Paymob Plugins Team
+# This file is distributed under the GNU General Public License v3.0.
+msgid ""
+msgstr ""
+"Project-Id-Version: Paymob for WooCommerce 1.0.2\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/paymob-for-woocommerce\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2023-12-12T08:27:42+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: paymob-woocommerce\n"
+
+#. Plugin Name of the plugin
+msgid "Paymob for WooCommerce"
+msgstr ""
+
+#. Description of the plugin
+msgid "PayMob Payment Gateway Integration for WooCommerce."
+msgstr ""
+
+#. Author of the plugin
+msgid "Paymob Plugins Team"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://paymob.com"
+msgstr ""
+
+#: includes/admin/settings.php:9
+msgid "Enable Paymob payment method"
+msgstr ""
+
+#: includes/admin/settings.php:12
+msgid "Merchant configuration"
+msgstr ""
+
+#: includes/admin/settings.php:16
+msgid "Please, ensure using the secret and public keys that are exists in Paymob <a href=\"https://accept.paymob.com/portal2/en/settings\">merchant account. </a><br/>For testing purposes, you can use secret and public test keys that exist in the same account"
+msgstr ""
+
+#: includes/admin/settings.php:20
+msgid "Secret Key"
+msgstr ""
+
+#: includes/admin/settings.php:25
+msgid "Public Key"
+msgstr ""
+
+#: includes/admin/settings.php:30
+msgid "API Key"
+msgstr ""
+
+#: includes/admin/settings.php:32
+msgid "Validate PayMob API Key"
+msgstr ""
+
+#: includes/admin/settings.php:38
+msgid "HMAC Key"
+msgstr ""
+
+#: includes/admin/settings.php:44
+msgid "Integration ID(s)"
+msgstr ""
+
+#: includes/admin/settings.php:49
+msgid "Title"
+msgstr ""
+
+#: includes/admin/settings.php:51
+msgid "This controls the title which the user sees during checkout."
+msgstr ""
+
+#: includes/admin/settings.php:52
+#: includes/admin/settings.php:58
+msgid "Pay with Paymob"
+msgstr ""
+
+#: includes/admin/settings.php:56
+msgid "Description"
+msgstr ""
+
+#: includes/admin/settings.php:59
+msgid "This controls the description which the user sees during checkout."
+msgstr ""
+
+#: includes/admin/settings.php:63
+msgid "Logo URL"
+msgstr ""
+
+#: includes/admin/settings.php:66
+msgid "Add a Logo URL for checkout icon."
+msgstr ""
+
+#: includes/admin/settings.php:70
+msgid "Integration Callback"
+msgstr ""
+
+#: includes/admin/settings.php:72
+msgid "Please click on this icon "
+msgstr ""
+
+#: includes/admin/settings.php:72
+msgid " to copy the callback URLs and paste it into paymob account."
+msgstr ""
+
+#: includes/admin/settings.php:77
+msgid "Empty cart items"
+msgstr ""
+
+#: includes/admin/settings.php:79
+msgid "Enable empty cart items"
+msgstr ""
+
+#: includes/admin/settings.php:80
+msgid "You can check this option in case you need to clear the cart items before completing the payment. (not recommended)"
+msgstr ""
+
+#: includes/admin/settings.php:84
+msgid "Debug Log"
+msgstr ""
+
+#: includes/admin/settings.php:85
+msgid "Enable debug log"
+msgstr ""
+
+#: includes/admin/settings.php:87
+msgid "Log file will be saved in "
+msgstr ""
+
+#: includes/helper/paymob.php:48
+msgid "Paymob : Awaiting Payment"
+msgstr ""
+
+#: includes/helper/paymob.php:92
+msgid "In create intention for order # "
+msgstr ""
+
+#: includes/helper/paymob.php:96
+msgid "Intention response for order # "
+msgstr ""
+
+#: includes/helper/paymob.php:137
+msgid "Order "
+msgstr ""
+
+#: includes/helper/paymob.php:182
+#: includes/helper/paymob.php:188
+msgid "Ops. you are accessing wrong order."
+msgstr ""
+
+#: includes/payment/paymob-gateway.php:16
+msgid "Pay With Paymob"
+msgstr ""
+
+#: includes/payment/paymob-gateway.php:17
+msgid "Paymob payment."
+msgstr ""
+
+#: includes/payment/paymob-gateway.php:134
+msgid "Please ensure you are entering API, public and secret keys. Also, ensure to select at least one of the integration IDs.."
+msgstr ""
+
+#: init_paymob.php:60
+msgid "API documentation"
+msgstr ""
+
+#: init_paymob.php:61
+msgid "Customer support"
+msgstr ""
+
+#: init_paymob.php:79
+msgid "Sorry, PayMob plugin requires WooCommerce to be installed and active."
+msgstr ""
+
+#: paymob_payment.php:40
+msgid "PayMob Settings"
+msgstr ""
+
+#: paymob_payment.php:88
+msgid "Paymob  Webhook for Order #"
+msgstr ""
+
+#: paymob_payment.php:97
+msgid "Paymob  Webhook: Transaction Approved"
+msgstr ""
+
+#: paymob_payment.php:114
+msgid "Paymob  Webhook: Payment Refunded"
+msgstr ""
+
+#: paymob_payment.php:125
+msgid "Paymob Webhook: Payment is not completed "
+msgstr ""
+
+#: paymob_payment.php:142
+msgid "Sorry, you are accessing wrong data"
+msgstr ""
+
+#: paymob_payment.php:167
+msgid "Paymob : Transaction "
+msgstr ""
+
+#: paymob_payment.php:168
+#: paymob_payment.php:181
+msgid "In callback action, for order #"
+msgstr ""
+
+#: paymob_payment.php:180
+msgid "Payment is not completed due to "
+msgstr ""
+
+#: paymob_payment.php:202
+msgid "Merchant configuration: "
+msgstr ""
