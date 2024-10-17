@@ -38,3 +38,55 @@
 	font-size: x-large;
 	padding-top: 2px;
 }
+.red-star {
+	color: red;
+	font-size: 20px;
+}
+
+#config-note-accordion div ol li {
+	margin-bottom: 10px;
+	color: #555;
+}
+
+#config-note-accordion div ol li a {
+	color: #0073aa;
+	text-decoration: none;
+	transition: color 0.3s ease;
+}
+#config-note-accordion div a {
+	color: #0073aa;
+	text-decoration: none;
+	transition: color 0.3s ease;
+}
+
+#config-note-accordion div ol li a:hover {
+	color: #005177;
+}
+
+#config-note-accordion div ol ol li {
+	color: #666;
+	list-style: disc inside;
+	margin-bottom: 5px;
+}
+#extra-accordion div ul li {
+	color: #666;
+	list-style: disc;
+	margin-bottom: 10px;
+}
+
+#config-note-accordion .ui-accordion-header ,
+#callback-accordion .ui-accordion-header,
+#has-items-accordion .ui-accordion-header,
+#save-changes-accordion .ui-accordion-header,
+#extra-accordion .ui-accordion-header {
+	font-weight: bolder;
+	color: darkslategrey;
+	background: white;
+}
+#config-note-accordion div,
+#callback-accordion div,
+#has-items-accordion div,
+#save-changes-accordion div ,
+#extra-accordion div {
+	background: #f4f9fc;
+}

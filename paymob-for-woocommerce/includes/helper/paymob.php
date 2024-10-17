@@ -2,6 +2,7 @@
 
 class Paymob {
 
+
 	public $debug_order;
 	public $file;
 
@@ -42,20 +43,21 @@ class Paymob {
 	public function authToken( $conf ) {
 		$this->matchCountries( $conf );
 		$this->addLogs( $this->debug_order, $this->file, ' Authenticate Paymob configuration' );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
 
-		$apiUrl   = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
 		$tokenRes = $this->HttpRequest( $apiUrl . 'api/auth/tokens', 'POST', array( 'Content-Type: application/json' ), array( 'api_key' => $conf['apiKey'] ) );
 		$this->addLogs( $this->debug_order, $this->file, ' In api/auth/tokens Response: ' . json_encode( $tokenRes ) );
 
 		if ( isset( $tokenRes->token ) ) {
 			$hmacRes     = $this->getHmac( $tokenRes->token, $apiUrl );
 			$integIDsRes = $this->getIntegrationIDs( $tokenRes->token, $apiUrl, $this->matchMode( $conf ) );
-			return array(
+			$data        = array(
 				'hmac'           => $hmacRes,
 				'integrationIDs' => $integIDsRes,
 			);
+			return $data;
 		} else {
-			throw new Exception( 'can not get Token from PayMob account' );
+			throw new Exception( 'Cannot get Token from PayMob account' );
 		}
 	}
 
@@ -65,13 +67,14 @@ class Paymob {
 		if ( isset( $hmacRes->hmac_secret ) ) {
 			return $hmacRes->hmac_secret;
 		} else {
-			throw new Exception( 'can not get HMAC from PayMob account' );
+			throw new Exception( 'Cannot get HMAC from PayMob account' );
 		}
 	}
 
 	public function getIntegrationIDs( $token, $apiUrl, $isTest = false ) {
 		$intRes = $this->HttpRequest( $apiUrl . 'api/ecommerce/integrations?is_plugin=true&is_next=yes&page_size=500&is_deprecated=false&is_standalone=false', 'GET', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token ) );
 		$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/integrations Response: ' . json_encode( $intRes ) );
+
 		if ( ! empty( $intRes ) ) {
 			$IntegrationIDs = array();
 			foreach ( $intRes->results as $key => $integration ) {
@@ -84,19 +87,23 @@ class Paymob {
 					$type = 'Wallet';
 				}
 				if ( false == $integration->is_standalone && $integration->is_live == $isTest ) {
+
 					$IntegrationIDs[ $integration->id ] = array(
-						'id'       => $integration->id,
-						'type'     => $type,
-						'name'     => $integration->integration_name,
-						'currency' => $integration->currency,
+						'id'           => $integration->id,
+						'type'         => $type,
+						'gateway_type' => $integration->gateway_type,
+						'name'         => empty( $integration->installments ) ? $integration->integration_name : 'bank-installments',
+						'currency'     => $integration->currency,
 					);
 				}
 			}
+
 			return $IntegrationIDs;
 		} else {
-			throw new Exception( 'can not get avaibale integration IDs from PayMob account' );
+			throw new Exception( 'Cannot get available integration IDs from PayMob account' );
 		}
 	}
+
 
 	public function createIntention( $secKey, $data, $orderId ) {
 		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
@@ -143,7 +150,71 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $status ) );
 		return $status;
 	}
+	/**
+	 * Get a list of Paymob Gateways, their Logos, and names.
+	 *
+	 * @return array of Paymob data
+	 */
+	public function getPaymobGateways( $secKey, $path ) {
+		// get gateways data
+		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
 
+		$getways = $this->HttpRequest( $flash . 'api/ecommerce/gateways', 'GET', $header );
+		$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: ', json_encode( $getways ) );
+		// Handle invalid or empty responses
+		if ( is_null( $getways ) || ! isset( $getways->result ) ) {
+			$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: Invalid response or missing result property from the Paymob API.' );
+			return array(); // Return an empty array to avoid breaking the code
+		}
+
+		// Process the gateways data if available
+		$gateways = json_decode( json_encode( $getways->result, true ), true );
+		return $this->extractGatewaysData( $gateways, $path );
+	}
+
+	public static function extractGatewaysData( $gateways, $path ) {
+		$gatewaysData = array();
+
+		// Check if $gateways is an array or object before processing
+		if ( ! is_array( $gateways ) && ! is_object( $gateways ) ) {
+			return $gatewaysData; // Return empty data if $gateways is not valid
+		}
+
+		foreach ( $gateways as $gateway ) {
+			$logoPath = $path . strtolower( $gateway['code'] ) . '.png';
+			// Skip downloading the logo if the logo URL is empty
+			if ( ! empty( $gateway['logo'] ) ) {
+				if ( ! file_exists( $logoPath ) ) {
+					$ch = curl_init();
+					curl_setopt( $ch, CURLOPT_HEADER, 0 );
+					curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+					curl_setopt( $ch, CURLOPT_URL, $gateway['logo'] );
+					$data = curl_exec( $ch );
+					curl_close( $ch );
+					file_put_contents( $logoPath, $data );
+				}
+			} else {
+				// If logo URL is empty, use a placeholder or skip the download
+				$logoPath = ''; // Leave it empty if no logo is available
+			}
+
+			$gatewaysData[ strtolower( $gateway['code'] ) ] = array(
+				'title' => $gateway['label'],
+				'desc'  => $gateway['description'],
+				'logo'  => $gateway['logo'],
+			);
+		}
+
+		return $gatewaysData;
+	}
+	public function registerFramework( $secKey, $data ) {
+		$flash       = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$header      = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
+		$registerRes = $this->HttpRequest( $flash . 'api/ecommerce/plugins', 'POST', $header, $data );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/plugins: ' . json_encode( $registerRes ) );
+		return $registerRes;
+	}
 	public function matchMode( $conf ) {
 		$pubKeyMode = $this->getMode( $conf['pubKey'] );
 		$secKeyMode = $this->getMode( $conf['secKey'] );
@@ -188,25 +259,25 @@ class Paymob {
 		if ( empty( $intention ) ) {
 			// callback GET
 			$str  = $data['amount_cents']
-					. $data['created_at']
-					. $data['currency']
-					. $data['error_occured']
-					. $data['has_parent_transaction']
-					. $data['id']
-					. $data['integration_id']
-					. $data['is_3d_secure']
-					. $data['is_auth']
-					. $data['is_capture']
-					. $data['is_refunded']
-					. $data['is_standalone_payment']
-					. $data['is_voided']
-					. $data['order']
-					. $data['owner']
-					. $data['pending']
-					. $data['source_data_pan']
-					. $data['source_data_sub_type']
-					. $data['source_data_type']
-					. $data['success'];
+				. $data['created_at']
+				. $data['currency']
+				. $data['error_occured']
+				. $data['has_parent_transaction']
+				. $data['id']
+				. $data['integration_id']
+				. $data['is_3d_secure']
+				. $data['is_auth']
+				. $data['is_capture']
+				. $data['is_refunded']
+				. $data['is_standalone_payment']
+				. $data['is_voided']
+				. $data['order']
+				. $data['owner']
+				. $data['pending']
+				. $data['source_data_pan']
+				. $data['source_data_sub_type']
+				. $data['source_data_type']
+				. $data['success'];
 			$hash = hash_hmac( 'sha512', $str, $key );
 		} else {
 			// webhook POST
@@ -247,25 +318,25 @@ class Paymob {
 
 		$str  = '';
 		$str  = $data['amount_cents'] .
-				$data['created_at'] .
-				$data['currency'] .
-				$data['error_occured'] .
-				$data['has_parent_transaction'] .
-				$data['id'] .
-				$data['integration_id'] .
-				$data['is_3d_secure'] .
-				$data['is_auth'] .
-				$data['is_capture'] .
-				$data['is_refunded'] .
-				$data['is_standalone_payment'] .
-				$data['is_voided'] .
-				$data['order'] .
-				$data['owner'] .
-				$data['pending'] .
-				$data['source_data_pan'] .
-				$data['source_data_sub_type'] .
-				$data['source_data_type'] .
-				$data['success'];
+			$data['created_at'] .
+			$data['currency'] .
+			$data['error_occured'] .
+			$data['has_parent_transaction'] .
+			$data['id'] .
+			$data['integration_id'] .
+			$data['is_3d_secure'] .
+			$data['is_auth'] .
+			$data['is_capture'] .
+			$data['is_refunded'] .
+			$data['is_standalone_payment'] .
+			$data['is_voided'] .
+			$data['order'] .
+			$data['owner'] .
+			$data['pending'] .
+			$data['source_data_pan'] .
+			$data['source_data_sub_type'] .
+			$data['source_data_type'] .
+			$data['success'];
 		$hash = hash_hmac( 'sha512', $str, $key );
 		return $hash === $hmac;
 	}
@@ -315,6 +386,9 @@ class Paymob {
 	 */
 	public static function filterVar( $name, $global = 'GET' ) {
 		if ( isset( $GLOBALS[ '_' . $global ][ $name ] ) ) {
+			if ( is_array( $GLOBALS[ '_' . $global ][ $name ] ) ) {
+				return $GLOBALS[ '_' . $global ][ $name ];
+			}
 			return htmlspecialchars( $GLOBALS[ '_' . $global ][ $name ], ENT_QUOTES );
 		}
 		return null;

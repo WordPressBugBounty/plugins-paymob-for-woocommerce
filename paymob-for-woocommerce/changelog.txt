@@ -1,6 +1,11 @@
 == Changelog ==
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
+2024-10-15 - version 2.0.0
+Migrate old metchant into the new configuration
+List Paymob Payment in the Paymob admin setting page
+List Paymob Gateways separatly in the checkout page
+Add WooCommerce block compatibility
 
 2024-06-06 - version 1.0.10
 Add accept callback alongside flash callback

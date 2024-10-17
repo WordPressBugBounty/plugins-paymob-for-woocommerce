@@ -2,6 +2,7 @@
 
 class PaymobOrder {
 
+
 	public $config;
 	public $gateway;
 	public $order;
@@ -64,28 +65,77 @@ class PaymobOrder {
 	}
 
 	public function createPayment() {
-		$price = (int) (string) $this->config->amount_cents;
-		$items = $this->getInvoiceItems( $price );
-		$data  = array(
-			'amount'            => $price,
+		$totalAmount = (int) (string) $this->config->amount_cents;
+		$itemsArr    = null;
+		if ( 'yes' == $this->config->has_items ) {
+			$items       = $this->getInvoiceItems();
+			$itemsArr    = $items['items'];
+			$totalAmount = $items['total'];
+		}
+		$data = array(
+			'amount'            => $totalAmount,
 			'currency'          => $this->order->get_currency(),
 			'payment_methods'   => $this->getIntegrationIds(),
 			'billing_data'      => $this->billing,
-			'items'             => $items,
 			'expires_at'        => $this->getExpiryTime(),
 			'extras'            => array( 'merchant_intention_id' => $this->order->get_id() . '_' . time() ),
 			'special_reference' => $this->order->get_id() . '_' . time(),
 		);
 
+		if ( ! empty( $items ) ) {
+			$data['items'] = $itemsArr;
+		}
+		if ( ! empty( $this->getUserTokens() ) ) {
+			$data['card_tokens'] = $this->getUserTokens();
+		}
 		$paymobReq = new Paymob( $this->config->debug, $this->config->addlog );
 		return $paymobReq->createIntention( $this->config->sec_key, $data, $this->order->get_id() );
 	}
+	public function getUserTokens() {
+		$tokens = array();
+		if ( is_user_logged_in() ) {
+			global $wpdb;
+			$current_user = wp_get_current_user();
+			$user_id      = $current_user->ID;
+			$results      = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM {$wpdb->prefix}paymob_cards_token WHERE user_id = %d",
+					$user_id
+				),
+				OBJECT
+			);
+			if ( $results ) {
+				foreach ( $results as $value ) {
+					$tokens[] = $value->token;
+				}
+			}
+		}
+		return $tokens;
+	}
 
 	private function getIntegrationIds() {
-		$integration_id_hidden = explode( ',', $this->config->integration_id_hidden );
+		$omannet = strpos( $this->config->id, 'omannet' );
+		if ( false !== $omannet ) {
+			// get migs or vpc IDs
+			$omannetArr[] = (int) $this->config->single_integration_id;
+			$gateways     = PaymobAutoGenerate::get_db_gateways_data();
+			foreach ( $gateways as $gateway ) {
+				if ( ( false !== strpos( $gateway->gateway_id, 'vpc' ) || false !== strpos( $gateway->gateway_id, 'migs' ) )
+				&& false === strpos( $gateway->gateway_id, 'apple-pay' )
+				&& false === strpos( $gateway->gateway_id, 'google-pay' )
+				&& '0' === $gateway->is_manual ) {
+					$omannetArr[] = (int) $gateway->integration_id;
+				}
+			}
+			return $omannetArr;
+		}
+		if ( 'paymob' != $this->config->id ) {
+			return array( (int) $this->config->single_integration_id );
+		}
 
-		$matching_ids    = array();
-		$integration_ids = array();
+		$integration_id_hidden = explode( ',', $this->config->integration_id_hidden );
+		$matching_ids          = array();
+		$integration_ids       = array();
 
 		foreach ( $integration_id_hidden as $entry ) {
 			$parts = explode( ':', $entry );
@@ -105,7 +155,8 @@ class PaymobOrder {
 				}
 			}
 		}
-		if ( empty( $integration_ids ) ) {
+
+		if ( ! isset( $integration_ids ) ) {
 			foreach ( $this->config->integration_id as $id ) {
 				$id = (int) $id;
 				if ( $id > 0 ) {
@@ -116,16 +167,97 @@ class PaymobOrder {
 		return $integration_ids;
 	}
 
-	public function getInvoiceItems( $price ) {
-		$items[] = array(
-			'name'     => 'Order # ' . $this->order->get_id(),
-			'amount'   => $price,
-			'quantity' => 1,
+	public function getInvoiceItems() {
+		$country = Paymob::getCountryCode( $this->config->sec_key );
+		$cents   = 100;
+		$round   = 2;
+		if ( 'omn' === $country ) {
+			$round = 3;
+			$cents = 1000;
+		}
+		$Items  = array();
+		$amount = 0;
+
+		// Product items
+		$items = $this->order->get_items();
+		foreach ( $items as $item ) {
+			$itemName          = esc_html( mb_strimwidth( $item->get_name(), 0, 50, '...' ) );
+			$itemSubtotalPrice = $this->order->get_line_subtotal( $item, false );
+
+			if ( ! is_numeric( $itemSubtotalPrice ) ) {
+				$errMsg = sprintf( __( 'The "%s" Item has a non-numeric unit price.', 'woocommerce' ), $itemName );
+				throw new Exception( $errMsg );
+			}
+
+			$itemPrice = round( $itemSubtotalPrice / $item->get_quantity(), $round );
+			$amount   += round( $itemPrice * $cents, $round ) * $item->get_quantity();
+			$Items[]   = array(
+				'name'     => $itemName,
+				'quantity' => $item->get_quantity(),
+				'amount'   => round( $itemPrice * $cents, $round ),  // Ensure it's an integer
+			);
+		}
+
+		// Shipping
+		$shipping = round( $this->order->get_shipping_total(), $round );
+		if ( $shipping ) {
+			$rateLabel = esc_html( mb_strimwidth( $this->order->get_shipping_method(), 0, 50, '...' ) );
+			$amount   += round( $shipping * $cents, $round );
+			$Items[]   = array(
+				'name'     => $rateLabel,
+				'quantity' => '1',
+				'amount'   => round( $shipping * $cents, $round ),  // Ensure it's an integer
+			);
+		}
+
+		// Discounts and Coupons
+		$discount = round( $this->order->get_discount_total(), $round );
+		if ( $discount ) {
+			$amount -= round( $discount * $cents, $round );
+			$Items[] = array(
+				'name'     => __( 'Discount', 'woocommerce' ),
+				'quantity' => '1',
+				'amount'   => round( -$discount * $cents, $round ),  // Ensure it's an integer
+			);
+		}
+
+		// Other Fees
+		foreach ( $this->order->get_items( 'fee' ) as $item_fee ) {
+			$total_fees = round( $item_fee->get_total(), $round );
+			$amount    += round( $total_fees * $cents, $round );
+			$Items[]    = array(
+				'name'     => esc_html( mb_strimwidth( $item_fee->get_name(), 0, 50, '...' ) ),
+				'quantity' => '1',
+				'amount'   => round( $total_fees * $cents, $round ),  // Ensure it's an integer
+			);
+		}
+
+		// Gift Cards
+		foreach ( $this->order->get_items( 'pw_gift_card' ) as $line ) {
+			$gifPrice   = round( $line->get_amount(), $round );
+			$giftAmount = round( -$gifPrice * $cents, $round );
+			$amount    -= $giftAmount;
+			$Items[]    = array(
+				'name'     => __( 'Gift Card', 'woocommerce' ),
+				'quantity' => '1',
+				'amount'   => $giftAmount,  // Ensure it's an integer
+			);
+		}
+		// Tax
+		$tax = round( $this->order->get_total() - ( $amount / $cents ), $round );
+		if ( $tax ) {
+			$amount += round( $tax * $cents, $round );
+			$Items[] = array(
+				'name'     => __( 'Remaining Cart Items Amount', 'woocommerce' ),
+				'quantity' => '1',
+				'amount'   => round( $tax * $cents, $round ),  // Ensure it's an integer
+			);
+		}
+		return array(
+			'items' => array_reverse( $Items ),
+			'total' => $amount,
 		);
-
-		return $items;
 	}
-
 	public function getExpiryTime() {
 		$expiryDate = '';
 
@@ -146,14 +278,14 @@ class PaymobOrder {
 		return $expiryDate;
 	}
 
-	public static function validateOrderInfo( $orderId ) {
+	public static function validateOrderInfo( $orderId, $PaymentId ) {
 		if ( empty( $orderId ) || is_null( $orderId ) || false === $orderId || '' === $orderId ) {
 			wp_die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-woocommerce' ) ) );
 		}
 		$order = self::getOrder( $orderId );
 
 		$paymentMethod = $order->get_payment_method();
-		if ( 'paymob' != $paymentMethod ) {
+		if ( $PaymentId != $paymentMethod ) {
 			die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-woocommerce' ) ) );
 		}
 		return $order;

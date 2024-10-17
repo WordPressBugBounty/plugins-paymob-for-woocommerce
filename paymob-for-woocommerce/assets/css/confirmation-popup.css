@@ -1,0 +1,94 @@
+#confirmationModal {
+	display: none;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: #ffffff;
+	border: 1px solid #dcdcdc;
+	border-radius: 8px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	padding: 20px;
+	width: 350px;
+	max-width: 90%;
+	z-index: 2000;
+	font-family: Arial, sans-serif;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+#confirmationModal h2 {
+	margin: 0 0 15px;
+	font-size: 18px;
+	color: #333333;
+	font-weight: bold;
+}
+
+#confirmationModal p {
+	margin: 0 0 20px;
+	font-size: 16px;
+	color: #333333;
+}
+
+#confirmationModal ul {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 20px;
+	text-align: left;
+	max-height: 300px; /* Set a maximum height */
+	overflow-y: auto;  /* Make it scrollable */
+}
+
+#confirmationModal li {
+	display: flex;
+	align-items: center;
+	padding: 5px 0;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+#confirmationModal img {
+	margin-right: 10px;
+	border-radius: 4px;
+}
+
+#confirmationModal button {
+	background: #007cba;
+	color: #ffffff;
+	border: none;
+	border-radius: 4px;
+	padding: 10px 20px;
+	font-size: 14px;
+	cursor: pointer;
+	margin: 0 10px;
+	transition: background 0.3s ease;
+	width: 120px;
+}
+
+#confirmationModal button:hover {
+	background: #005d8b;
+}
+
+#confirmCancel {
+	background: #f0f0f0;
+	color: #333333;
+}
+
+#confirmCancel:hover {
+	background: #e0e0e0;
+}
+
+#overlay {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.7);
+	z-index: 999;
+}
+.notice-warning {
+	border-left: 4px solid #ffba00; /* Yellow border */
+	padding: 12px;
+	margin: 20px 0;
+}
