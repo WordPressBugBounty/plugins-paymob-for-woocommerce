@@ -74,11 +74,11 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 
 = Sign up for a Paymob account =
 Create a Paymob account by selecting your region and completing registration: 
-* [Egypt](https://accept.paymob.com/portal2/en/register)
-* [UAE](https://uae.paymob.com/portal2/en/register)
-* [Oman](https://oman.paymob.com/portal2/en/register)
-* [KSA](https://ksa.paymob.com/portal2/en/register)
-* [Pakistan](https://pakistan.paymob.com/portal2/en/register)
+* [Egypt](https://accept.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
+* [UAE](https://uae.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
+* [Oman](https://oman.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
+* [KSA](https://ksa.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
+* [Pakistan](https://pakistan.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
 
 After registration, merchants should email support@paymob.com for further assistance. 
 

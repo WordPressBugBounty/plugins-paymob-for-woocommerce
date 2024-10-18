@@ -11,11 +11,11 @@ return array(
 				<div>
 					<p>' . __( 'Before beginning the configuration, you must have a Paymob Account. Please register or login to your account using the below link:', 'paymob-woocommerce' ) . '</p>
 					<ol>
-						<li><a href="https://accept.paymob.com/portal2/en/register" target="_blank">Egypt</a></li>
-						<li><a href="https://uae.paymob.com/portal2/en/register" target="_blank">UAE</a></li>
-						<li><a href="https://oman.paymob.com/portal2/en/register" target="_blank">Oman</a></li>
-						<li><a href="https://ksa.paymob.com/portal2/en/register" target="_blank">KSA</a></li>
-						<li><a href="https://pakistan.paymob.com/portal2/en/register" target="_blank">Pakistan</a></li>
+						<li><a href="https://accept.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce" target="_blank">Egypt</a></li>
+						<li><a href="https://uae.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce" target="_blank">UAE</a></li>
+						<li><a href="https://oman.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce" target="_blank">Oman</a></li>
+						<li><a href="https://ksa.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce" target="_blank">KSA</a></li>
+						<li><a href="https://pakistan.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce" target="_blank">Pakistan</a></li>
 					</ol>
 					<p>' . __( 'Once registered or logged in, you will gain access to the Test Mode Environment on the Merchant Dashboard.', 'paymob-woocommerce' ) . '</p>
 				</div>
