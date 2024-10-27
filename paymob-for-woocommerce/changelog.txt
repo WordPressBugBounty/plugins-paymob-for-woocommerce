@@ -1,6 +1,13 @@
 == Changelog ==
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
+== Changelog ==
+2024-10-27 - version 2.0.1
+Add code optimization
+Add refund functionality
+Add missing Arabic translation
+Fix multi requests for misconfiguration
+
 2024-10-15 - version 2.0.0
 Migrate old metchant into the new configuration
 List Paymob Payment in the Paymob admin setting page

@@ -1,7 +1,7 @@
 jQuery(document).ready(function ($) {
     var tableBodyHtml = window.paymob_gateways_table_body || '';
     $('#paymob_custom_gateways tbody').html(tableBodyHtml);
-
+    
     function showConfirmationModal(title, message, confirmCallback, cancelCallback) {
         $('#confirmation-modal-title').text(title);
         $('#confirmation-modal-message').text(message);
@@ -151,12 +151,15 @@ jQuery(document).ready(function ($) {
                         $(".loader_paymob").show();
                     },
                     success: function (response) {
-                        // jQuery('.wrap').prepend('<div class="notice notice-success is-dismissible"><p>' + response.message + '</p></div>');
-                        //alert(response.message);
+                        
+                        if(!response.success){
+                            const data=JSON.parse(response.data);
+                            alert(data.error);
+                        }
                         location.reload();
                     },
                     complete: function () {
-                       // $(".loader_paymob").hide();
+                        // $(".loader_paymob").hide();
                     },
                     error: function (xhr, status, error) {
                         alert('An error occurred while resetting the payment methods.');

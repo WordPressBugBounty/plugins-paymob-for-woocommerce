@@ -492,3 +492,51 @@ msgstr ""
 #: templates/gateway_block.js:4
 msgid "checkout_title"
 msgstr ""
+
+#: includes/helper/save_cards/class-paymob-saved-cards-title.php:8
+msgid "Paymob Saved Credit Cards"
+msgstr ""
+
+#: includes/helper/save_cards/class-paymob-add-saved-cards-tab.php:10
+msgid "Paymob Saved Cards"
+msgstr ""
+
+#: includes/helper/save_cards/class-paymob-display-saved-cards.php:14
+msgid "Saved Cards"
+msgstr ""
+
+#: includes/helper/save_cards/class-paymob-saved-cards-title.php:16
+msgid "Card"
+msgstr ""
+
+#: includes/helper/save_cards/class-paymob-saved-cards-title.php:16
+msgid "Actions"
+msgstr ""
+
+#: includes/helper/save_cards/class-paymob-saved-cards-title.php:27
+msgid "No saved cards."
+msgstr ""
+
+#: includes/admin/views/htmlsviews/html_save_card_confirmation_model.php:4
+msgid "Are you sure you want to delete this card? This action cannot be undone."
+msgstr ""
+
+#: includes/admin/views/htmlsviews/html_save_card_confirmation_model.php:5
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/views/htmlsviews/html_save_card_confirmation_model.php:6
+msgid "Cancel"
+msgstr ""
+
+#: includes/helper/paymob-order.php:71
+msgid "Please remove your cards from"
+msgstr ""
+
+#: includes/helper/paymob-order.php:71
+msgid "to complete your purchase"
+msgstr ""
+
+#: includes/helper/paymob-order.php:72
+msgid "Ops,Max number of card tokens is 3."
+msgstr ""

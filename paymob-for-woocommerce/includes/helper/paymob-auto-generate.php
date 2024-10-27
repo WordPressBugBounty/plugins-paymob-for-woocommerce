@@ -393,4 +393,19 @@ class PaymobAutoGenerate {
 			WC_Admin_Settings::add_error( $e->getMessage() );
 		}
 	}
+	/**
+	 * Customize the Gateways Method Title.
+	 */
+	public static function gateways_method_title( $method_title, $setting, $single_integration_id = null ) {
+		if ( ! empty( $single_integration_id ) ) {
+			echo '<h2>' . esc_html__( 'Edit Payment Method - ', 'paymob-woocommerce' ) . esc_html( $method_title ) . ' ( ' . esc_html( $single_integration_id ) . ' ) ' .
+			'<small class="wc-admin-breadcrumb"><a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout' ) ) . '" aria-label="' . esc_attr__( 'Return to payments', 'paymob-woocommerce' ) . '">⤴︎</a></small></h2>';
+		} else {
+			echo '<h2>' . esc_html__( 'Edit Payment Method - ', 'paymob-woocommerce' ) . esc_html( $method_title ) .
+			'<small class="wc-admin-breadcrumb"><a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout' ) ) . '" aria-label="' . esc_attr__( 'Return to payments', 'paymob-woocommerce' ) . '">⤴︎</a></small></h2>';
+		}
+		echo '<table class="form-table">';
+		$setting->generate_settings_html();
+		echo '</table>';
+	}
 }

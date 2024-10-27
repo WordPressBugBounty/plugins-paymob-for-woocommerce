@@ -54,6 +54,8 @@ class Paymob_Main_Gateway extends Paymob_Payment {
 		$paymobOptions   = get_option( 'woocommerce_paymob-main_settings' );
 		$default_enabled = isset( $paymobOptions['enabled'] ) ? $paymobOptions['enabled'] : '';
 		$pubKey          = isset( $paymobOptions['pub_key'] ) ? $paymobOptions['pub_key'] : '';
+		$apiKey          = isset( $paymobOptions['api_key'] ) ? $paymobOptions['api_key'] : '';
+		$secKey          = isset( $paymobOptions['sec_key'] ) ? $paymobOptions['sec_key'] : '';
 		$empty_cart      = isset( $post_data['woocommerce_paymob-main_empty_cart'] ) ? sanitize_text_field( $post_data['woocommerce_paymob-main_empty_cart'] ) : '';
 		$debug           = isset( $post_data['woocommerce_paymob-main_debug'] ) ? sanitize_text_field( $post_data['woocommerce_paymob-main_debug'] ) : '';
 		// Validate and sanitize the keys
@@ -67,24 +69,19 @@ class Paymob_Main_Gateway extends Paymob_Payment {
 			return false;
 		}
 		try {
-			// Handle the logic to get and validate the data from Paymob
-			$addlog    = WC_LOG_DIR . 'paymob.log';
-			$paymobReq = new Paymob( $debug, $addlog );
-			$result    = $paymobReq->authToken( $conf );
+			if ($conf['pubKey'] !== $pubKey || $conf['apiKey'] !== $apiKey || $conf['secKey'] !== $secKey) {
+				// Handle the logic to get and validate the data from Paymob
+				$addlog    = WC_LOG_DIR . 'paymob.log';
+				$paymobReq = new Paymob( $debug, $addlog );
+				$result    = $paymobReq->authToken( $conf );
 
-			Paymob::addLogs( $debug, $addlog, __( 'Merchant configuration: ', 'paymob-woocommerce' ), $result );
-
-			$paymob_u_Options = get_option( 'woocommerce_paymob_settings' );
-			$hmac_hidden      = isset( $paymob_u_Options['hmac_hidden'] ) ? sanitize_text_field( $paymob_u_Options['hmac_hidden'] ) : '';
-			// Check for HMAC mismatch or pubKey change
-			if ( $hmac_hidden !== $result['hmac'] || $conf['pubKey'] !== $pubKey ) {
+				Paymob::addLogs( $debug, $addlog, __( 'Merchant configuration: ', 'paymob-woocommerce' ), $result );
+				
 				$this->unset_old_settings();
-				$paymob_country = get_option( 'woocommerce_paymob_country' );
-				if ( empty( $paymob_country ) || $paymob_country != Paymob::getCountryCode( $conf['pubKey'] ) || $conf['pubKey'] !== $pubKey ) {
-					$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
-					update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
-					update_option( 'woocommerce_paymob_country', Paymob::getCountryCode( $conf['pubKey'] ) );
-				}
+				$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
+				update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
+				update_option( 'woocommerce_paymob_country', Paymob::getCountryCode( $conf['pubKey'] ) );
+				
 				PaymobAutoGenerate::create_gateways( $result, 1, $gatewayData );
 
 				// Handle the logic for integration ID and HMAC update
@@ -175,45 +172,8 @@ class Paymob_Main_Gateway extends Paymob_Payment {
 }
 function enqueue_paymob_accordion_scripts( $hook ) {
 	if ( ( Paymob::filterVar( 'section' ) ) && Paymob::filterVar( 'section' ) == 'paymob-main' ) {
-		wp_enqueue_script( 'jquery-ui-accordion' );
-		wp_add_inline_script(
-			'jquery-ui-accordion',
-			'
-			jQuery(document).ready(function($) {
-				$("#config-note-accordion").accordion({
-					icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-					collapsible: true,
-					active: false,
-					heightStyle: "content"
-				});
-				$("#callback-accordion").accordion({
-					icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-					collapsible: true,
-					active: false,
-					heightStyle: "content"
-				});
+		Paymob_Scripts::paymob_accordion();
 
-				$("#has-items-accordion").accordion({
-					icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-					collapsible: true,
-					active: false,
-					heightStyle: "content"
-				});
-				$("#extra-accordion").accordion({
-					icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-					collapsible: true,
-					active: false,
-					heightStyle: "content"
-				});
-				$("#save-changes-accordion").accordion({
-					icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-					collapsible: true,
-					active: false,
-					heightStyle: "content"
-				});
-			});
-		'
-		);
 	}
 }
 add_action( 'admin_enqueue_scripts', 'enqueue_paymob_accordion_scripts' );

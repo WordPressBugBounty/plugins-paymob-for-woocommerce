@@ -36,7 +36,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public function __construct() {
 		// config
 		$this->has_fields = true;
-		$this->supports   = array( 'products' );
+		$this->supports   = array( 'products', 'refunds' );
 
 		$this->init_settings();
 		$this->init_form_fields();
@@ -68,7 +68,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 
 	public function paymob_frontend_enqueue() {
 		if ( is_checkout() ) {
-			wp_enqueue_script( 'paymob-frontend-js', plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/js/appleUsers.js', array( 'jquery' ), PAYMOB_VERSION, true );
+			Paymob_Scripts::paymob_frontend();
 		}
 	}
 
@@ -85,10 +85,8 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			$gateway_ids[] = $gateway->gateway_id;
 		}
 		if ( ( Paymob::filterVar( 'section' ) ) && ( in_array( Paymob::filterVar( 'section' ), $gateway_ids ) || Paymob::filterVar( 'section' ) == 'paymob-main' || Paymob::filterVar( 'section' ) == 'paymob_add_gateway' || Paymob::filterVar( 'section' ) == 'paymob_list_gateways' ) ) {
-			wp_enqueue_script( 'paymob-admin-js', plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/js/admin.js', array( 'jquery' ), PAYMOB_VERSION, true );
-			wp_enqueue_script( 'color-picker', admin_url() . 'js/color-picker.min.js', array(), PAYMOB_VERSION, true );
-			wp_localize_script( 'paymob-admin-js', 'ajax_object', $params );
-			wp_enqueue_style( 'paymob-admin-css', plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/css/admin.css', array(), PAYMOB_VERSION );
+			Paymob_Scripts::paymob_admin( $params );
+			Paymob_Style::paymob_admin();
 		}
 	}
 
@@ -119,10 +117,9 @@ class Paymob_Payment extends WC_Payment_Gateway {
 
 		$paymobOrder = new PaymobOrder( $orderId, $this );
 		$status      = $paymobOrder->createPayment();
-		// echo "<pre>";print_r($status);exit;
 		if ( ! $status['success'] ) {
 			$errorMsg = $status['message'];
-			if ( 'Unsupported currency' == $errorMsg && 'paymob' != $this->id ) {
+			if ( 'Unsupported currency' == $errorMsg) {
 				$paymobOptions   = get_option( 'woocommerce_paymob_settings' );
 				$integration_ids = explode( ',', $paymobOptions['integration_id_hidden'] );
 				$currencies      = array(); // Initialize array to store matching values
@@ -164,16 +161,73 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			'redirect' => $to,
 		);
 	}
+	public function process_refund( $order_id, $amount = null, $reason = '' ) {
 
+		$country = Paymob::getCountryCode( $this->sec_key );
+		$cents   = 100;
+		$round   = 2;
+		if ( 'omn' === $country ) {
+			$round = 3;
+			$cents = 1000;
+		}
+		$order = wc_get_order( $order_id );
+		// Check if the order exists
+		if ( ! $order ) {
+			return new WP_Error( 'invalid_order', __( 'Order not found.', 'woocommerce' ) );
+		}
+
+		$transactionId   = $order->get_meta( 'PaymobTransactionId', true );
+		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
+		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$data            = array(
+			'transaction_id' => $transactionId,
+			'amount_cents'   => round( $amount, $round ) * $cents,
+		);
+		$paymobReq       = new Paymob( $this->debug, $addlog );
+		$status          = $paymobReq->refundPayment( $this->sec_key, $data );
+
+		if ( ! $status['success'] ) {
+			return new WP_Error( 'error', __( 'Refund failed: ', 'paymob-woocommerce' ) . $status['message'] );
+		} else {
+			$paymob_refund_id = $status['refund_id'];
+			$msg              = $this->can_refund_orders( $order, $amount, $paymob_refund_id );
+			Paymob::addLogs( $this->debug, $addlog, 'For Order # ' . $order_id . ' ' . $msg );
+		}
+		// If the refund is successful, return true.
+		return true;
+	}
+
+	public function can_refund_orders( $order, $amount, $paymob_refund_id ) {
+		$refunds = $order->get_refunds(); // Get all refunds associated with the order
+		if ( ! empty( $refunds ) ) {
+			usort(
+				$refunds,
+				function ( $a, $b ) {
+					return strtotime( $b->get_date_created() ) - strtotime( $a->get_date_created() );
+				}
+			);
+			$recent_refund    = reset( $refunds );
+			$recent_refund_id = $recent_refund->get_id();
+		}
+
+			$order_total = $order->get_total();
+		if ( $amount < $order_total ) {
+			// Partial refund
+			$msg = __( 'Paymob : Partial refund of ', 'paymob-woocommerce' ) . $amount;
+
+		} elseif ( $amount == $order_total ) {
+			// Full refund
+			$msg = __( 'Paymob : Full refund of ', 'paymob-woocommerce' ) . $amount;
+		}
+			$info = "<br/>Woo Order Refund ID: {$recent_refund_id}<br/>Transaction Refund ID : {$paymob_refund_id}";
+			$order->add_order_note( $msg . $info );
+			return $msg;
+	}
 	public function payment_fields() {
 		if ( $this->description ) {
 			echo wp_kses_post( wpautop( esc_html( $this->description ) ) );
 		}
 	}
-
-	// public function get_parent_payment_fields() {
-	// parent::payment_fields();
-	// }
 
 	public function init_form_fields() {
 		$this->form_fields = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-single-gateway.php';

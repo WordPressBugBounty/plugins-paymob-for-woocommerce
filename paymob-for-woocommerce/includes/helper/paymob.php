@@ -215,6 +215,30 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/plugins: ' . json_encode( $registerRes ) );
 		return $registerRes;
 	}
+	public function refundPayment( $secKey, $data ) {
+		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$refundRes = $this->HttpRequest( $flash . 'api/acceptance/void_refund/refund', 'POST', $header, $data );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/acceptance/void_refund/refund: ' . json_encode( $refundRes ) );
+
+		if ( isset( $refundRes->detail ) ) {
+			$status['message'] = $refundRes->detail;
+			return $status;
+		}
+		if ( isset( $refundRes->message ) ) {
+			$status['message'] = $refundRes->message;
+			return $status;
+		}
+		if ( isset( $refundRes->success ) ) {
+			$status['success']   = true;
+			$status['refund_id'] = $refundRes->id;
+		} else {
+			$status['success'] = false;
+			$status['message'] = 'Something went wrong';
+		}
+		return $status;
+	}
 	public function matchMode( $conf ) {
 		$pubKeyMode = $this->getMode( $conf['pubKey'] );
 		$secKeyMode = $this->getMode( $conf['secKey'] );

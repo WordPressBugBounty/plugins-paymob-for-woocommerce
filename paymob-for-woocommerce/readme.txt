@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -123,11 +123,11 @@ After registration, merchants should email support@paymob.com for further assist
 7. saved cards.png
 
 == Changelog ==
-2024-10-15 - version 2.0.0
-Migrate old metchant into the new configuration
-List Paymob Payment in the Paymob admin setting page
-List Paymob Gateways separatly in the checkout page
-Add WooCommerce block compatibility
+2024-10-27 - version 2.0.1
+Add code optimization
+Add refund functionality
+Add missing Arabic translation
+Fix multi requests for misconfiguration
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 
