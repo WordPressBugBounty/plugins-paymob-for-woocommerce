@@ -1,6 +1,6 @@
 <div id="confirmationModal">
-	<h2>Disable Paymob Gateway</h2>
-	<p>If you disable this gateway, all Paymob gateways will be disabled. Do you want to continue?</p>
+	<h2><?php echo esc_html(__( 'Disable Paymob Gateway','paymob-woocommerce')); ?></h2>
+	<p><?php echo esc_html(__( 'If you disable this gateway, all Paymob gateways will be disabled. Do you want to continue?','paymob-woocommerce')); ?></p>
 	<ul>
 		<?php
 		foreach ( $gateways as $gateway ) {
@@ -19,7 +19,7 @@
 		}
 		?>
 	</ul>
-	<button id="confirmDisable">Disable</button>
-	<button id="confirmCancel">Cancel</button>
+	<button id="confirmDisable"><?php echo esc_html(__( 'Disable','paymob-woocommerce')); ?></button>
+	<button id="confirmCancel"><?php echo esc_html(__( 'Cancel','paymob-woocommerce')); ?></button>
 </div>
 <div id="overlay"></div>

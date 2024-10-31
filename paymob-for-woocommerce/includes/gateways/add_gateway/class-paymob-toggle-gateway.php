@@ -53,7 +53,7 @@ class Paymob_Toggle_Gateway {
 		wp_send_json_success(
 			array(
 				'success' => true,
-				'msg'     => 'Payment Method status updated successfully.',
+				'msg'     => __( 'Payment Method status updated successfully.','paymob-woocommerce'),
 			)
 		);
 

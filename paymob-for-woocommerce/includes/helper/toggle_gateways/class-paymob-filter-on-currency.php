@@ -61,7 +61,7 @@ class Paymob_Filter_currency {
 
 				$message = sprintf(
 					/* translators: %1$s is a comma-separated list of integration IDs. %2$s is a comma-separated list of currencies. */
-					__( 'Payment Method(s) with the Integration ID(s) (%1$s) require(s) the store currency to be set to: %2$s.', 'paymob-woocommerce' ),
+					__( 'Payment Method(s) with the Integration ID(s)', 'paymob-woocommerce'). ' (%1$s) '. __( 'require(s) the store currency to be set to:', 'paymob-woocommerce'). ' %2$s.',
 					$mismatched_ids_string,
 					$mismatched_currencies_string
 				);

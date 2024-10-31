@@ -11,12 +11,14 @@ class WC_Paymob_GatewayData {
 			if ( ! empty( $mainOptions ) ) {
 				$debug          = isset( $mainOptions['debug'] ) ? $mainOptions['debug'] : '';
 				$debug          = 'yes' === $debug ? '1' : '0';
-				$paymobReq      = new Paymob( $debug, WC_LOG_DIR . 'paymob.log' );
-				$conf['secKey'] = isset( $mainOptions['sec_key'] ) ? $mainOptions['sec_key'] : '';
-
-				$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
-
-				update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
+				try {
+					$paymobReq      = new Paymob( $debug, WC_LOG_DIR . 'paymob.log' );
+					$conf['secKey'] = isset( $mainOptions['sec_key'] ) ? $mainOptions['sec_key'] : '';
+					$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
+					update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
+				} catch ( \Exception $e ) {
+					WC_Admin_Settings::add_error( __( $e->getMessage(), 'paymob-woocommerce' ) );
+				}
 			}
 		} else {
 			foreach ( $gatewayData as $key => $gateway ) {

@@ -1,7 +1,7 @@
 <?php
 
 return '<div style="width:60%"><div id="callback-accordion">
-            <h3>' . __( 'Step 4: Configure Callback URL', 'paymob-woocommerce' ) . '</h3>
+            <h3>' . __( 'Step 3: Configure Callback URL', 'paymob-woocommerce' ) . '</h3>
             <div>
                 <ol>
                     <li>' . __( 'Click the icon <span style="cursor:pointer;" id="cpicon" class="dashicons dashicons-clipboard"></span> to copy the callback URL.', 'paymob-woocommerce' ) . '</li>

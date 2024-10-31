@@ -26,8 +26,8 @@ jQuery(document).ready(function ($) {
         var nonce = paymob_admin_ajax.delete_nonce;
 
         showConfirmationModal(
-            'Remove Gateway',
-            'Are you sure you want to remove this gateway?',
+            paymob_admin_ajax.rg,
+            paymob_admin_ajax.ays,
             function () {
                 $.ajax({
                     url: paymob_admin_ajax.ajax_url,
@@ -60,8 +60,8 @@ jQuery(document).ready(function ($) {
         var nonce = paymob_admin_ajax.toggle_nonce;
 
         showConfirmationModal(
-            action.charAt(0).toUpperCase() + action.slice(1) + ' Gateway',
-            'Are you sure you want to ' + action + ' this gateway?',
+            action.charAt(0).toUpperCase() + action.slice(1) + paymob_admin_ajax.gat,
+            paymob_admin_ajax.ay + action + paymob_admin_ajax.tg,
             function () {
                 $.ajax({
                     url: paymob_admin_ajax.ajax_url,
@@ -135,8 +135,8 @@ jQuery(document).ready(function ($) {
     });
     $("#reset-paymob-gateways").click(function () {
         showConfirmationModal(
-            'Reset Payment Methods',
-            'Are you sure you want to reset the payment methods?',
+            paymob_admin_ajax.rp,
+            paymob_admin_ajax.arp,
             function () {
                 // Confirm callback: AJAX call to reset the gateways
                 // alert('reset');return false;

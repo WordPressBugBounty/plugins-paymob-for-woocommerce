@@ -12,6 +12,13 @@ class Paymob_Scripts {
 				'toggle_nonce'                => wp_create_nonce( 'toggle_gateway_nonce' ),
 				'save_gateway_order_nonce'    => wp_create_nonce( 'save_gateway_order' ),
 				'reset_paymob_gateways_nonce' => wp_create_nonce( 'reset_paymob_gateways' ),
+				'rg' =>__('Remove Gateway', 'paymob-woocommerce'),
+				'ays' => __('Are you sure you want to remove this gateway?', 'paymob-woocommerce'),
+				'ay' => __('Are you sure you want to ', 'paymob-woocommerce'),
+				'tg' => __(' this gateway?', 'paymob-woocommerce'),
+				'gat' => __(' Gateway', 'paymob-woocommerce'),
+				'rp' => __('Reset Payment Methods', 'paymob-woocommerce'),
+				'arp' => __('Are you sure you want to reset the payment methods?', 'paymob-woocommerce'),
 			)
 		);
 	}

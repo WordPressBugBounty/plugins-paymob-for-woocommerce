@@ -2,23 +2,17 @@
 return '<div style="width:60%"><div id="config-note-accordion">
  <h3>' . __( 'Step 1: Register with Paymob', 'paymob-woocommerce' ) . '</h3>
  <div>
-     <p>' . __( 'Before beginning the configuration, you must have a Paymob Account. Please register or login to your account using the below link:', 'paymob-woocommerce' ) . '</p>
-     <ol>
-         <li><a href="https://accept.paymob.com/portal2/en/register" target="_blank">Egypt</a></li>
-         <li><a href="https://uae.paymob.com/portal2/en/register" target="_blank">UAE</a></li>
-         <li><a href="https://oman.paymob.com/portal2/en/register" target="_blank">Oman</a></li>
-         <li><a href="https://ksa.paymob.com/portal2/en/register" target="_blank">KSA</a></li>
-         <li><a href="https://pakistan.paymob.com/portal2/en/register" target="_blank">Pakistan</a></li>
-     </ol>
-     <p>' . __( 'Once registered or logged in, you will gain access to the Test Mode Environment on the Merchant Dashboard.', 'paymob-woocommerce' ) . '</p>
+     <ol><li>  <a href="https://onboarding.paymob.com/?partner=woocommerce" target="_blank">' . __( 'Click here', 'paymob-woocommerce' ) . '</a>
+     ' . __( ' to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left.', 'paymob-woocommerce' ) . '</li>
+     <li>' . __( 'After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments.
+   If there are any issues with documentation, our sales representative will reach out to assist you.', 'paymob-woocommerce' ) . '</li>
+   <li>' . __( 'After 3 days, please ', 'paymob-woocommerce' ) . ' <a href="https://onboarding.paymob.com/?partner=woocommerce" target="_blank">' . __( 'click here ', 'paymob-woocommerce' ) . '</a>
+     ' . __( ' to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.', 'paymob-woocommerce' ) . '</li>
+     <li>' . __( 'While waiting for verification to complete, you can follow the installation steps provided below.', 'paymob-woocommerce' ) . '</li>    
+     <li>' . __( 'Once verification is complete, please refer to the “Main Configuration”, starting from Step 2 to configure the plugin.', 'paymob-woocommerce' ) . '</li>
+     
  </div>
-
- <h3>' . __( 'Step 2: Contact Paymob Support', 'paymob-woocommerce' ) . '</h3>
- <div>
-     <p>' . __( 'Email Paymob at <a href="mailto:support@paymob.com">support@paymob.com</a> to get assistance from the Sales Team for further onboarding.', 'paymob-woocommerce' ) . '</p>
- </div>
-
- <h3>' . __( 'Step 3: Key Configurations', 'paymob-woocommerce' ) . '</h3>
+ <h3>' . __( 'Step 2: Key Configurations', 'paymob-woocommerce' ) . '</h3>
  <div>
      <p>' . __( 'Your dashboard has Test Mode and Live Mode options. Live Mode will be activated only when you have at least one live payment method integration.', 'paymob-woocommerce' ) . '</p>
      <ol>

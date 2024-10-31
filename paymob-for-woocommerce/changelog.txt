@@ -2,6 +2,10 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2024-10-31 - version 2.0.2
+Add Paymob WooCommerce onboarding page
+Fix handling exception
+
 2024-10-27 - version 2.0.1
 Add code optimization
 Add refund functionality

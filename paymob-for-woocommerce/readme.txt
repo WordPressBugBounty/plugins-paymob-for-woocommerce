@@ -6,7 +6,7 @@ Tested up to: 6.6
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.1
+Stable tag: 2.0.2
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -73,14 +73,10 @@ Refunds can be initiated through API or the merchant dashboard.
 Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE), Oman, Saudi Arabia (KSA), and Pakistan. Since its launch, Paymob has empowered enterprises and SMEs to accept online and in-store payments, revolutionizing payment infrastructure across the MENA-P region. 
 
 = Sign up for a Paymob account =
-Create a Paymob account by selecting your region and completing registration: 
-* [Egypt](https://accept.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
-* [UAE](https://uae.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
-* [Oman](https://oman.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
-* [KSA](https://ksa.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
-* [Pakistan](https://pakistan.paymob.com/portal2/en/register?accept_sales_owner=WooCommerce)
-
-After registration, merchants should email support@paymob.com for further assistance. 
+1. [Click here](https://onboarding.paymob.com/?partner=woocommerce) to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left .
+2. After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments. If there are any issues with documentation, our sales representative will reach out to assist you.
+3. After 3 days, please [click here](https://onboarding.paymob.com/?partner=woocommerce) to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.
+5. Once verification is complete, please refer to the “Main Configuration”, starting from Step 2 to configure the plugin.
 
 = Install the Paymob extension =
 1. In your WordPress Admin Dashboard, go to Plugins > Installed Plugins. 
@@ -95,10 +91,10 @@ After registration, merchants should email support@paymob.com for further assist
 6. After activation, the plugin will appear as "Paymob for WooCommerce." Click on Paymob Settings. 
 
 = Main Configuration = 
-1. If you are already registered with Paymob and onboarded, skip Steps 1 and 2. 
-2. Enter your API Key, Secret Key, and Public Key (refer to instructions in Step 3). 
-3. Step 4 is mandatory (Follow the provided instructions in Step 4). 
-4. Steps 5 and 6 are optional. 
+1. If you are already registered with Paymob and onboarded, skip Steps 1. 
+2. Enter your API Key, Secret Key, and Public Key (refer to instructions in Step 2). 
+3. Step 3 is mandatory (Follow the provided instructions in Step 3). 
+4. Steps 4 and 5 are optional. 
 5. Click Save Changes to be redirected to the Payment Integrations Page. 
 
 =  Payment Method Integration Settings =
@@ -123,11 +119,9 @@ After registration, merchants should email support@paymob.com for further assist
 7. saved cards.png
 
 == Changelog ==
-2024-10-27 - version 2.0.1
-Add code optimization
-Add refund functionality
-Add missing Arabic translation
-Fix multi requests for misconfiguration
+2024-10-31 - version 2.0.2
+Add Paymob WooCommerce onboarding page
+Fix handling exception.
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 
