@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-woocommerce
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '2.0.2' );
+	define( 'PAYMOB_VERSION', '2.0.3' );
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -45,20 +45,12 @@ class Init_Paymob {
 		add_filter( 'plugin_row_meta', array( $this, 'add_row_meta' ), 10, 2 );
 		add_action( 'activate_' . PAYMOB_PLUGIN, array( $this, 'install' ), 0 );
 		add_action( 'plugins_loaded', array( $this, 'load' ), 0 );
-		// Declare compatibility with custom order tables for WooCommerce.
+		// Declare compatibility with custom order tables and checkout blocks for WooCommerce.
 		add_action(
 			'before_woocommerce_init',
 			function () {
 				if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
 					\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
-				}
-			}
-		);
-		// Declare compatibility with checkout blocks for WooCommerce.
-		add_action(
-			'before_woocommerce_init',
-			function () {
-				if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
 					\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
 				}
 			}

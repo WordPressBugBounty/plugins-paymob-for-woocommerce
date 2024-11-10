@@ -2,6 +2,10 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2024-11-10 - version 2.0.3
+Fix showing Apple pay in apple devices.
+Fix multi requests.
+
 2024-10-31 - version 2.0.2
 Add Paymob WooCommerce onboarding page
 Fix handling exception

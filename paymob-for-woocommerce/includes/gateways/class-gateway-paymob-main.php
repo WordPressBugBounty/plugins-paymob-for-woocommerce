@@ -74,17 +74,17 @@ class Paymob_Main_Gateway extends Paymob_Payment {
 				$addlog    = WC_LOG_DIR . 'paymob.log';
 				$paymobReq = new Paymob( $debug, $addlog );
 				$result    = $paymobReq->authToken( $conf );
-
 				Paymob::addLogs( $debug, $addlog, __( 'Merchant configuration: ', 'paymob-woocommerce' ), $result );
-				
-				$this->unset_old_settings();
 				$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
+				// Remove old gateways and its settings
+				$this->unset_old_settings();
 				update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
 				update_option( 'woocommerce_paymob_country', Paymob::getCountryCode( $conf['pubKey'] ) );
-				
+				delete_option( 'woocommerce_paymob_gateway_data_failure');
+				// Generate gateways
 				PaymobAutoGenerate::create_gateways( $result, 1, $gatewayData );
 
-				// Handle the logic for integration ID and HMAC update
+				// Handle the logic for integration ID
 				$ids                   = array();
 				$integration_id_hidden = array();
 				foreach ( $result['integrationIDs'] as $value ) {

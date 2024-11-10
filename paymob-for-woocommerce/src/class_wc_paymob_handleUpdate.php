@@ -58,7 +58,8 @@ class WC_Paymob_HandelUpdate {
 
 			try {
 				$paymob_country = get_option( 'woocommerce_paymob_country' );
-				if ( empty( $paymob_country ) ) {
+				$lastFailure = get_option('woocommerce_paymob_gateway_data_failure');
+				if ( empty( $paymob_country ) && empty($lastFailure) ) {
 					$paymobReq = new Paymob( $debug, WC_LOG_DIR . 'paymob.log' );
 					update_option( 'woocommerce_paymob_country', Paymob::getCountryCode( $conf['pubKey'] ) );
 					$result = $paymobReq->authToken( $conf );
@@ -71,6 +72,7 @@ class WC_Paymob_HandelUpdate {
 					if ( empty( $gatewayData ) ) {
 						$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
 						update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
+						delete_option( 'woocommerce_paymob_gateway_data_failure' );
 					}
 					
 					PaymobAutoGenerate::create_gateways( $result, 0, $gatewayData );

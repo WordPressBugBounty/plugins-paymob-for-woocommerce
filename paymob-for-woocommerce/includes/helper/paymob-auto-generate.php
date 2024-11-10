@@ -79,7 +79,7 @@ class PaymobAutoGenerate {
 		$jb_content = str_replace( 'checkout_title', $file_data['checkout_title'], $jb_content );
 		$jb_content = str_replace( 'gateway_id', $file_data['gateway_id'], $jb_content );
 		if ( false !== strpos( $file_data['gateway_id'], 'apple-pay' ) ) {
-			$jb_content = str_replace( '//check_a_pay', 'if (!typeof window.ApplePaySession)', $jb_content );
+			$jb_content = str_replace( '//check_a_pay', 'if (typeof window.ApplePaySession !== "undefined")', $jb_content );
 		} else {
 			$jb_content = str_replace( '//check_a_pay', '', $jb_content );
 		}

@@ -1,12 +1,13 @@
 <?php
+$currentURL = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 return '<div style="width:60%"><div id="config-note-accordion">
  <h3>' . __( 'Step 1: Register with Paymob', 'paymob-woocommerce' ) . '</h3>
  <div>
-     <ol><li>  <a href="https://onboarding.paymob.com/?partner=woocommerce" target="_blank">' . __( 'Click here', 'paymob-woocommerce' ) . '</a>
+     <ol><li>  <a href="https://onboarding.paymob.com/?partner=woocommerce&redirect_url='. urlencode($currentURL) .'" target="_blank">' . __( 'Click here', 'paymob-woocommerce' ) . '</a>
      ' . __( ' to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left.', 'paymob-woocommerce' ) . '</li>
      <li>' . __( 'After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments.
    If there are any issues with documentation, our sales representative will reach out to assist you.', 'paymob-woocommerce' ) . '</li>
-   <li>' . __( 'After 3 days, please ', 'paymob-woocommerce' ) . ' <a href="https://onboarding.paymob.com/?partner=woocommerce" target="_blank">' . __( 'click here ', 'paymob-woocommerce' ) . '</a>
+   <li>' . __( 'After 3 days, please ', 'paymob-woocommerce' ) . ' <a href="https://onboarding.paymob.com/?partner=woocommerce&redirect_url='. urlencode($currentURL) .'" target="_blank">' . __( 'click here ', 'paymob-woocommerce' ) . '</a>
      ' . __( ' to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.', 'paymob-woocommerce' ) . '</li>
      <li>' . __( 'While waiting for verification to complete, you can follow the installation steps provided below.', 'paymob-woocommerce' ) . '</li>    
      <li>' . __( 'Once verification is complete, please refer to the “Main Configuration”, starting from Step 2 to configure the plugin.', 'paymob-woocommerce' ) . '</li>

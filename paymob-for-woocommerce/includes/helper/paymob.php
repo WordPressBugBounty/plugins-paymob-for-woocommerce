@@ -164,8 +164,8 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: ', json_encode( $getways ) );
 		// Handle invalid or empty responses
 		if ( is_null( $getways ) || ! isset( $getways->result ) ) {
-			$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: Invalid response or missing result property from the Paymob API.' );
-			return array(); // Return an empty array to avoid breaking the code
+			$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: Cannot get Gateways Data from PayMob account.' );
+			throw new Exception( 'Cannot get Gateways Data from PayMob account' );
 		}
 
 		// Process the gateways data if available

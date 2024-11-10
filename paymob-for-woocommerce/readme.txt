@@ -1,12 +1,12 @@
 === Paymob for WooCommerce ===
-Contributors: nspaymob
+Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
 Tested up to: 6.6
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.2
+Stable tag: 2.0.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -73,9 +73,9 @@ Refunds can be initiated through API or the merchant dashboard.
 Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE), Oman, Saudi Arabia (KSA), and Pakistan. Since its launch, Paymob has empowered enterprises and SMEs to accept online and in-store payments, revolutionizing payment infrastructure across the MENA-P region. 
 
 = Sign up for a Paymob account =
-1. [Click here](https://onboarding.paymob.com/?partner=woocommerce) to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left .
+1. [Click here](https://onboarding.paymob.com/?partner=woocommerce&redirect_url=wordpress) to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left .
 2. After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments. If there are any issues with documentation, our sales representative will reach out to assist you.
-3. After 3 days, please [click here](https://onboarding.paymob.com/?partner=woocommerce) to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.
+3. After 3 days, please [click here](https://onboarding.paymob.com/?partner=woocommerce&redirect_url=wordpress) to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.
 5. Once verification is complete, please refer to the “Main Configuration”, starting from Step 2 to configure the plugin.
 
 = Install the Paymob extension =
@@ -110,18 +110,18 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 2. Enable Paymob. 
 
 == Screenshots ==
-1. main configuration.png
-2. paymob keys.png
-3. payment integrations.png
-4. edit payment integration.png
-5. store checkout.png
-6. paymob checkout.png
-7. saved cards.png
+1. screenshot-1.png
+2. screenshot-2.png
+3. screenshot-3.png
+4. screenshot-4.png
+5. screenshot-5.png
+6. screenshot-6.png
+7. screenshot-7.png
 
 == Changelog ==
-2024-10-31 - version 2.0.2
-Add Paymob WooCommerce onboarding page
-Fix handling exception.
+2024-11-10 - version 2.0.3
+Fix showing Apple pay in apple devices.
+Fix multi requests.
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 
