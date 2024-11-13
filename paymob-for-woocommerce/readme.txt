@@ -2,11 +2,11 @@
 Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
-Tested up to: 6.6
+Tested up to: 6.7
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.3
+Stable tag: 2.0.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -119,9 +119,8 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 7. screenshot-7.png
 
 == Changelog ==
-2024-11-10 - version 2.0.3
-Fix showing Apple pay in apple devices.
-Fix multi requests.
+2024-11-13 - version 2.0.4
+Add Paymob WooCommerce onboarding page after plugin activation.
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

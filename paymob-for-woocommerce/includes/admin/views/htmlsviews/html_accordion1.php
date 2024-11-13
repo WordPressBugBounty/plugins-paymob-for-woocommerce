@@ -1,5 +1,5 @@
 <?php
-$currentURL = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+$currentURL = self_admin_url(esc_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob_main' ));
 return '<div style="width:60%"><div id="config-note-accordion">
  <h3>' . __( 'Step 1: Register with Paymob', 'paymob-woocommerce' ) . '</h3>
  <div>

@@ -49,6 +49,13 @@ if ( ! class_exists( 'WC_Paymob_UnInstall' ) ) {
 if ( ! class_exists( 'WC_Paymob_Row_Meta' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_rowMeta.php';
 }
+
+if ( ! class_exists( 'WC_Paymob_RedirectFlag' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_set_redirect_flag_on_activation.php';
+}
+if ( ! class_exists( 'WC_Paymob_RedirectUrl' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_redirect_after_activation.php';
+}
 // add html admin views init Dependencies
 
 if ( ! class_exists( 'MainHtmlInclude' ) ) {
