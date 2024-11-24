@@ -106,7 +106,7 @@ class PaymobAutoGenerate {
 				$checkout_desc             = isset( $gateway_data[ strtolower( $value['gateway_type'] ) ]['desc'] ) ? $gateway_data[ strtolower( $value['gateway_type'] ) ]['desc'] : $title;
 				$class_name                = 'Paymob_' . preg_replace( '/[^a-zA-Z0-9]+/', '_', ucwords( $payment_integrations_type ) );
 				$payment_integrations_type = 'paymob-' . preg_replace( '/[^a-zA-Z0-9]+/', '-', strtolower( $payment_integrations_type ) );
-				$file_name                 = 'class-gateway-' . sanitize_file_name( $payment_integrations_type ) . '.php';
+				$file_name                 = 'class-gateway-' .$payment_integrations_type. '.php';
 				$logo                      = file_exists( PAYMOB_PLUGIN_PATH . '/assets/img/' . strtolower( $value['gateway_type'] ) . '.png' ) ?
 					plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/img/' . strtolower( $value['gateway_type'] ) . '.png'
 					: plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/img/paymob.png';

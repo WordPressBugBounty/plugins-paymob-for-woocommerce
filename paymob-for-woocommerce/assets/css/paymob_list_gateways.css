@@ -2,58 +2,72 @@
 	width: 100%;
 	border-collapse: collapse;
 }
+
 #paymob_custom_gateways th, #paymob_custom_gateways td {
 	border: 1px solid #ddd;
 	padding: 10px;
 	text-align: left;
 }
+
 #paymob_custom_gateways th:first-child,
 #paymob_custom_gateways td:first-child {
 	width: 5%;
 	text-align: center;
 }
+
 #paymob_custom_gateways th:nth-child(2),
 #paymob_custom_gateways td:nth-child(2) {
 	width: 5%;
 	text-align: center;
 }
+
 #paymob_custom_gateways th {
 	background-color: #0476D0;
 	color: white;
 }
+
 #paymob_custom_gateways tbody tr:nth-child(even) {
 	background-color: #f2f2f2;
 }
+
 #paymob_custom_gateways tbody tr:nth-child(odd) {
 	background-color: #fff;
 }
+
 #paymob_custom_gateways tbody tr:hover {
 	background-color: #ddd;
 }
+
 .enable-checkbox {
 	margin-top: 0;
 }
+
 .button {
 	margin: 0 5px;
 	padding: 6px 12px;
 	border-radius: 3px;
 }
+
 .button-secondary {
 	background-color: #0073aa;
 	color: #fff;
 	border: none;
 }
+
 .button-secondary:hover {
 	background-color: #005b85;
 }
+
 .button-primary {
 	background-color: #d63638;
 	color: #fff;
 	border: none;
 }
+
 .button-primary:hover {
 	background-color: #a02828;
 }
+
 #confirmation-modal {
 	position: fixed;
 	top: 0;
@@ -66,6 +80,7 @@
 	align-items: center;
 	z-index: 9999;
 }
+
 #confirmation-modal-content {
 	background: white;
 	padding: 20px;
@@ -73,10 +88,49 @@
 	box-shadow: 0 0 10px rgba(0,0,0,0.1);
 	text-align: center;
 }
+
 #confirmation-modal-title {
 	margin-top: 0;
 }
+
 #confirmation-modal-button-container {
 	margin-top: 20px;
 }
+
 #mainform .submit { display: none; }
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    #paymob_custom_gateways, #paymob_custom_gateways thead, #paymob_custom_gateways tbody, #paymob_custom_gateways th, #paymob_custom_gateways td, #paymob_custom_gateways tr {
+        display: block;
+        width: 100%;
+    }
+    #paymob_custom_gateways thead tr {
+        display: none;
+    }
+    #paymob_custom_gateways tbody tr {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        padding: 10px;
+    }
+    #paymob_custom_gateways td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border: none;
+        border-bottom: 1px solid #ddd;
+    }
+    #paymob_custom_gateways td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        font-weight: bold;
+        text-align: left;
+    }
+    /* Hide less important columns on mobile */
+    .column-reorder,
+    .column-integration-id,
+    .column-logo {
+        display: none;
+    }
+}

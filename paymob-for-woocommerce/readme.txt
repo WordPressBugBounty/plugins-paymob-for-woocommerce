@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.4
+Stable tag: 2.0.5
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -119,8 +119,10 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 7. screenshot-7.png
 
 == Changelog ==
-2024-11-13 - version 2.0.4
-Add Paymob WooCommerce onboarding page after plugin activation.
+2024-11-24 - version 2.0.5
+Fix the conflict of wp stateless plugin
+Fix mobile view for admin payment list
+Fix product name to be 45 chars
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

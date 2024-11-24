@@ -188,7 +188,7 @@ class PaymobOrder {
 		// Product items
 		$items = $this->order->get_items();
 		foreach ( $items as $item ) {
-			$itemName          = esc_html( mb_strimwidth( $item->get_name(), 0, 50, '...' ) );
+			$itemName          = esc_html( mb_strimwidth( $item->get_name(), 0, 45, '...' ) );
 			$itemSubtotalPrice = $this->order->get_line_subtotal( $item, false );
 
 			if ( ! is_numeric( $itemSubtotalPrice ) ) {
@@ -208,7 +208,7 @@ class PaymobOrder {
 		// Shipping
 		$shipping = round( $this->order->get_shipping_total(), $round );
 		if ( $shipping ) {
-			$rateLabel = esc_html( mb_strimwidth( $this->order->get_shipping_method(), 0, 50, '...' ) );
+			$rateLabel = esc_html( mb_strimwidth( $this->order->get_shipping_method(), 0, 45, '...' ) );
 			$amount   += round( $shipping * $cents, $round );
 			$Items[]   = array(
 				'name'     => $rateLabel,
@@ -233,7 +233,7 @@ class PaymobOrder {
 			$total_fees = round( $item_fee->get_total(), $round );
 			$amount    += round( $total_fees * $cents, $round );
 			$Items[]    = array(
-				'name'     => esc_html( mb_strimwidth( $item_fee->get_name(), 0, 50, '...' ) ),
+				'name'     => esc_html( mb_strimwidth( $item_fee->get_name(), 0, 45, '...' ) ),
 				'quantity' => '1',
 				'amount'   => round( $total_fees * $cents, $round ),  // Ensure it's an integer
 			);

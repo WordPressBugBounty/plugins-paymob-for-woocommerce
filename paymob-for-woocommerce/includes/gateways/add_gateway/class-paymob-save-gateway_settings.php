@@ -47,7 +47,7 @@ class Paymob_Save_Gateway_Settings {
 			$payment_integrations_type = 'paymob-' . preg_replace( '/[^a-zA-Z0-9]+/', '-', strtolower( $payment_integrations_type ) );
 			$gateway                   = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}paymob_gateways WHERE gateway_id = %s", $payment_integrations_type ), OBJECT );
 
-			$file_name = 'class-gateway-' . sanitize_file_name( $payment_integrations_type ) . '.php';
+			$file_name = 'class-gateway-' .$payment_integrations_type. '.php';
 
 			if ( ! $gateway && ! empty( $payment_integrations_type ) ) {
 				append_gateway_to_paymob_order( $payment_integrations_type );

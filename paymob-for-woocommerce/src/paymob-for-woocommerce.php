@@ -29,7 +29,7 @@ class Paymob_WooCommerce {
 	 */
 	public function register( $gateways ) {
 		include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-paymob-payment.php';
-		include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-gateway-' . sanitize_file_name( $this->id ) . '.php';
+		include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-gateway-' .$this->id. '.php';
 		if ( ! isset( $gateways[ $this->id ] ) ) {
 			$gateways[] = $this->gateway;
 		}

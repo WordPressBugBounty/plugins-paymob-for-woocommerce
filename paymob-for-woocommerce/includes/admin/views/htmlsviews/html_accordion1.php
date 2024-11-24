@@ -1,9 +1,10 @@
 <?php
-$currentURL = self_admin_url(esc_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob_main' ));
+$currentURL = str_replace('amp;', '', esc_attr( self_admin_url(('admin.php?page=wc-settings&tab=checkout&section=paymob-main') )));
+
 return '<div style="width:60%"><div id="config-note-accordion">
  <h3>' . __( 'Step 1: Register with Paymob', 'paymob-woocommerce' ) . '</h3>
  <div>
-     <ol><li>  <a href="https://onboarding.paymob.com/?partner=woocommerce&redirect_url='. urlencode($currentURL) .'" target="_blank">' . __( 'Click here', 'paymob-woocommerce' ) . '</a>
+     <ol><li>  <a href="https://onboarding.paymob.com/?partner=woocommerce&redirect_url='. urlencode($currentURL).'" target="_blank">' . __( 'Click here', 'paymob-woocommerce' ) . '</a>
      ' . __( ' to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left.', 'paymob-woocommerce' ) . '</li>
      <li>' . __( 'After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments.
    If there are any issues with documentation, our sales representative will reach out to assist you.', 'paymob-woocommerce' ) . '</li>
@@ -30,3 +31,4 @@ return '<div style="width:60%"><div id="config-note-accordion">
      <p>' . __( 'Note: API Key, Public Key, and Secret Key differ between Test and Live Modes. Always use LIVE Keys for live transactions and TEST Keys for test transactions.', 'paymob-woocommerce' ) . '</p>
  </div>
 </div></div>';
+

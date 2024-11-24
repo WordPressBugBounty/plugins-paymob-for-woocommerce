@@ -2,6 +2,11 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2024-11-24 - version 2.0.5
+Fix the conflict of wp stateless plugin
+Fix mobile view for admin payment list
+Fix product name to be 45 chars
+
 2024-11-13 - version 2.0.4
 Add Paymob WooCommerce onboarding page after plugin activation.
 
