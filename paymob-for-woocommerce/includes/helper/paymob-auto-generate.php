@@ -10,6 +10,7 @@
  * @package PaymobWooCommerce
  * @subpackage Classes
  */
+
 class PaymobAutoGenerate {
 	/**
 	 * Generates the required files for Paymob integration.
@@ -23,6 +24,7 @@ class PaymobAutoGenerate {
 	 *
 	 * @return void
 	 */
+	public $needle;
 	public static function generate_files( $file_data ) {
 		global $wp_filesystem;
 		if ( ! $wp_filesystem ) {
@@ -97,10 +99,17 @@ class PaymobAutoGenerate {
 	public static function create_gateways( $result, $paymob_setting, $gateway_data ) {
 		global $wpdb;
 		$ids = array();
+		$paymob_ids=array();
+		// $paymobOptions = get_option('woocommerce_paymob-main_settings');
+		// $paymob_mode = isset($paymobOptions['mode']) ? $paymobOptions['mode'] : '';
+		// echo $paymob_mode;exit;
 		if ( isset( $result['integrationIDs'] ) ) {
 			foreach ( $result['integrationIDs'] as $value ) {
 				$title                     = empty( $value['name'] ) ? $value['type'] : $value['name'];
 				$ids[]                     = trim( $value['id'] );
+				// if (isset($value['mode']) && $value['mode'] == $paymob_mode) {
+				// 	$paymob_ids[]=trim( $value['id']);
+				// }
 				$payment_integrations_type = $value['id'] . ' ' . $title . ' ' . $value['gateway_type'] . ' ' . $value['currency'];
 				$checkout_title            = isset( $gateway_data[ strtolower( $value['gateway_type'] ) ]['title'] ) ? $gateway_data[ strtolower( $value['gateway_type'] ) ]['title'] : $title;
 				$checkout_desc             = isset( $gateway_data[ strtolower( $value['gateway_type'] ) ]['desc'] ) ? $gateway_data[ strtolower( $value['gateway_type'] ) ]['desc'] : $title;
@@ -112,7 +121,7 @@ class PaymobAutoGenerate {
 					: plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/img/paymob.png';
 
 				$ordering = 2;
-
+				$mode       = isset($value['mode'])?$value['mode'] :'test';
 				// in case Apple Pay / Google Pay / Installment
 				$applePay = strpos( $payment_integrations_type, 'apple-pay' );
 				if ( false !== $applePay ) {
@@ -170,6 +179,7 @@ class PaymobAutoGenerate {
 							'integration_id'       => sanitize_text_field( $value['id'] ),
 							'is_manual'            => '0',
 							'ordering'             => $ordering,
+							'mode'                 =>$mode
 						)
 					);
 
@@ -188,39 +198,43 @@ class PaymobAutoGenerate {
 						'title'                 => $checkout_title,
 						'description'           => $checkout_desc,
 						'logo'                  => $logo,
+						'mode'                 =>$mode,
+						
 					);
 					update_option( 'woocommerce_' . $payment_integrations_type . '_settings', $default_settings );
 				}
 			}
 
-			$existing_paymob_gateway = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}paymob_gateways WHERE gateway_id = %s", 'paymob' ), OBJECT );
-			$integration_ids         = implode( ', ', array_unique( $ids ) ); // Combine unique IDs.
-
-			if ( empty( $existing_paymob_gateway ) ) {
-				// Insert Paymob gateway only if it does not exist.
-				$wpdb->insert(
-					$wpdb->prefix . 'paymob_gateways',
-					array(
-						'gateway_id'           => 'paymob',
-						'file_name'            => 'class-gateway-paymob.php',
-						'class_name'           => 'Paymob',
-						'checkout_title'       => 'Pay with Paymob',
-						'checkout_description' => 'Pay with Paymob',
-						'integration_id'       => $integration_ids,
-						'is_manual'            => '0',
-						'ordering'             => 30,
-					)
-				);
-			} elseif ( $existing_paymob_gateway[0]->integration_id !== $integration_ids ) {
-					$wpdb->update(
-						$wpdb->prefix . 'paymob_gateways',
-						array(
-							'integration_id' => $integration_ids,
-							'ordering'       => 30,
-						),
-						array( 'gateway_id' => 'paymob' )
-					);
-			}
+			// $existing_paymob_gateway = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}paymob_gateways WHERE gateway_id = %s", 'paymob' ), OBJECT );
+			// // $integration_ids         = implode( ', ', array_unique( $ids ) ); // Combine unique IDs.
+			// $integration_ids         = implode( ', ', array_unique($paymob_ids ) ); // Combine unique IDs.
+			
+			// if ( empty( $existing_paymob_gateway ) ) {
+			// 	// Insert Paymob gateway only if it does not exist.
+			// 	$wpdb->insert(
+			// 		$wpdb->prefix . 'paymob_gateways',
+			// 		array(
+			// 			'gateway_id'           => 'paymob',
+			// 			'file_name'            => 'class-gateway-paymob.php',
+			// 			'class_name'           => 'Paymob',
+			// 			'checkout_title'       => 'Pay with Paymob',
+			// 			'checkout_description' => 'Pay with Paymob',
+			// 			'integration_id'       => $integration_ids,
+			// 			'is_manual'            => '0',
+			// 			'ordering'             => 30,
+			// 			'mode'                 =>$paymob_mode
+			// 		)
+			// 	);
+			// } elseif ( $existing_paymob_gateway[0]->integration_id !== $integration_ids ) {
+			// 		$wpdb->update(
+			// 			$wpdb->prefix . 'paymob_gateways',
+			// 			array(
+			// 				'integration_id' => $integration_ids,
+			// 				'ordering'       => 30,
+			// 			),
+			// 			array( 'gateway_id' => 'paymob' )
+			// 		);
+			// }
 		}
 
 		// Update the paymob_gateway_order option according to the ordering.
@@ -272,22 +286,28 @@ class PaymobAutoGenerate {
 			);
 		}
 		$paymob_options = get_option( 'woocommerce_paymob_settings' );
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$paymobReq = new Paymob( '1', WC_LOG_DIR . 'paymob-auth.log' );
+		$mode = $paymobReq->getMode( $paymob_options['sec_key'] );
+
 		if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
 			$integration_id_hidden = explode( ',', $paymob_options['integration_id_hidden'] );
 			foreach ( $integration_id_hidden as $entry ) {
-				$parts = explode( ':', $entry );
-				// Check if parts are set correctly.
-				if ( count( $parts ) < 3 ) {
-					continue; // Skip this entry if it doesn't have enough parts.
-				}
-				$id = trim( $parts[0] );
-				if ( ( Paymob::filterVar( 'section' ) ) && 'paymob' === Paymob::filterVar( 'section' ) ) {
-					if ( ! empty( trim( $entry ) ) ) {
-						list($id, $label)               = explode( ' : ', trim( $entry ), 2 );
-						$integration_ids[ trim( $id ) ] = trim( $id . ' : ' . $label );
+				if (stripos($entry, $mode) !== false) {
+					$parts = explode( ':', $entry );
+					// Check if parts are set correctly.
+					if ( count( $parts ) < 3 ) {
+						continue; // Skip this entry if it doesn't have enough parts.
 					}
-				} else {
-					$integration_ids[ $id ] = $id;
+					$id = trim( $parts[0] );
+					if ( ( Paymob::filterVar( 'section' ) ) && 'paymob' === Paymob::filterVar( 'section' ) ) {
+						if ( ! empty( trim( $entry ) ) ) {
+							list($id, $label)               = explode( ' : ', trim( $entry ), 2 );
+							$integration_ids[ trim( $id ) ] = trim( $id . ' : ' . $label );
+						}
+					} else {
+						$integration_ids[ $id ] = $id;
+					}
 				}
 			}
 		}
@@ -304,9 +324,13 @@ class PaymobAutoGenerate {
 		$title = null;
 		foreach ( $gateways as $gateway ) {
 			$options = get_option( 'woocommerce_' . $gateway->gateway_id . '_settings', array() );
-			if ( 'yes' === $options['enabled'] && isset( $options['title'] ) ) {
-				$title .= ucwords( $options['title'] ) . ', ';
+			if($options)
+			{
+				if ( 'yes' === $options['enabled'] && isset( $options['title'] ) ) {
+					$title .= ucwords( $options['title'] ) . ', ';
+				}
 			}
+			
 		}
 
 		if ( empty( $title ) ) {
@@ -374,10 +398,10 @@ class PaymobAutoGenerate {
 
 				$debug   = 'yes' === $debug ? '1' : '0';
 				$sec_key = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
-				$add_log = WC_LOG_DIR . 'paymob.log';
+				$add_log = WC_LOG_DIR . 'paymob-auth.log';
 				// Make sure all IDs are unique.
 				$unique_ids = array_unique( $ids );
-				$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob.log' );
+				$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
 				$data       = array(
 					'url'                   => get_site_url(),
 					'is_ssl'                => is_ssl(),
@@ -408,4 +432,97 @@ class PaymobAutoGenerate {
 		$setting->generate_settings_html();
 		echo '</table>';
 	}
+	/**
+	 * Pixel Gateway Integration IDs.
+	 */
+	public static function get_pixel_integration_ids($name) {
+		$integration_ids = array();
+		if (isset($name) &&(strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay' )) {
+			$integration_ids = array(
+				'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
+			);
+			
+		}
+		$paymob_options = get_option('woocommerce_paymob_settings');
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$mode       = !empty($mainOptions['mode'])?$mainOptions['mode'] : 'test';
+
+		if (isset($paymob_options['integration_id_hidden']) && !empty($paymob_options['integration_id_hidden'])) {
+			$integration_id_hidden = explode(',', $paymob_options['integration_id_hidden']);
+
+			foreach ($integration_id_hidden as $entry) {
+				if ((stripos($entry, $mode) !== false) ) {
+					$parts = explode(':', $entry);
+					// Check if parts are set correctly.
+					if (count($parts) < 3) {
+						continue; // Skip this entry if it doesn't have enough parts.
+					}
+						$id = trim($parts[0]);
+						$label = trim($parts[1]);
+						$currency = trim($parts[2]);
+						$mode = !empty($parts[3])?trim($parts[3]):$mode;
+						if (strpos(strtolower($label), strtolower($name)) !== false && strpos(strtolower($label), 'bank-installments') === false &&  strpos(strtolower($label), 'apple_pay') === false &&  strpos(strtolower($label), 'google-pay') === false) {
+							$integration_ids[strtolower($id)] = strtolower($id) . ' : ' . strtolower($label).' : '. $currency.' : '.$mode;
+						}
+
+						if (isset($name) &&(strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay' )  && strpos($label, $name) !== false) {
+							$integration_ids = array(
+								'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
+							);
+							$integration_ids[ $id ] = $id;
+						}
+				}
+			}
+		}
+		return $integration_ids;
+	}
+
+	public static function get_pixel_integration_ids_all($name) {
+		$integration_ids = array();
+	
+		// Default option for Apple Pay and Google Pay
+		if (isset($name) && (strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay')) {
+			$integration_ids = array(
+				'' => __('Select an Integration ID', 'paymob-woocommerce'),
+			);
+		}
+	
+		$paymob_options = get_option('woocommerce_paymob-main_settings');
+	
+		if (isset($paymob_options['integration_id_hidden']) && !empty($paymob_options['integration_id_hidden'])) {
+			$integration_id_hidden = explode(',', $paymob_options['integration_id_hidden']);
+	
+			foreach ($integration_id_hidden as $entry) {
+				$parts = explode(':', $entry);
+	
+				// Ensure the entry has enough parts
+				if (count($parts) < 3) {
+					continue;
+				}
+	
+				$id = trim($parts[0]);
+				$label = trim($parts[1]);
+				$currency = trim($parts[2]);
+	
+				// Match the name and exclude specific cases
+				if (strpos(strtolower($label), strtolower($name)) !== false && 
+					strpos(strtolower($label), 'bank-installments') === false && 
+					strpos(strtolower($label), 'apple_pay') === false && 
+					strpos(strtolower($label), 'google-pay') === false) {
+					$integration_ids[strtolower($id)] = strtolower($id) . ' : ' . strtolower($label) . ' : ' . $currency;
+				}
+	
+				// Special case for Apple Pay and Google Pay
+				if (isset($name) && (strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay') && strpos($label, $name) !== false) {
+					$integration_ids = array(
+						'' => __('Select an Integration ID', 'paymob-woocommerce'),
+					);
+					$integration_ids[$id] = $id;
+				}
+			}
+		}
+	
+		return $integration_ids;
+	}
+	
 }

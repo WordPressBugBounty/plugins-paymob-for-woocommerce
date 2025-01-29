@@ -8,12 +8,13 @@
             <th><?php esc_html_e('Description', 'paymob-woocommerce'); ?></th>
             <th class="column-integration-id"><?php esc_html_e('Integration ID', 'paymob-woocommerce'); ?></th>
             <th class="column-logo"><?php esc_html_e('Logo', 'paymob-woocommerce'); ?></th>
+            <th><?php esc_html_e('Webhook URL', 'paymob-woocommerce'); ?></th>
             <th><?php esc_html_e('Action', 'paymob-woocommerce'); ?></th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td colspan="8"><?php esc_html_e('Loading...', 'paymob-woocommerce'); ?></td>
+            <td colspan="8"><?php esc_html_e('Please wait while loading Payment methods ...', 'paymob-woocommerce'); ?></td>
         </tr>
     </tbody>
 </table>

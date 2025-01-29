@@ -17,7 +17,7 @@ class WC_Paymob_GatewayData
 				$debug = isset($mainOptions['debug']) ? $mainOptions['debug'] : '';
 				$debug = 'yes' === $debug ? '1' : '0';
 				try {
-					$paymobReq = new Paymob($debug, WC_LOG_DIR . 'paymob.log');
+					$paymobReq = new Paymob($debug, WC_LOG_DIR . 'paymob-auth.log');
 					$conf['secKey'] = isset($mainOptions['sec_key']) ? $mainOptions['sec_key'] : '';
 					$gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/');
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);

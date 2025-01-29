@@ -166,7 +166,20 @@ function delete_gateway() {
 function remove_gateway_from_paymob_order( $gateway_id_to_remove ) {
 	return Paymob_Remove_Gateway_From_Order::remove_gateway_from_paymob_order( $gateway_id_to_remove );
 }
+// AJAX to handle gateway enabling/disabling.
+add_action( 'wp_ajax_webhook_url', 'webhook_url' );
+/**
+ * Toggles the status of a payment gateway.
+ *
+ * This function handles the AJAX request to enable or disable a payment gateway.
+ * It checks the current status, validates required API keys, and updates the gateway's status accordingly.
+ *
+ * @return void
+ */
+function webhook_url() {
 
+	return Paymob_Webhook_Url::webhook_url();
+}
 // AJAX to handle gateway enabling/disabling.
 add_action( 'wp_ajax_toggle_gateway', 'toggle_gateway' );
 /**

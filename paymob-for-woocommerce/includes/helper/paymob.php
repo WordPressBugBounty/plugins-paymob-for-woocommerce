@@ -15,20 +15,24 @@ class Paymob {
 		if ( ! in_array( 'curl', get_loaded_extensions() ) ) {
 			throw new Exception( 'Curl extension is not loaded on your server, please check with server admin. Then try again!' );
 		}
-
+		$agent=self::filterVar('HTTP_USER_AGENT','SERVER');
 		ini_set( 'precision', 14 );
 		ini_set( 'serialize_precision', -1 );
 		$curl = curl_init();
-
 		curl_setopt( $curl, CURLOPT_URL, $apiPath );
 		if ( 'GET' == $method ) {
 			curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'GET' );
+		}elseif('PUT' == $method)
+		{
+			curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PUT');  // Correctly set PUT method
+			curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));  // Set data as JSON
 		} else {
 			curl_setopt( $curl, CURLOPT_POST, true );
 			curl_setopt( $curl, CURLOPT_POSTFIELDS, json_encode( $data ) );
 		}
 		curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
 		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+		curl_setopt($curl, CURLOPT_USERAGENT, $agent);
 
 		$response = curl_exec( $curl );
 
@@ -44,8 +48,8 @@ class Paymob {
 		$this->matchCountries( $conf );
 		$this->addLogs( $this->debug_order, $this->file, ' Authenticate Paymob configuration' );
 		$apiUrl = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
-
 		$tokenRes = $this->HttpRequest( $apiUrl . 'api/auth/tokens', 'POST', array( 'Content-Type: application/json' ), array( 'api_key' => $conf['apiKey'] ) );
+		
 		$this->addLogs( $this->debug_order, $this->file, ' In api/auth/tokens Response: ' . json_encode( $tokenRes ) );
 
 		if ( isset( $tokenRes->token ) ) {
@@ -55,6 +59,7 @@ class Paymob {
 				'hmac'           => $hmacRes,
 				'integrationIDs' => $integIDsRes,
 			);
+			// var_dump($data);die;
 			return $data;
 		} else {
 			throw new Exception( 'Cannot get Token from PayMob account' );
@@ -86,7 +91,14 @@ class Paymob {
 				} elseif ( 'UIG' == $type ) {
 					$type = 'Wallet';
 				}
-				if ( false == $integration->is_standalone && $integration->is_live == $isTest ) {
+				if ( false == $integration->is_standalone ) {
+					if($integration->is_live==false){
+						$mode='test';
+					}
+					else
+					{
+						$mode='live';
+					}
 
 					$IntegrationIDs[ $integration->id ] = array(
 						'id'           => $integration->id,
@@ -94,23 +106,23 @@ class Paymob {
 						'gateway_type' => $integration->gateway_type,
 						'name'         => empty( $integration->installments ) ? $integration->integration_name : 'bank-installments',
 						'currency'     => $integration->currency,
+						'mode'         => $mode
 					);
 				}
 			}
-
 			return $IntegrationIDs;
 		} else {
 			throw new Exception( 'Cannot get available integration IDs from PayMob account' );
 		}
 	}
 
-
-	public function createIntention( $secKey, $data, $orderId ) {
+	public function createIntention( $secKey, $data, $orderId ,$cs,$method) {
 		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
 		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
 		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
-		$intention = $this->HttpRequest( $flash . 'v1/intention/', 'POST', $header, $data );
-		$note_i    = 'Intention response for order # ' . $orderId;
+		$intention = $this->HttpRequest( $flash . 'v1/intention/'.$cs, $method, $header, $data );
+		$text= (!empty($cs)) ? 'Update ' : '';
+		$note_i    = $text.'Intention response for order # ' . $orderId;
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $intention, 1 ) );
 		if ( empty( $intention->payment_keys ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $intention );
@@ -120,11 +132,14 @@ class Paymob {
 			'success' => false,
 		);
 
+		if ( isset( $intention->amount_cents ) ) {
+			$status['message'] = $intention->amount_cents;
+			return $status;
+		}
 		if ( isset( $intention->detail ) ) {
 			$status['message'] = $intention->detail;
 			return $status;
 		}
-
 		if ( isset( $intention->amount ) ) {
 			$status['message'] = $intention->amount[0];
 			return $status;
@@ -144,6 +159,9 @@ class Paymob {
 			$status['cs']          = $intention->client_secret;
 			$status['intentionId'] = $intention->id;
 			$status['centsAmount'] = $intention->intention_detail->amount;
+			if(empty($cs)){
+				$status['intention_order_id'] = $intention->intention_order_id;
+			}
 		} else {
 			$status['message'] = ( isset( $intention->code ) ) ? $intention->code : 'Something went wrong';
 		}
@@ -238,6 +256,23 @@ class Paymob {
 			$status['message'] = 'Something went wrong';
 		}
 		return $status;
+	}
+	public function getOnboardingUrl( $code, $data ) {
+		$flash       = $this->getApiUrl($code);
+		$header = array( 'Content-Type: application/json');
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$onboardingRes = $this->HttpRequest( $flash . 'api/onboarding/partners-utils/country_url', 'POST', $header, $data );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/country_url: ' . json_encode( $onboardingRes ) );
+		return $onboardingRes;
+	}
+	public function getPartnerInfo( $woo_code, $data ) {
+		// return $this->getCountryCode( $woo_code );
+		$flash       = $this->getApiUrl( strtolower($this->getCountryCode( $woo_code )) );
+		$header      = array( 'Content-Type: application/json', 'Authorization:' . $woo_code );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$partnerInfoRes = $this->HttpRequest( $flash . 'api/onboarding/partners-utils/merchant_info', 'POST', $header, $data );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/merchant_info: ' . json_encode( $partnerInfoRes ) );
+		return $partnerInfoRes;
 	}
 	public function matchMode( $conf ) {
 		$pubKeyMode = $this->getMode( $conf['pubKey'] );
@@ -429,4 +464,57 @@ class Paymob {
 			( '1' === $debug ) ? error_log( PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note . ' -- ' . json_encode( $data ), 3, $file ) : false;
 		}
 	}
+
+	public function getIntegrationID( $conf,$IntegrationID ) {
+		$this->matchCountries( $conf );
+		$this->addLogs( $this->debug_order, $this->file, ' Authenticate Paymob configuration' );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
+
+		$tokenRes = $this->HttpRequest( $apiUrl . 'api/auth/tokens', 'POST', array( 'Content-Type: application/json' ), array( 'api_key' => $conf['apiKey'] ) );
+		if ( isset( $tokenRes->token ) )
+		{
+			$IntegrationID = $this->HttpRequest( $apiUrl . 'api/ecommerce/integrations/'.$IntegrationID, 'GET', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $tokenRes->token ) );
+			$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/integrations Response: ' . json_encode( $IntegrationID ) );
+			if ( ! empty( $IntegrationID ) ) 
+			{
+				return $IntegrationID;
+			}else
+			{
+				throw new Exception( 'Cannot get this integration ID from PayMob account' );
+			}
+
+		}
+		else 
+		{
+			throw new Exception( 'Cannot get Token from PayMob account' );
+		}
+		
+	}
+
+	public function updateWebHookUrl( $conf,$IntegrationID,$data ) {
+		$this->matchCountries( $conf );
+		$this->addLogs( $this->debug_order, $this->file, ' Authenticate Paymob configuration' );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
+		$tokenRes = $this->HttpRequest( $apiUrl . 'api/auth/tokens', 'POST', array( 'Content-Type: application/json' ), array( 'api_key' => $conf['apiKey'] ) );
+		if ( isset( $tokenRes->token ) )
+		{ 
+			$result = $this->HttpRequest( $apiUrl . 'api/ecommerce/integrations/'.$IntegrationID, 'PUT', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $tokenRes->token ),$data);
+			$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/integrations Response: ' . json_encode( $result ) );
+			if ( ! empty( $result ) ) 
+			{
+				return $result;
+			}else
+			{
+				throw new Exception( 'Cannot update webhook url' );
+			}
+
+		}
+		else 
+		{
+			throw new Exception( 'Cannot get Token from PayMob account' );
+		}
+		
+	}
 }
+
+

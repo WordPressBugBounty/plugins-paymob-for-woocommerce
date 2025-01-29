@@ -24,6 +24,7 @@ class Paymob_WooCommerce {
 		$paymob_u_Options  = get_option( 'woocommerce_paymob_settings' );
 		$this->hmac_hidden = isset( $paymob_u_Options['hmac_hidden'] ) ? sanitize_text_field( $paymob_u_Options['hmac_hidden'] ) : '';
 	}
+
 	/**
 	 * Register the gateway to WooCommerce
 	 */
@@ -68,6 +69,8 @@ class Paymob_WooCommerce {
 		if ( isset( $json_data['type'] ) && Paymob::filterVar( 'hmac', 'REQUEST' ) && 'TRANSACTION' === $json_data['type'] ) {
 			$this->acceptWebhook( $json_data, $url );
 		} elseif ( isset( $json_data['type'] ) && 'TOKEN' === $json_data['type'] ) {
+			$addlog          = WC_LOG_DIR  . 'paymob-token.log';
+			Paymob::addLogs( $this->gateway->debug, $addlog, ' In TOKEN REQUEST >>>> ', wp_json_encode( $json_data ) );
 			$this->saveCardToken( $json_data );
 		} else {
 			$this->flashWebhook( $json_data, $url, $country );
@@ -79,6 +82,15 @@ class Paymob_WooCommerce {
 		$obj     = $json_data['obj'];
 		$type    = $json_data['type'];
 		$orderId = substr( $obj['order']['merchant_order_id'], 0, -11 );
+		$merchant_order_id= $obj['order']['merchant_order_id'];
+		if(strpos($orderId,'pixel') !== false){
+			global $wpdb;
+			$orderId = $wpdb->get_var(
+				
+				"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
+		    );
+
+		}
 		if ( Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, Paymob::filterVar( 'hmac', 'REQUEST' ) ) ) {
 
 			$order           = wc_get_order( $orderId );
@@ -113,6 +125,8 @@ class Paymob_WooCommerce {
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$order->add_order_note( $note2);
 				$order->payment_complete( $orderId );
 				$paymentMethod      = $order->get_payment_method();
 				$paymentMethodTitle = 'Paymob - ' . ucwords( $type );
@@ -124,8 +138,11 @@ class Paymob_WooCommerce {
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$order->add_order_note( $note2);
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
+			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
 			$order->save();
 			die( esc_html( "Order updated: $orderId" ) );
 		} else {
@@ -135,6 +152,15 @@ class Paymob_WooCommerce {
 
 	public function flashWebhook( $json_data, $url, $country ) {
 		$orderId          = Paymob::getIntentionId( $json_data['intention']['extras']['creation_extras']['merchant_intention_id'] );
+		$merchant_order_id=$json_data['intention']['extras']['creation_extras']['merchant_intention_id'];
+		if(strpos($orderId,'pixel') !== false){
+			global $wpdb;
+			$orderId = $wpdb->get_var(
+				
+				"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
+		 );
+
+		}
 		$order            = wc_get_order( $orderId );
 		$OrderIntensionId = $order->get_meta( 'PaymobIntentionId', true );
 		$OrderAmount      = $order->get_meta( 'PaymobCentsAmount', true );
@@ -194,6 +220,8 @@ class Paymob_WooCommerce {
 				$paymobId    = $json_data['transaction']['order']['id'];
 				$note       .= "<br/>Payment Method IDs: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$order->add_order_note( $note2);
 				$order->payment_complete( $orderId );
 				$paymentMethod = $order->get_payment_method();
 
@@ -225,8 +253,11 @@ class Paymob_WooCommerce {
 				$paymobId    = $json_data['transaction']['order']['id'];
 				$note       .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$order->add_order_note( $note2);
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
+			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
 			$order->save();
 			die( esc_html( "Order updated: $orderId" ) );
 		}
@@ -236,7 +267,7 @@ class Paymob_WooCommerce {
 
 		$table_name = $wpdb->prefix . 'paymob_cards_token';
 		$obj        = $json_data['obj'];
-		$addlog     = WC_LOG_DIR . 'paymob.log';
+		$addlog     = WC_LOG_DIR . 'paymob-auth.log';
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In save Card Token Webhook , for User -- ' . $obj['email'], wp_json_encode( $json_data ) );
 		$user = get_user_by( 'email', $obj['email'] );
 		if ( $user ) {
@@ -277,19 +308,62 @@ class Paymob_WooCommerce {
 			die( esc_html( 'No User Found with this email: ' . $obj['email'] ) );
 		}
 	}
-
 	public function callReturnAction() {
+		
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
+		
+		$merchant_order_id=Paymob::filterVar( 'merchant_order_id' );
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant order id'. $merchant_order_id );
+		if(strpos($orderId,'pixel') !== false){
+			global $wpdb;
+			$orderId = $wpdb->get_var(
+				
+					"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
+		     );
+
+			// Paymob::addLogs( 1, WC_LOG_DIR . "SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'");
+		}
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- order id'.$orderId );
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- GET'.print_r($_GET,1));
+			Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
+		
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- errorrrrr'.Paymob::filterVar( 'errmsg' ) );
 		$order           = wc_get_order( $orderId );
+		
+		if(!$order ){
+			// wc_add_notice( __( 'Sorry, you are accessing wrong data', 'paymob-woocommerce' ), 'error' );
+			wp_safe_redirect(wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, no order found. Please try again.', 'paymob-woocommerce' ));
+			exit();
+		}
+		
+		
+		if(Paymob::filterVar( 'errmsg' ) && Paymob::filterVar( 'errmsg' ) !=='undefined'){
+			$error = Paymob::filterVar( 'errmsg' );
+			$order->update_status( 'failed' );
+			$order->add_order_note( 'Paymob :' . $error );
+			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+			$err = '?gatewayerror='.$error ;
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$order->add_order_note( $note2);
+			$order->save();
+			wp_safe_redirect(wc_get_checkout_url().$err);
+			exit();
+		}
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
 		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
 
+		//echo "<pre>";print_r($PaymobPaymentId);exit;
 		if ( ! Paymob::verifyHmac( $this->hmac_hidden, Paymob::sanitizeVar() ) ) {
-			wc_add_notice( __( 'Sorry, you are accessing wrong data', 'paymob-woocommerce' ), 'error' );
-			wp_safe_redirect( wc_get_checkout_url() );
+			$checkout_url = wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, you are accessing wrong data due to mismatch verification.', 'paymob-woocommerce' );
+			if(Paymob::filterVar( 'afterpayment' )){
+				wp_send_json_success(array('url' => $checkout_url));
+			}
+			else{
+				wp_safe_redirect( $checkout_url );
+			}
 			exit();
 		}
-
+		$err = null;
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Callback action, for order# ' . $orderId, wp_json_encode( Paymob::sanitizeVar() ) );
 
 		$order         = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
@@ -308,13 +382,20 @@ class Paymob_WooCommerce {
 		) {
 			$status = $order->get_status();
 			if ( 'pending' !== $status && 'failed' !== $status && 'on-hold' !== $status ) {
-				wp_safe_redirect( $order->get_checkout_order_received_url() );
+				$received_url=$order->get_checkout_order_received_url();
+				if(Paymob::filterVar( 'afterpayment' )){
+					wp_send_json_success(array('url' => $received_url));
+				}else{
+					wp_safe_redirect( $order->get_checkout_order_received_url() );
+				}
 				exit();
 			}
 			$note = __( 'Paymob : Transaction ', 'paymob-woocommerce' ) . Paymob::filterVar( 'data_message' );
 			$msg  = __( 'In callback action, for order #', 'paymob-woocommerce' ) . ' ' . $orderId . ' ' . $note;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$order->add_order_note( $note . $info );
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$order->add_order_note( $note2);
 			$order->payment_complete( $orderId );
 			$paymentMethod      = $order->get_payment_method();
 			$paymentMethodTitle = 'Paymob - ' . ucwords( $type );
@@ -322,20 +403,38 @@ class Paymob_WooCommerce {
 			$redirect_url = $order->get_checkout_order_received_url();
 		} else {
 			$redirect_url = wc_get_checkout_url();
-			if ( 'yes' == $this->gateway->empty_cart ) {
-				$redirect_url = $order->get_checkout_payment_url();
-			}
+			// if ( 'yes' == $this->gateway->empty_cart ) {
+			// 	$redirect_url = $order->get_checkout_payment_url();
+			// }
 			$gatewayError = Paymob::filterVar( 'data_message' );
 			$error        = __( 'Payment is not completed due to ', 'paymob-woocommerce' ) . $gatewayError;
 			$msg          = __( 'In callback action, for order #', 'paymob-woocommerce' ) . ' ' . $orderId . ' ' . $error;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$order->update_status( 'failed' );
 			$order->add_order_note( 'Paymob :' . $error . $info );
-			wc_add_notice( $error, 'error' );
+			$err = '?gatewayerror='.$error ;
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$order->add_order_note( $note2);
+			$order->save();
+
+			// wc_add_notice( $error, 'error' );
 		}
-		$order->update_meta_data( 'PaymobTransactionId', $id );
+		$order->update_meta_data( 'PaymobTransactionId', $id ); 
+		$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
 		$order->save();
-		wp_safe_redirect( $redirect_url );
+	    WC()->session->set( 'cart', WC()->cart->get_cart() );
+		WC()->session->set( 'chosen_shipping_methods', array() );
+        WC()->session->set( 'chosen_payment_method', '' );
+	    WC()->session->set( 'order_awaiting_payment', null );
+
+		if(Paymob::filterVar( 'afterpayment' )){
+			$session = WC()->session;     // Unset the order 
+			$session->__unset('order_id');
+   			wp_send_json_success(array('url' => $redirect_url.$err));
+		}else{
+			wp_safe_redirect( $redirect_url.$err );
+		}
+		
 		exit();
 	}
 	public function add_enqueue_scripts() {

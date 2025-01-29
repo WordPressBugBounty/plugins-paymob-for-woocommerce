@@ -8,7 +8,10 @@ return array(
 		'title'             => __( 'Paymob Integration ID(s)', 'paymob-woocommerce' ),
 		'type'              => 'multiselect',
 		'options'           => PaymobAutoGenerate::get_integration_ids(),
-		'custom_attributes' => array( 'required' => 'required' ),
+		'custom_attributes' => array(
+			'required' => 'required',
+			'multiple' => 'multiple',
+        ),
 	),
 	'title'          => array(
 		'title'             => __( 'Payment Method - Title', 'paymob-woocommerce' ),

@@ -7,6 +7,7 @@ class WC_Paymob_UnInstall {
 	public static function uninstall() {
 		global $wpdb;
 		delete_option( 'woocommerce_paymob-main_settings' );
+		// delete_option( 'woocommerce_paymob-pixel_settings' );
 		delete_option( 'woocommerce_paymob_settings' );
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
 		foreach ( $gateways as $gateway ) {

@@ -13,7 +13,9 @@ class Paymob_Apply_Gateway_Order {
 			if ( ! empty( $order ) ) {
 				$sorted_gateways   = array();
 				$paymob_main_index = array_search( 'paymob-main', array_keys( $available_gateways ), true );
-
+				$paymob_pixel_index = array_search( 'paymob-pixel', array_keys( $available_gateways ), true );
+				
+				
 				// Sort gateways according to the saved order.
 				foreach ( $order as $gateway_id ) {
 					if ( isset( $available_gateways[ $gateway_id ] ) ) {
@@ -30,6 +32,11 @@ class Paymob_Apply_Gateway_Order {
 						array_slice( $available_gateways, $paymob_main_index + 1, null, true );
 				} else {
 					$available_gateways = array( 'paymob-main' => $available_gateways['paymob-main'] ) + $sorted_gateways + $available_gateways;
+				}
+			      // set pixel to be first in check out
+				if ( $paymob_pixel_index !== false ) {
+					// Remove the 'paymob-pixel' element from the original position
+					$available_gateways = array( 'paymob-pixel' => $available_gateways['paymob-pixel'] ) + $sorted_gateways + $available_gateways;
 				}
 			}
 
@@ -52,3 +59,5 @@ class Paymob_Apply_Gateway_Order {
 		return $available_gateways;
 	}
 }
+
+

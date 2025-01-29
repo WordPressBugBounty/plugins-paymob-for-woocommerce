@@ -19,24 +19,24 @@ jQuery( document ).ready(
 
 		$( "#has-items-accordion" ).accordion(
 			{
-				icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-				collapsible: true,
+				icons: {   "header": "ui-icon-triangle-1-e", "activeHeader": "ui-icon-triangle-1-s" },
+				collapsible: false,
 				active: false,
 				heightStyle: "content"
 			}
 		);
 		$( "#extra-accordion" ).accordion(
 			{
-				icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-				collapsible: true,
+				icons: { "header": "ui-icon-triangle-1-e", "activeHeader": "ui-icon-triangle-1-s" },
+				collapsible: false,
 				active: false,
 				heightStyle: "content"
 			}
 		);
 		$( "#save-changes-accordion" ).accordion(
 			{
-				icons: { "header": "ui-icon-plus", "activeHeader": "ui-icon-minus" },
-				collapsible: true,
+				icons: {  "header": "ui-icon-triangle-1-e", "activeHeader": "ui-icon-triangle-1-s" },
+				collapsible: false,
 				active: false,
 				heightStyle: "content"
 			}

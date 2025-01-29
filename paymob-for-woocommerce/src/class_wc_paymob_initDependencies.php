@@ -7,6 +7,8 @@ if ( ! class_exists( 'PaymobAutoGenerate' ) ) {
 require_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle-paymob-gateways.php';
 require_once PAYMOB_PLUGIN_PATH . '/includes/helper/save-cards.php';
 require_once PAYMOB_PLUGIN_PATH . '/includes/gateways/add-paymob-gateway.php';
+require_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob-pixel.php';
+require_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob-main.php';
 
 if ( ! class_exists( 'Checkout_Blocks' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/blocks/checkout-blocks.php';
@@ -150,6 +152,9 @@ if ( ! class_exists( 'Paymob_Admin_Scripts' ) ) {
 if ( ! class_exists( 'Paymob_Hide_Save_Button' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/add_gateway/class-paymob-hide-save-changes-button.php';
 }
+if ( ! class_exists( 'Paymob_Webhook_Url' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/add_gateway/class-paymob-webhook-url.php';
+}
 // add Save Cards init Dependencies
 
 if ( ! class_exists( 'Paymob_Delete_Confirmation_Model' ) ) {
@@ -176,6 +181,9 @@ if ( ! class_exists( 'Paymob_Handle_Card_Deletion' ) ) {
 if ( ! class_exists( 'Paymob_Save_Cards_Title' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/save_cards/class-paymob-saved-cards-title.php';
 }
+if ( ! class_exists( 'Paymob_Saved_Cards_Tokens' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/save_cards/class-paymob-saved-cards-tokens.php';
+}
 
 // add Toggle Gateway init Dependencies
 if ( ! class_exists( 'Paymob_Custom_Model' ) ) {
@@ -197,5 +205,68 @@ if ( ! class_exists( 'Paymob_Handel_Toggle' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle_gateways/class-paymob-handle-toggle-gateway.php';
 }
 
+// add Paymob Pixel init Dependencies
+if ( ! class_exists( 'Paymob_Pixel_Settings' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-pixel-settings.php';
+}
+if ( ! class_exists( 'Paymob_Pixel_Style' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-pixel-styles.php';
+}
+if ( ! class_exists( 'Paymob_Pixel_Customization_Html' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-pixel-customization-html.php';
+}
+if ( ! class_exists( 'Paymob_Save_Pixel_Settings' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-save-pixel-settings.php';
+}
+if ( ! class_exists( 'Paymob_Update_Pixel_Data' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-update-pixel-data.php';
+}
+if ( ! class_exists( 'Paymob_Pixel_Checkout' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-pixel-checkout.php';
+}
+if ( ! class_exists( 'Paymob_Pixel_Update_Intention' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_pixel/class-paymob-pixel-update-Intention.php';
+}
+if ( ! class_exists( 'Paymob_Webhook_Model' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle_gateways/class-paymob-webhook_modal.php';
+}
+
+if ( ! class_exists( 'Paymob_Webhook_Update' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle_gateways/class-paymob-webhook_update.php';
+}
+// add Paymob Pixel init Dependencies
+if ( ! class_exists( 'Paymob_Main_Scripts' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-scripts.php';
+}
+if ( ! class_exists( 'Paymob_Main_Partner_Info' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-partner-info.php';
+}
+if ( ! class_exists( 'Paymob_Main_Connect_Account' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-connect-account.php';
+}
+if ( ! class_exists( 'Paymob_Manual_Setup_Model' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-manual-setup-model.php';
+}
+if ( ! class_exists( 'Paymob_Manual_Setup_Save' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-manual-setup.php';
+}
+
+if ( ! class_exists( 'Paymob_Disconnect_Model' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-disconnect-model.php';
+}
+
+if ( ! class_exists( 'Paymob_Disconnect_Save' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-disconnect-save.php';
+}
+
+if ( ! class_exists( 'Paymob_Change_Mode_Model' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-change-mode-model.php';
+}
+if ( ! class_exists( 'Paymob_Change_Mode_Save' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-change-mode-save.php';
+}
+if ( ! class_exists( 'Paymob_Unset_Old_Setting' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-unset-old-setting.php';
+}
 
 require_once ABSPATH . 'wp-admin/includes/upgrade.php';

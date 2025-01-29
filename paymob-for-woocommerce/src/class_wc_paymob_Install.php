@@ -18,5 +18,6 @@ class WC_Paymob_Install {
 			wp_die( esc_html__( 'Sorry, PayMob plugin requires WooCommerce to be installed and active.', 'paymob-woocommerce' ) );
 		}
 		WC_Paymob_Tables::create_paymob_gateways_table();
+		WC_Paymob_Tables::create_paymob_pixel_table();
 	}
 }

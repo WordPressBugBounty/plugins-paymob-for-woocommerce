@@ -1,4 +1,5 @@
 <?php
+// var_dump($this->settings);die;
 return array(
 	'title'       => isset( $this->settings['title'] ) ? ucwords( $this->settings['title'] ) : '',
 	'description' => isset( $this->settings['description'] ) ? $this->settings['description'] : '',

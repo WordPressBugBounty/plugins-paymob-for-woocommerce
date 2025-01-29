@@ -17,8 +17,9 @@ class Paymob_Check_IntergrationID {
 				}
 
 				$id       = trim( $parts[0] );
-				$currency = isset( $parts[2] ) ? trim( substr( $parts[2], strpos( $parts[2], '(' ) + 1, -2 ) ) : '';
-
+				$currency = isset( $parts[2] ) ? trim( substr( $parts[2], strpos( $parts[2], '(' ) + 1 ) ) : '';
+				$currency = str_replace([')', ' '], '', $currency);
+				
 				if ( $id === $integration_id ) {
 					if ( get_woocommerce_currency() === $currency ) {
 						$currency_matched = true;

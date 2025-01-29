@@ -24,24 +24,7 @@ class Paymob_Toggle_Gateway {
 				);
 			}
 
-			// $integration_id = sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) );
-			// $ids            = array();
-			// if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
-			// 	$integration_id_hidden = explode( ',', $paymob_options['integration_id_hidden'] );
-			// 	$currency_errors       = array();
-			// 	//verify_integration_id( $integration_id_hidden, $integration_id, $currency_errors, $ids, $gateway_id );
-
-			// 	if ( ! empty( $currency_errors ) ) {
-			// 		wp_send_json_error(
-			// 			array(
-			// 				'success' => false,
-			// 				'msg'     => 'Payment Method(s) with the Integration ID(s) ' . implode( ', ', array_unique( $ids ) ) . ' require(s) the store currency to be set to: ' . implode( ', ', array_unique( $currency_errors ) ),
-			// 			)
-			// 		);
-			// 	}
-			// }
 		}
-
 		$settings = get_option( 'woocommerce_' . $gateway_id . '_settings', array() );
 		// Merge the new status with the existing settings.
 		$settings['enabled'] = $enabled;

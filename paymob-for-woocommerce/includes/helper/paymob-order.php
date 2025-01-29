@@ -65,7 +65,7 @@ class PaymobOrder {
 	}
 
 	public function createPayment() {
-		if (sizeof($this->getUserTokens()) > 3) {
+		if (sizeof(Paymob_Saved_Cards_Tokens::getUserTokens()) > 3) {
 			$url = wc_get_endpoint_url('saved-cards', '', get_permalink(wc_get_page_id('myaccount')));
 			$url = '<a href="' . $url . '">'.esc_html( __( 'Paymob Saved Cards', 'paymob-woocommerce' ) ).'</a>';
 			$url = esc_html( __( 'Please remove your cards from', 'paymob-woocommerce' ) ).' ' . $url . ' '.esc_html( __( 'to complete your purchase', 'paymob-woocommerce' ) );
@@ -93,33 +93,12 @@ class PaymobOrder {
 			if ( ! empty( $items ) ) {
 				$data['items'] = $itemsArr;
 			}
-			$data['card_tokens'] = $this->getUserTokens();
+			$data['card_tokens'] = Paymob_Saved_Cards_Tokens::getUserTokens();
 			$paymobReq = new Paymob( $this->config->debug, $this->config->addlog );
-			return $paymobReq->createIntention( $this->config->sec_key, $data, $this->order->get_id() );
+			return $paymobReq->createIntention( $this->config->sec_key, $data, $this->order->get_id() ,$cs='','POST');
 		}
 	}
-	public function getUserTokens() {
-		$tokens = array();
-		if ( is_user_logged_in() ) {
-			global $wpdb;
-			$current_user = wp_get_current_user();
-			$user_id      = $current_user->ID;
-			$results      = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM {$wpdb->prefix}paymob_cards_token WHERE user_id = %d",
-					$user_id
-				),
-				OBJECT
-			);
-			if ( $results ) {
-				foreach ( $results as $value ) {
-					$tokens[] = $value->token;
-				}
-			}
-		}
-		return $tokens;
-	}
-
+	
 	private function getIntegrationIds() {
 		$omannet = strpos( $this->config->id, 'omannet' );
 		if ( false !== $omannet ) {
@@ -129,7 +108,7 @@ class PaymobOrder {
 			foreach ( $gateways as $gateway ) {
 				if ( ( false !== strpos( $gateway->gateway_id, 'vpc' ) || false !== strpos( $gateway->gateway_id, 'migs' ) )
 				&& false === strpos( $gateway->gateway_id, 'apple-pay' )
-				&& false === strpos( $gateway->gateway_id, 'google-pay' )
+				&& false === strpos( strtolower($gateway->gateway_id), 'google-pay' )
 				&& '0' === $gateway->is_manual ) {
 					$omannetArr[] = (int) $gateway->integration_id;
 				}

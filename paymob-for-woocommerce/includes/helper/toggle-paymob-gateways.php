@@ -67,6 +67,25 @@ function add_custom_modal_html() {
 	return Paymob_Custom_Model::add_custom_modal_html();
 }
 
+add_action( 'admin_footer', 'webhook_modal_html' );
+/**
+ * Adds custom modal HTML to the admin footer for confirmation before disabling the Paymob gateway.
+ *
+ * This function hooks into the 'admin_footer' action and includes the HTML for a confirmation modal
+ * that appears on the WooCommerce settings page when the 'checkout' tab is selected.
+ */
+function webhook_modal_html() {
+
+	return Paymob_Webhook_Model::webhook_modal_html();
+}
+
+
+add_action('wp_ajax_save_webhook_callbacks', 'save_webhook_callbacks_callback');
+
+function save_webhook_callbacks_callback() {
+	return Paymob_Webhook_Update::save_webhook_callbacks_callback();
+	
+}
 // Hook into the AJAX action to handle gateway toggling.
 add_action( 'wp_ajax_paymob_toggle_gateway', 'handle_toggle_gateway' );
 /**

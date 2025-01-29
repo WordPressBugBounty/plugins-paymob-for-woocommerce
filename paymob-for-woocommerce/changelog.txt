@@ -2,6 +2,15 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2025-01-29 - version 3.0.0
+Add pixel / Embedded expereince for in-checkout payment.
+Add customization for Embedded checkout experience.
+Add new design for admin.
+Add onboarding flow for registered / non-registered merchants.
+Add Manual Set-up for registered merchant.
+Add webhook automatic update.
+Add Live/Test mode switcher.
+
 2024-11-24 - version 2.0.5
 Fix the conflict of wp stateless plugin
 Fix mobile view for admin payment list

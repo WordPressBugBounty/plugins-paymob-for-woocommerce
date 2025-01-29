@@ -1,4 +1,5 @@
 jQuery(function ($) {
+    
     if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && typeof window.wc.wcSettings !== 'undefined' && typeof window.wc.wcBlocksRegistry !== 'undefined') {
         const settings = window.wc.wcSettings.getSetting('paymob_data', {});
         const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('Pay with Paymob', 'paymob-woocommerce');

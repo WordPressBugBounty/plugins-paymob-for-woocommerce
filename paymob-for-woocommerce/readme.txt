@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 2.0.5
+Stable tag: 3.0.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -73,10 +73,10 @@ Refunds can be initiated through API or the merchant dashboard.
 Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE), Oman, Saudi Arabia (KSA), and Pakistan. Since its launch, Paymob has empowered enterprises and SMEs to accept online and in-store payments, revolutionizing payment infrastructure across the MENA-P region. 
 
 = Sign up for a Paymob account =
-1. [Click here](https://onboarding.paymob.com/?partner=woocommerce&redirect_url=wordpress) to register, upload your business documents and select the payment methods you wish to integrate with .Process has few steps, and you can always resume from where you left .
-2. After you complete all the steps , Document verification will take up to 3 days and then you can start accepting payments. If there are any issues with documentation, our sales representative will reach out to assist you.
-3. After 3 days, please [click here](https://onboarding.paymob.com/?partner=woocommerce&redirect_url=wordpress) to check if your documents have been approved. If you encounter any issues, please email us at support@paymob.com for assistance.
-5. Once verification is complete, please refer to the “Main Configuration”, starting from Step 2 to configure the plugin.
+1. [Click here](https://onboarding.paymob.com/?partner=woocommerce&redirect_url=wordpress) to register,upload your business documents, and choose the payment methods you want to integrate. The process is simple and can be resumed anytime from where you left off .
+2.  Once all steps are completed, document verification will take up to 3 days. If there are any issues with your documents, you will receive an email notification, and our sales representative will assist you in completing the remaining steps. 
+3. After your documents are verified, you will receive an email notification.
+5. Once the live payment integrations you requested are set up, you will be notified via email. 
 
 = Install the Paymob extension =
 1. In your WordPress Admin Dashboard, go to Plugins > Installed Plugins. 
@@ -91,23 +91,74 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 6. After activation, the plugin will appear as "Paymob for WooCommerce." Click on Paymob Settings. 
 
 = Main Configuration = 
-1. If you are already registered with Paymob and onboarded, skip Steps 1. 
-2. Enter your API Key, Secret Key, and Public Key (refer to instructions in Step 2). 
-3. Step 3 is mandatory (Follow the provided instructions in Step 3). 
-4. Steps 4 and 5 are optional. 
-5. Click Save Changes to be redirected to the Payment Integrations Page. 
+1. Follow either Step 1.1 OR 1.2 to configure the Plugin for use
+
+1.1 Click on “Connect your Paymob Account” to be redirected to the sign-in page. Select your country, enter your username or mobile number along with your password, and verify your account using an OTP. Once authenticated, you will be taken to the main configuration section. Your plugin is now ready to use & will be enabled by default on the Store.
+Note – If your onboarding is not yet complete, click on “Connect your Paymob Account” to proceed with the onboarding steps. 
+
+1.2 You can also click on “Manual Setup”, enter the API Key, Public Secret Key &  Client Key and click on Confirm to connect your account. Once the Keys are validated, your plugin is now ready to use & will be enabled by default on the Store. 
+
+Keys are different for Test Mode and Live Mode.
+
+= Where to find API Keys? =
+Log in to the Paymob Dashboard and navigate to Settings -> Account Info. Click on “View” to access the details. Ensure the correct mode is selected, as highlighted on the top panel: choose LIVE to access Live Keys or TEST to access Test Keys. 
+ 
+Paymob Dashboard Link : 
+Egypt - [https://accept.paymob.com/portal2/en/login](https://accept.paymob.com/portal2/en/login)
+UAE - [https://uae.paymob.com/portal2/en/login](https://uae.paymob.com/portal2/en/login)
+Oman - [https://oman.paymob.com/portal2/en/login](https://oman.paymob.com/portal2/en/login)
+KSA - [https://ksa.paymob.com/portal2/en/login](https://ksa.paymob.com/portal2/en/login)
+
+2. Once your account is authenticated through Step 1.1 or 1.2, your LIVE & TEST payment method integrations will be displayed in the Payment Integrations tab. The store mode is indicated in the Main Configuration section, and you can toggle between modes as needed. 
+
+In LIVE Mode, your store will use live payment method integrations. 
+In TEST Mode, your store will use test payment method integrations. 
+
+If you make any changes, such as switching the mode, enabling/disabling Show Product Details on Paymob's Checkout, or adjusting the Debug Log, be sure to click “Save Changes” to apply them. 
 
 =  Payment Method Integration Settings =
-* If you have entered Live Keys on the main configuration page, all live payment method integrations will be displayed on this page.
-* All test payment methods will be displayed if you’ve entered Test Keys. By default, payment methods appear as a list on the store's checkout page. Users can then select any payment method and complete their payment via Paymob Checkout.  
-* An option labeled Pay with Paymob is disabled by default. If enabled and selected by the user, they will be redirected to Paymob Checkout, where they can choose from all available payment methods.
-* You can configure your store’s WooCommerce checkout to list payment methods individually, use the Paymob Main App, or display both options.  
-* All payment methods are enabled by default when the Paymob Main App is disabled.
-* You can reorder payment methods by dragging them across, editing their titles and descriptions, and enabling/disabling them. However, it is recommended that you do not edit payment method logos.  Payment methods will appear in the same order in the WooCommerce checkout as listed here.  
+* This section displays both Live and Test Payment Method Integrations, with the ability to toggle between Test and Live modes.
+* Paymob provides flexible checkouts options.  
+* Refer to Payment Method Header: 
+* Option 1. paymob-pixel (Card Embedded Settings)  
+Enable seamless payments directly on your WooCommerce store for Cards, Apple Pay, and Google Pay without redirecting users to Paymob’s Hosted Checkout. 
+By default, this option is enabled on your store with Card Payments only. To enable Apple Pay or Google Pay via Paymob Pixel, please contact your account manager or email us at support@paymob.com. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay via the Card Embedded Settings section. 
+* Option 2: Display payment methods as a list on your WooCommerce store. 
+Users will select a payment method and be redirected to Paymob’s Hosted Checkout to enter their payment details and complete the transaction. 
+Enabling a payment method in this section will make it visible on your WooCommerce store. 
+* Option 3: Using Paymob Main App 
+Paymob’s main app is disabled by default. 
+If enabled, users selecting this option will be redirected to Paymob’s Checkout, where they can choose from all available payment methods. 
+This will appear as the last option in your payment method list.
+* You can have all set-up’ enabled or a combination of any.
+* The best recommendation is to use paymob-pixel for Cards, Apple Pay, and Google Pay while displaying other payment methods as a list.
 
-= Final Step - Enabling Paymob  =
+= Customization Options =
+* Rearrange payment methods by dragging and dropping them to your preferred order. 
+* Edit titles and descriptions or enable/disable payment methods as needed. 
+* It is recommended not to modify payment method logos. 
+Payment methods will appear in the WooCommerce checkout in the same order as listed here. 
+
+= Webhook Settings =
+* Webhooks will be automatically configured for all payment method integrations. Merchants can view the current Webhook URL by clicking on the “Webhook URL” option. 
+* The correct format for the Webhook URL is Store URL_ wc-api=paymob_callback 
+* Upon Clicking on “Webhook URL”, a dialog pop-up will display the current Webhook URL. If the displayed Webhook URL does not match the correct format, merchants can click “Confirm” to update it to the correct Webhook URL for their store. 
+
+= Card Embedded Settings = 
+* Feature enables consumers to complete their payments directly on your WooCommerce store. It is enabled by default on your store. To disable it, navigate to the Payment Integrations section and disable “paymob-pixel”. If you wish to hide a specific payment method, simply avoid selecting its integration ID. 
+* For card payments, select the required integration ID. By default, all integration IDs will be pre-selected. 
+* For Apple Pay and Google Pay, certain actions must be completed on Paymob side. Please reach out to your account manager or contact us at support@paymob.com. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay for the embedded experience. 
+* Payment Method – Title: Merchants can customize the title of the payment method displayed at checkout. 
+* Cards, Google Pay & Apple Pay: Select the Integration ID to be used for payments. If integration id is not selected, payment method will not be displayed 
+* Show Save Card: Allows users to save their card for future transactions if they provide consent. 
+* Force Save Card: When enabled, cards are automatically saved after a transaction without user consent. Users will be notified that their card will be saved on Checkout. 
+* Customization: Customize the component using CSS properties. Default settings are applied initially, and you can click the “Reset Default” button to restore them. 
+
+Remember to save your changes for them to reflect on the checkout. 
+
+= Final Step - Enabling Paymob =
 1. Go to WooCommerce > Settings > Payments.
-2. Enable Paymob. 
+2. Ensure enabling Paymob. 
 
 == Screenshots ==
 1. screenshot-1.png
@@ -117,12 +168,21 @@ Paymob is a leading payment service provider in Egypt, United Arab Emirates (UAE
 5. screenshot-5.png
 6. screenshot-6.png
 7. screenshot-7.png
+8. screenshot-8.png
+9. screenshot-9.png
+10. screenshot-10.png
+11. screenshot-11.png
 
 == Changelog ==
-2024-11-24 - version 2.0.5
-Fix the conflict of wp stateless plugin
-Fix mobile view for admin payment list
-Fix product name to be 45 chars
+2025-01-29 - version 3.0.0
+Add pixel / Embedded expereince for in-checkout payment.
+Add customization for Embedded checkout experience.
+Add new design for admin.
+Add onboarding flow for registered / non-registered merchants.
+Add Manual Set-up for registered merchant.
+Add webhook automatic update.
+Add Live/Test mode switcher.
+
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

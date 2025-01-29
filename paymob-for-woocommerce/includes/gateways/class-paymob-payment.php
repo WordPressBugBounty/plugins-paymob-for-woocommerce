@@ -32,6 +32,49 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public $notify_url;
 	public $amount_cents;
 	public $has_items;
+	public $test_sec_key;
+	public $live_pub_key;
+	public $live_sec_key;
+	public $mode;
+	public $pixel_payment;
+	public $cards_integration_id;
+	public $test_pub_key;
+	public $google_pay_integration_id;
+	public $show_save_card;
+	public $font_family;
+	public $font_size;
+	public $font_weight;
+	public $color_container;
+	public $color_border;
+	public $radius_border;
+	public $color_disabled;
+	public $color_error;
+	public $vertical_spacing_between_components;
+	public $vertical_padding_for_text_fields;
+	public $color_for_text_placeholder;
+	public $width_of_container;
+	public $color_for_input_fields;
+	public $color_for_primary;
+	public $color_for_container;
+	public $color_input_fields;
+	public $color_primary;
+	public $apple_pay_integration_id;
+	public $force_save_card;
+	public $vertical_padding_for_button;
+	public $customization_div;
+	public $container_padding;
+	public $vertical_padding;
+	public $text_color_for_input_fields;
+	public $text_color_for_payment_button;
+	public $text_color_for_label;
+	public $color_border_payment_button;
+	public $color_border_input_fields;
+	public $font_weight_payment_button;
+	public $font_weight_input_fields;
+	public $font_weight_label;
+	public $font_size_payment_button;
+	public $font_size_input_fields;
+	public $font_size_label;
 
 	public function __construct() {
 		// config
@@ -114,52 +157,73 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	}
 
 	public function process_payment( $orderId ) {
-
+		// $pxl_submit = Paymob::filterVar('pxl_submit', 'POST') ?? Paymob::filterVar('pxl_submit', 'POST');
 		$paymobOrder = new PaymobOrder( $orderId, $this );
-		$status      = $paymobOrder->createPayment();
-		if ( ! $status['success'] ) {
-			$errorMsg = $status['message'];
-			if ( 'Unsupported currency' == $errorMsg) {
-				$paymobOptions   = get_option( 'woocommerce_paymob_settings' );
-				$integration_ids = explode( ',', $paymobOptions['integration_id_hidden'] );
-				$currencies      = array(); // Initialize array to store matching values
-				// Loop through each entry in the second array
-				foreach ( $integration_ids as $entry ) {
-					// Split the entry by ':'
-					$parts = explode( ':', $entry );
-					$id    = trim( $parts[0] );
-					if ( isset( $parts[2] ) ) {
-						if ( in_array( $id, $paymobOptions['integration_id'] ) ) {
-							$currencies[] = trim( substr( $parts[2], strpos( $parts[2], '(' ) + 1, -2 ) );
+		$order = wc_get_order( $orderId );
+		if('paymob-pixel' !== $this->id){
+			$status      = $paymobOrder->createPayment();
+			if ( ! $status['success'] ) {
+				$errorMsg = $status['message'];
+				if ( 'Unsupported currency' == $errorMsg) {
+					$paymobOptions   = get_option( 'woocommerce_paymob_settings' );
+					$integration_ids = explode( ',', $paymobOptions['integration_id_hidden'] );
+					$currencies      = array(); // Initialize array to store matching values
+					// Loop through each entry in the second array
+					foreach ( $integration_ids as $entry ) {
+						// Split the entry by ':'
+						$parts = explode( ':', $entry );
+						$id    = trim( $parts[0] );
+						if ( isset( $parts[2] ) ) {
+							if ( in_array( $id, $paymobOptions['integration_id'] ) ) {
+								$currencies[] = trim( substr( $parts[2], strpos( $parts[2], '(' ) + 1 ) );
+							}
 						}
 					}
+					$errorMsg = __( 'Given currency is not supported. ', 'paymob-woocommerce' );
+					if ( ! empty( $currencies ) ) {
+						$errorMsg .= __( 'Currency supported : ', 'paymob-woocommerce' ) . implode( ',', array_unique( $currencies ) );
+					}
 				}
-				$errorMsg = __( 'Given currency is not supported. ', 'paymob-woocommerce' );
-				if ( ! empty( $currencies ) ) {
-					$errorMsg .= __( 'Currency supported : ', 'paymob-woocommerce' ) . implode( ',', array_unique( $currencies ) );
-				}
+				return $paymobOrder->throwErrors( $errorMsg );
 			}
-			return $paymobOrder->throwErrors( $errorMsg );
+
+			$paymobReq   = new Paymob( $this );
+			$countryCode = $paymobReq->getCountryCode( $this->pub_key );
+			$apiUrl      = $paymobReq->getApiUrl( $countryCode );
+			$cs          = $status['cs'];
+
+			$to    = $apiUrl . "unifiedcheckout/?publicKey=$this->pub_key&clientSecret=$cs";
+			
+			$order->update_meta_data( 'PaymobIntentionId', $status['intentionId'] );
+			$order->update_meta_data( 'PaymobCentsAmount', $status['centsAmount'] );
+			$order->update_meta_data( 'PaymobPaymentId', $this->id );
+			$order->save();
+
+			$paymobOrder->processOrder();
+
+			return array(
+				'result'   => 'success',
+				'redirect' => $to,
+			);
+		// }elseif($pxl_submit=='pxl_submit'){
+		// 	echo 123; die;
+		}else{
+			$order->update_status( 'pending-payment' );	
+			$paymobOrder->processOrder();
+			$order->update_meta_data('PaymobIntentionId', WC()->session->get('PaymobIntentionId'));
+			$order->update_meta_data('PaymobCentsAmount',  WC()->session->get('PaymobCentsAmount'));
+			$order->update_meta_data('PaymobPaymentId', $this->id);
+			$order->save();
+			Paymob_Pixel_Checkout::update_paymob_intention_with_orderID($orderId,WC()->session->get('cs'), WC()->session->get('pixel_identifier'));
+		    $session=WC()->session;
+         	$session->__unset('order_id');
+		    $session->set( 'order_id',  WC()->session->get('pixel_identifier'));
+
+			return array(
+				'result'   => 'success',
+				'redirect' => '#',
+			);
 		}
-
-		$paymobReq   = new Paymob( $this );
-		$countryCode = $paymobReq->getCountryCode( $this->pub_key );
-		$apiUrl      = $paymobReq->getApiUrl( $countryCode );
-		$cs          = $status['cs'];
-
-		$to    = $apiUrl . "unifiedcheckout/?publicKey=$this->pub_key&clientSecret=$cs";
-		$order = wc_get_order( $orderId );
-		$order->update_meta_data( 'PaymobIntentionId', $status['intentionId'] );
-		$order->update_meta_data( 'PaymobCentsAmount', $status['centsAmount'] );
-		$order->update_meta_data( 'PaymobPaymentId', $this->id );
-		$order->save();
-
-		$paymobOrder->processOrder();
-
-		return array(
-			'result'   => 'success',
-			'redirect' => $to,
-		);
 	}
 	public function process_refund( $order_id, $amount = null, $reason = '' ) {
 
@@ -224,13 +288,20 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			return $msg;
 	}
 	public function payment_fields() {
-		if ( $this->description ) {
-			echo wp_kses_post( wpautop( esc_html( $this->description ) ) );
+		if('paymob-pixel' !== $this->id){
+			if ( $this->description ) {
+				echo wp_kses_post( wpautop( esc_html( $this->description ) ) );
+			}
+		}else{
+			if (function_exists('is_checkout') && is_checkout()) {
+				include PAYMOB_PLUGIN_PATH . 'includes/admin/scripts/pixel_checkout.php';
+			}
 		}
 	}
 
 	public function init_form_fields() {
 		$this->form_fields = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-single-gateway.php';
+		
 	}
 
 	/**

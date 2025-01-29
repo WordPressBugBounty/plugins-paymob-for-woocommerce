@@ -10,6 +10,9 @@ class Paymob_Save_Gateway_Settings {
 		}
 
 		$paymob_options = get_option( 'woocommerce_paymob_settings' );
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$mode       = isset($mainOptions['mode'])?$mainOptions['mode'] :'test';
+
 		$pub_key        = isset( $paymob_options['pub_key'] ) ? $paymob_options['pub_key'] : '';
 		$sec_key        = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
 		$api_key        = isset( $paymob_options['api_key'] ) ? $paymob_options['api_key'] : '';
@@ -21,20 +24,6 @@ class Paymob_Save_Gateway_Settings {
 			$ids                   = array();
 			//$integration_id_hidden = explode( ',', $paymob_options['integration_id_hidden'] );
 			$integration_id        = Paymob::filterVar( 'integration_id', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) ) : '';
-
-			// verify_integration_id( $integration_id_hidden, $integration_id, $currency_errors, $ids );
-			// if ( ! empty( $currency_errors ) ) {
-			// 	WC_Admin_Settings::add_error(
-			// 		sprintf(
-			// 		/* translators: %1$s is a comma-separated list of integration IDs. %2$s is a comma-separated list of currencies. */
-			// 			__( 'Payment Method(s) with the Integration ID(s) %1$s require(s) the store currency to be set to: %2$s', 'paymob-woocommerce' ),
-			// 			implode( ', ', $ids ),
-			// 			$currency_errors[0]
-			// 		)
-			// 	);
-			// 	return;
-			// }
-
 			$payment_enabled           = Paymob::filterVar( 'payment_enabled', 'POST' ) ? 'yes' : 'no';
 			$payment_integrations_type = Paymob::filterVar( 'payment_integrations_type', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'payment_integrations_type', 'POST' ) ) : '';
 			$payment_logo              = Paymob::filterVar( 'payment_logo', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'payment_logo', 'POST' ) ) : '';
@@ -65,6 +54,7 @@ class Paymob_Save_Gateway_Settings {
 						'integration_id'       => $integration_id,
 						'is_manual'            => '1',
 						'ordering'             => $ordering,
+						'mode'                 =>$mode
 					)
 				);
 
@@ -75,6 +65,7 @@ class Paymob_Save_Gateway_Settings {
 						'checkout_title'       => $checkout_title,
 						'checkout_description' => $checkout_description,
 						'file_name'            => $file_name,
+						
 					);
 					PaymobAutoGenerate::generate_files( $f_array );
 
