@@ -37,9 +37,7 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
             'input[name="radio-control-wc-payment-method-options"]:checked'
         );
         if ( selectedGateway && selectedGateway.value === 'paymob-pixel') {
-            jQuery('.wc-block-components-button').hide(); 
-            jQuery('.wc-block-components-checkout-place-order-button').hide();
-            jQuery('#place_order').hide();
+           
             const buttonSelectors = [
                 '.wc-block-components-button',
                 '.custom-checkout-button',
@@ -48,7 +46,7 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
         
             buttonSelectors.forEach(selector => {
                 if (jQuery(selector).length) {
-                    jQuery(selector).hide();
+                    updatePlaceOrderVisibility();
                 }
             });
         }
@@ -89,14 +87,7 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
 
     // Function to load Paymob scripts and initialize element
     function loadScriptsAndInitializePaymob() {
-        // if(window.isCardValid === true || window.isCardValid === "true"){
-        //     jQuery('.wc-block-components-button').show(); 
-        //     jQuery('#place_order').show(); 
-        // }else{
-            jQuery('.wc-block-components-button').hide(); 
-            jQuery('.wc-block-components-checkout-place-order-button').hide();
-            jQuery('#place_order').hide(); 
-        // }
+        isCheckoutFormValid();
         // const googleenabled =pxl_object.googleenabled;
         // loadScripts();
         const { select } = wp.data;
@@ -115,32 +106,31 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
                 if (event.target.id.includes("paymob-pixel")) {
                     showLoadingMessage();
                     ajaxCall(billingData, totalAmount);
-                    // if(window.isCardValid === true || window.isCardValid === "true"){
-                    //     jQuery('.wc-block-components-button').show(); 
-                    //     jQuery('#place_order').show(); 
-                    // }else{
-                        jQuery('.wc-block-components-button').hide(); 
-                    jQuery('.wc-block-components-checkout-place-order-button').hide();
-                        jQuery('#place_order').hide(); 
-                    // }
+                   
                 } else {
                     // Show the button for other payment methods
                     jQuery('.wc-block-components-button').show(); 
                     jQuery('.wc-block-components-checkout-place-order-button').show();
+
+                    const placeOrderSelectors = [
+                        '.wc-block-components-button',
+                        '.wc-block-components-checkout-place-order-button',
+                        '#place_order'
+                    ];
+                
+                    
+                    placeOrderSelectors.forEach(selector => {
+                        jQuery(selector).show().prop('disabled', false);
+                    });
+                    
+
                     jQuery('#place_order').show();
                 }
             }
         });
 
         onload = () =>ajaxCall(billingData, totalAmount);
-        // if(window.isCardValid === true || window.isCardValid === "true"){
-        //     jQuery('.wc-block-components-button').show(); 
-        //     jQuery('#place_order').show(); 
-        // }else{
-            jQuery('.wc-block-components-button').hide(); 
-            jQuery('.wc-block-components-checkout-place-order-button').hide();
-            jQuery('#place_order').hide(); 
-        // }
+        
        
     }
     document.addEventListener('DOMContentLoaded', function () {
@@ -168,26 +158,41 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
             });
             observer.observe(checkoutContainer, { childList: true, subtree: true });
         }
+        // hide place order in loading page  
+        setTimeout(function checkButton() {
+            const placeOrderBtn = document.querySelector('.wp-block-button__link, .wc-block-components-button, button[type="submit"]');
+            
+            if (placeOrderBtn) {
+                placeOrderBtn.style.display = 'none';
+            } else {
+                setTimeout(checkButton, 500); // Retry after 500ms
+            }
+        }, 1000); // Initial delay of 1 second
+
+
     });
 }
+
 function isCheckoutFormValid() {
-    // Validate required fields
+    let isValid = true; // Assume valid, but check each field
+
     jQuery('.wc-block-components-form input[required], .wc-block-components-form select[required]').each(function () {
         const field = jQuery(this);
         if (field.val().trim() === '') {
-            window.isValid = false;
+            isValid = false;
             field.addClass('woocommerce-invalid'); // Highlight invalid field
             field.closest('.form-row').addClass('woocommerce-invalid-row'); // Highlight row
-            return window.isValid;
         } else {
-            window.isValid = true;
             field.removeClass('woocommerce-invalid'); // Remove invalid highlight
             field.closest('.form-row').removeClass('woocommerce-invalid-row'); // Remove row highlight
         }
     });
 
-    return window.isValid;
+    window.isValid = isValid;
+    updatePlaceOrderVisibility();
+    return isValid;
 }
+
 
 function updateCheckoutData(forcereload = false) {
 
@@ -494,24 +499,35 @@ function initializePaymobElement(key, cs) {
             callbackAjaxCall(response.data, null);
         }, 
         cardValidationChanged: (isValid) => {
-            window.isCardValid = false;
             console.log(isValid);
-            if(isValid === 'true' || isValid === true){
-                window.isCardValid = true;
-                jQuery('.wc-block-components-button').show();
-                 jQuery('.wc-block-components-checkout-place-order-button').show();
-                jQuery('#place_order').show(); 
-            }else{
-                window.isCardValid = false;
-                jQuery('.wc-block-components-button').hide();                
-                jQuery('.wc-block-components-checkout-place-order-button').hide();
-                
-                jQuery('#place_order').hide(); 
-            }
+            window.isCardValid = isValid === 'true' || isValid === true;
+            updatePlaceOrderVisibility();
         },   
         customStyle: customArr,
     });
 }
+
+function updatePlaceOrderVisibility() {
+    console.log("Validation Status:", window.isValid, window.isCardValid);
+
+    const placeOrderSelectors = [
+        '.wc-block-components-button',
+        '.wc-block-components-checkout-place-order-button',
+        '#place_order'
+    ];
+
+    if (window.isValid && window.isCardValid) {
+        placeOrderSelectors.forEach(selector => {
+            jQuery(selector).show().prop('disabled', false);
+        });
+    } else {
+        placeOrderSelectors.forEach(selector => {
+            jQuery(selector).hide().prop('disabled', true);
+        });
+    }
+}
+
+
 
 function validateClassicFrom(){
 window.hasEmptyFields = false;
@@ -648,9 +664,7 @@ jQuery(document).ready(function ($) {
                 const billingData = cartStore.getCustomerData().billingAddress;
                     showLoadingMessage();
                     ajaxCall(billingData, totalAmount, true);
-                    jQuery('.wc-block-components-button').hide(); 
-                    jQuery('.wc-block-components-checkout-place-order-button').hide();
-                    jQuery('#place_order').hide();
+                   
             }
 
             if (window.previousTotalBlock === null) {
@@ -668,9 +682,7 @@ jQuery(document).ready(function ($) {
         paymentBlockInput.prop('checked', true).trigger('change'); // Select and trigger the change event
         paymentClassicInput.prop('checked', true).trigger('change'); // Select and trigger the change event
         console.log('Payment method set to:', paymentMethod);
-        jQuery('.wc-block-components-button').hide(); 
-        jQuery('.wc-block-components-checkout-place-order-button').hide();
-        jQuery('#place_order').hide();
+       
     } 
 });
 
@@ -782,7 +794,15 @@ jQuery(document).ready(function ($) {
             window.scriptInitialized = true;
             // Load scripts and initialize Paymob element
             loadScripts();
+              // Handle changes in billing address inputs
+            jQuery(document).on('input change', '.wc-block-components-form input[required], .wc-block-components-form select[required]', function () {
+                isCheckoutFormValid();
+            });
+
+            // Initial validation on page load
+            isCheckoutFormValid();
             // handleOrderCreation();
         }
         
 });
+

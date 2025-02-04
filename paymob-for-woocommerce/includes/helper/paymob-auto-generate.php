@@ -437,7 +437,7 @@ class PaymobAutoGenerate {
 	 */
 	public static function get_pixel_integration_ids($name) {
 		$integration_ids = array();
-		if (isset($name) &&(strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay' )) {
+		if (isset($name) &&(stripos($name, 'apple') !== false || stripos($name, 'google') !== false )) {
 			$integration_ids = array(
 				'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
 			);
@@ -465,7 +465,7 @@ class PaymobAutoGenerate {
 							$integration_ids[strtolower($id)] = strtolower($id) . ' : ' . strtolower($label).' : '. $currency.' : '.$mode;
 						}
 
-						if (isset($name) &&(strtolower($name) == 'apple_pay' || strtolower($name) == 'google-pay' )  && strpos($label, $name) !== false) {
+						if (isset($name) &&(stripos($name, 'apple') !== false || stripos($name, 'google') !== false )  && strpos($label, $name) !== false) {
 							$integration_ids = array(
 								'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
 							);

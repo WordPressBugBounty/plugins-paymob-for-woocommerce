@@ -2,6 +2,11 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2025-02-04 - version 3.0.1
+Hot-fix for Apple Pay
+Hot-fix for card/billing validation
+Add notice for apple/google file when selected
+
 2025-01-29 - version 3.0.0
 Add pixel / Embedded expereince for in-checkout payment.
 Add customization for Embedded checkout experience.

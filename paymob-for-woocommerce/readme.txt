@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -174,14 +174,10 @@ Remember to save your changes for them to reflect on the checkout.
 11. screenshot-11.png
 
 == Changelog ==
-2025-01-29 - version 3.0.0
-Add pixel / Embedded expereince for in-checkout payment.
-Add customization for Embedded checkout experience.
-Add new design for admin.
-Add onboarding flow for registered / non-registered merchants.
-Add Manual Set-up for registered merchant.
-Add webhook automatic update.
-Add Live/Test mode switcher.
+2025-02-04 - version 3.0.1
+Hot-fix for Apple Pay
+Hot-fix for card/billing validation
+Add notice for apple/google file when selected
 
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.

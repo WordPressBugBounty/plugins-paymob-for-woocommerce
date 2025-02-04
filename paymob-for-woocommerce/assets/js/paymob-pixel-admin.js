@@ -75,3 +75,70 @@ jQuery(document).ready(function ($) {
     });
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+    function addWarningMessage(selectId, messageText, email, emailColor, bgColor, borderColor) {
+        const selectElement = document.getElementById(selectId);
+        if (!selectElement) {
+            console.error(`Element with ID ${selectId} not found!`);
+            return;
+        }
+
+        // Prevent duplicates
+        if (selectElement.parentNode.querySelector(".warning-message")) {
+            return;
+        }
+
+        // Create the warning message container
+        const warningMessage = document.createElement("div");
+        warningMessage.className = "warning-message"; 
+        warningMessage.innerHTML = `⚠️ <strong>Warning:</strong> ${messageText} 
+            <a href='mailto:${email}' style='color: ${emailColor}; font-weight: bold; text-decoration: underline;'>${email}</a>.`;
+
+        // Apply improved styling
+        warningMessage.style.display = "none";
+        warningMessage.style.backgroundColor = bgColor;
+        warningMessage.style.border = `1px solid ${borderColor}`;
+        warningMessage.style.color = "#333"; 
+        warningMessage.style.padding = "8px";
+        warningMessage.style.marginTop = "6px";
+        warningMessage.style.borderRadius = "5px";
+        warningMessage.style.fontSize = "13px";
+        warningMessage.style.fontWeight = "500";
+        warningMessage.style.boxShadow = `0px 0px 4px ${borderColor}`;
+        warningMessage.style.width = `${selectElement.offsetWidth}px`; // Set width same as input field
+        warningMessage.style.maxWidth = "100%"; // Prevent overflow
+        warningMessage.style.boxSizing = "border-box"; // Ensure proper sizing
+
+        // Append message
+        selectElement.parentNode.appendChild(warningMessage);
+
+        // Show/hide message on change
+        selectElement.addEventListener("change", function () {
+            warningMessage.style.display = selectElement.value ? "block" : "none";
+            warningMessage.style.width = `${selectElement.offsetWidth}px`; // Adjust width on change
+        });
+    }
+
+    // Apple Pay - Blue Theme
+    addWarningMessage(
+        "apple_pay_integration_id", 
+        "Please do not select an Integration ID if your domain is not verified with Apple Pay. To verify your domain, reach out to your account manager or contact us at", 
+        "support@paymob.com",
+        "#007bff",   // Email color (Blue)
+        "#e7f1ff",   // Background color (Light Blue)
+        "#007bff"    // Border color (Blue)
+    );
+
+    // Google Pay - Green Theme
+    addWarningMessage(
+        "google_pay_integration_id", 
+        "Please do not select an Integration ID if your domain is not verified with Google Pay. To verify your domain, reach out to your account manager or contact us at", 
+        "support@paymob.com",
+        "#007bff",   // Email color (Blue)
+        "#e7f1ff",   // Background color (Light Blue)
+        "#007bff"    // Border color (Blue)
+    );
+});
+
+
+

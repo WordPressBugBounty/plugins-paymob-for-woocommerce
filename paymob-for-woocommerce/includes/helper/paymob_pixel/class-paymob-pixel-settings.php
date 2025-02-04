@@ -41,9 +41,12 @@ class Paymob_Pixel_Settings {
                     'type'  => 'title',
                     'class' => 'payment-feature-description',
                     'name'  => __( 'About Feature', 'paymob-woocommerce' ),
-                    'desc'  => '<div style="background-color: #f0f8ff; border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 8px; font-family: Arial, sans-serif; color: #333; width:70%; margin-left:1%" >'.__( 'Feature enables consumers to complete their payments directly on your WooCommerce store. It is enabled by default on your store. To disable it, navigate to the Payment Integrations section and disable "paymob-pixel" . If you wish to hide a specific payment method, simply avoid selecting its integration ID.<br/><br/>
-                        For card payments, select the required integration ID. By default, all integration IDs will be pre-selected. <br/><br/>
-                        For Apple Pay and Google Pay, certain actions must be completed on Paymob side. Please reach out to your account manager or contact us at <a href="mailto:support@paymob.com" >support@paymob.com</a>. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay.' ).'</div>',
+                    'desc'  => '<div style="background-color: #f0f8ff; border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 8px; font-family: Arial, sans-serif; color: #333; width:70%; margin-left:1%" >
+                                    '.__( 'Feature enables consumers to complete their payments directly on your WooCommerce store. It is enabled by default on your store. To disable it, navigate to the Payment Integrations section and disable "paymob-pixel" . If you wish to hide a specific payment method, simply avoid selecting its integration ID.<br/><br/>
+                                    For card payments, select the required integration ID. By default, all integration IDs will be pre-selected. <br/><br/>
+                                    <span style="font-weight: bold; color: #007bff;">ℹ️ For Apple Pay and Google Pay:</span> Certain actions must be completed on Paymob\'s side. Please reach out to your account manager or contact us at 
+                                    <a href="mailto:support@paymob.com" style="color: #007bff; font-weight: bold;">support@paymob.com</a>. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay.' ).'
+                                </div>',
                 ),
                 array(
                     'type' => 'title',
