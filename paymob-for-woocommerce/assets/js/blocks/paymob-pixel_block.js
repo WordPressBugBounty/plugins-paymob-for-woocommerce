@@ -376,6 +376,8 @@ function initializePaymobElement(key, cs) {
                                 resolve(true);
                                 // window.dispatchEvent(new Event('updateIntentionData'));
                                 // console.log('updateIntentionData');
+                                 $('form.checkout').unblock();
+ 
                                 // Trigger the form submission
                                 form.submit();
                             });

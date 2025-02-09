@@ -2,6 +2,9 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2025-02-09 - version 3.0.2
+Hot-fix classic checkout overlay - omannet OTP popup
+
 2025-02-04 - version 3.0.1
 Hot-fix for Apple Pay
 Hot-fix for card/billing validation
