@@ -6,7 +6,7 @@ Tested up to: 6.7
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.3
-Stable tag: 3.0.2
+Stable tag: 3.0.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -174,8 +174,11 @@ Remember to save your changes for them to reflect on the checkout.
 11. screenshot-11.png
 
 == Changelog ==
-2025-02-09 - version 3.0.2
-Hot-fix classic checkout overlay - omannet OTP popup
+2025-02-18 - version 3.0.3
+Hot-fix error processing while checkout
+Hot-fix hide only checkout button
+Hot-fix steet NA issue
+Hot-fix refund decimal/zero issue
 
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.

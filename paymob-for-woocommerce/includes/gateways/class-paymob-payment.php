@@ -245,7 +245,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
 		$data            = array(
 			'transaction_id' => $transactionId,
-			'amount_cents'   => round( $amount, $round ) * $cents,
+			'amount_cents'   => intval(round( $amount, $round ) * $cents),
 		);
 		$paymobReq       = new Paymob( $this->debug, $addlog );
 		$status          = $paymobReq->refundPayment( $this->sec_key, $data );

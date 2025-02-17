@@ -31,7 +31,7 @@ class Paymob_Update_Pixel_Data {
                 'email' => !empty($billing_data['email']) ? $billing_data['email'] : 'customer@example.com',
                 'first_name' => !empty($billing_data['first_name']) ? $billing_data['first_name'] : 'NA',
                 'last_name' => !empty($billing_data['last_name']) ? $billing_data['last_name'] : 'NA',
-                'street' => !empty($billing_data['address']) ? $billing_data['address'] . ' - ' . $billing_data['email'] : 'NA',
+                'street' => !empty($billing_data['address_1']) ? $billing_data['address_1'] . ' - ' . $billing_data['address_2'] : 'NA',
                 'phone_number' => ($billing_data['phone']) ? $billing_data['phone'] : 'NA',
                 'city' => !empty($billing_data['city']) ? $billing_data['city'] : 'NA',
                 'country' => !empty($billing_data['country']) ? $billing_data['country'] : 'NA',

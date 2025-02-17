@@ -2,6 +2,12 @@
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 == Changelog ==
+2025-02-18 - version 3.0.3
+Hot-fix error processing while checkout
+Hot-fix hide only checkout button
+Hot-fix steet NA issue
+Hot-fix refund decimal/zero issue
+
 2025-02-09 - version 3.0.2
 Hot-fix classic checkout overlay - omannet OTP popup
 

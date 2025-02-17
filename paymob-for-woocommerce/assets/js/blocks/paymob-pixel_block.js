@@ -160,7 +160,8 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
         }
         // hide place order in loading page  
         setTimeout(function checkButton() {
-            const placeOrderBtn = document.querySelector('.wp-block-button__link, .wc-block-components-button, button[type="submit"]');
+            
+            const placeOrderBtn = document.querySelector('.wc-block-checkout__form .wp-block-button__link,.wc-block-checkout__form .wc-block-components-button, .wc-block-checkout__form button[type="submit"]');
             
             if (placeOrderBtn) {
                 placeOrderBtn.style.display = 'none';
@@ -334,7 +335,7 @@ function initializePaymobElement(key, cs) {
                     if(validateClassicFrom() === false){
                         return await new Promise((resolve) => {
                                 jQuery('form.checkout').submit();
-                                jQuery('form.checkout').unblock();
+                                jQuery('form.checkout').unblock({ message: null});
                                 console.log('Classic Checkout - Create order before resolve');
                                 resolve(true);
                         }, 5000);
@@ -365,6 +366,8 @@ function initializePaymobElement(key, cs) {
                             form.on('checkout_error', function (e, errorMessages) {
                                 console.log('Checkout Error:', errorMessages);
                                 // Stop form submission
+                                form.unblock({ message: null});
+
                                 resolve(false);
                                 hideLoadingIndicator();
                                 return false;
@@ -373,10 +376,11 @@ function initializePaymobElement(key, cs) {
                             form.on('checkout_place_order_success', function () {
                                 console.log('Checkout successful.');
                                 //showLoadingIndicator("Please wait while we direct you to Bank's OTP Page .");
+                                form.unblock({ message: null});
+
                                 resolve(true);
                                 // window.dispatchEvent(new Event('updateIntentionData'));
                                 // console.log('updateIntentionData');
-                                 $('form.checkout').unblock();
  
                                 // Trigger the form submission
                                 form.submit();
