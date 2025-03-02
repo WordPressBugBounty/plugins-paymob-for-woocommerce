@@ -248,10 +248,10 @@ class Paymob {
 			$status['message'] = $refundRes->message;
 			return $status;
 		}
-		if ( isset( $refundRes->amount_cents ) ) {
-			$status['message'] = !empty($refundRes->amount_cents[0])?$refundRes->amount_cents[0] : $refundRes->amount_cents;
+		if ( isset( $refundRes->amount_cents[0] ) ) {
+			$status['message'] = $refundRes->amount_cents[0] ;
 			return $status;
-		} 
+		}
 		if ( isset( $refundRes->success ) ) {
 			$status['success']   = true;
 			$status['refund_id'] = $refundRes->id;
