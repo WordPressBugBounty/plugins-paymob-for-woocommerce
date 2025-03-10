@@ -251,7 +251,7 @@ class Paymob {
 		if ( isset( $refundRes->amount_cents[0] ) ) {
 			$status['message'] = $refundRes->amount_cents[0] ;
 			return $status;
-		}
+		} 
 		if ( isset( $refundRes->success ) ) {
 			$status['success']   = true;
 			$status['refund_id'] = $refundRes->id;
@@ -518,6 +518,29 @@ class Paymob {
 			throw new Exception( 'Cannot get Token from PayMob account' );
 		}
 		
+	}
+
+	public function valuWidget( $secKey, $data) {
+
+		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		// $widgets = $this->HttpRequest( $flash, 'POST', $header, $data );
+		$widgets = $this->HttpRequest( $apiUrl.'api/acceptance/valu_widget/inquire', 'POST', $header, $data );
+		$note_i    = 'ValuWidget response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $widgets, 1 ) );
+		if ( empty( $widgets ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $widgets );
+		}
+		
+		if ( isset( $widgets ) ) {
+			$widgets = $widgets;
+		}
+		else {
+			$widgets = ( isset( $widgets ) ) ? $widgets : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $widgets ) );
+		return $widgets;
 	}
 }
 

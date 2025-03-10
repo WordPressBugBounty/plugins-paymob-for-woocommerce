@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 3.0.3
+ * Version: 3.1.0
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-woocommerce
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '3.0.3' );
+	define( 'PAYMOB_VERSION', '3.1.0' );
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -46,6 +46,8 @@ class Init_Paymob {
 		// Set redirect flag upon activation of PayMob plugin
 		add_action( 'activated_plugin', array( $this, 'set_redirect_flag_on_activation' ) );
 		add_action( 'plugins_loaded', array( $this, 'load' ), 0 );
+		// add_action('wp_enqueue_scripts', array($this,'paymobValuWidget'));
+		// add_action('woocommerce_after_add_to_cart_button',array($this,'paymobValuWidget'));
 		// Check redirect flag and perform redirect with high priority
 		add_action( 'admin_init', array( $this, 'redirect_after_activation' ), 1 );
 		
@@ -59,6 +61,16 @@ class Init_Paymob {
 				}
 			}
 		);
+
+	// add_filter( 'woocommerce_admin_get_feature_config', function( $features ) {
+	// 			return array_merge(
+	// 				$features,
+	// 				[
+	// 					'reactify-classic-payments-settings' => true,
+	// 				]
+	// 			);
+	// 		}
+	// 	, 999 );
 	}
 
 	public static function add_row_meta( $links, $file ) {
@@ -88,6 +100,11 @@ class Init_Paymob {
 
 	public function load() {
 		return WC_Paymob_Loading::load();
+	}
+
+	public function paymobValuWidget()
+	{
+		return WC_Paymob_ValuWidget::AddValuWidget();
 	}
 	
 }

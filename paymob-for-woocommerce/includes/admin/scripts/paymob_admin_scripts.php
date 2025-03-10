@@ -108,7 +108,7 @@ class Paymob_Scripts {
 	public static function paymob_pixel_checkout($customize) {
         $paymobOptions = get_option('woocommerce_paymob-main_settings');
         $paymob_pixel = get_option('woocommerce_paymob-pixel_settings');
-        if($paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout() && !is_cart() ){
+        if(!empty($paymob_pixel['enabled']) && $paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout() && !is_cart() ){
 			wp_enqueue_script('paymob-pixel-checkout', plugins_url(PAYMOB_PLUGIN_NAME) . '/assets/js/blocks/paymob-pixel_block.js', array('jquery'), PAYMOB_VERSION, true);
 	        $pubKey = isset($paymobOptions['pub_key']) ? $paymobOptions['pub_key'] : '';
 	        wp_localize_script('paymob-pixel-checkout', 'pxl_object', array(
@@ -155,6 +155,23 @@ class Paymob_Scripts {
 		
 		$current_section = isset($_GET['section']) ? sanitize_text_field($_GET['section']) : '';
 		if ($current_section === 'paymob_pixel') {
+			// Enqueue the script
+			wp_enqueue_script(
+				'paymob-pixel-custom-script', // Unique handle
+				plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/js/paymob-pixel-admin.js', // Path to your JS file
+				array('jquery'), // Dependencies
+				'', // Version
+				true // Load in the footer
+			);
+
+		}
+		
+	}
+
+	public static function enqueue_paymob_valu_widget_script() {
+		
+		$current_section = isset($_GET['section']) ? sanitize_text_field($_GET['section']) : '';
+		if ($current_section === 'valu_widget') {
 			// Enqueue the script
 			wp_enqueue_script(
 				'paymob-pixel-custom-script', // Unique handle

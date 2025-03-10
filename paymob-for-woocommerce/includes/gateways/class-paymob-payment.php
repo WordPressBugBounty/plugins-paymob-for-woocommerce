@@ -75,7 +75,9 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public $font_size_payment_button;
 	public $font_size_input_fields;
 	public $font_size_label;
-
+	public $dark_mode;
+    public $enabled_widget;
+	
 	public function __construct() {
 		// config
 		$this->has_fields = true;
@@ -208,6 +210,13 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		// }elseif($pxl_submit=='pxl_submit'){
 		// 	echo 123; die;
 		}else{
+			$status = Paymob_Pixel_Update_Intention::update_intention($orderId,$order);
+			if (!$status['success']) {
+				wc_add_notice( $status['message'], 'error' );
+				wp_safe_redirect( wc_get_checkout_url() );
+				exit;
+				
+			}
 			$order->update_status( 'pending-payment' );	
 			$paymobOrder->processOrder();
 			$order->update_meta_data('PaymobIntentionId', WC()->session->get('PaymobIntentionId'));

@@ -2,14 +2,15 @@ window.isValid =  true;
 window.isCardValid = false;
 window.scriptInitialized = false;
 window.googleenabled =0;
+
 // Trigger form submission
 if (typeof pxl_object !== 'undefined')
 {
     window.googleenabled = pxl_object.googleenabled;
-
+   
 }
 if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && typeof window.wc.wcSettings !== 'undefined' && typeof window.wc.wcBlocksRegistry !== 'undefined') {
-    
+   
     const settings = window.wc.wcSettings.getSetting('paymob-pixel_data', {});
     const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('Paymob Pixel Payment', 'paymob-woocommerce');
     const Icon = () => {
@@ -25,11 +26,12 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
             })
             : null;
     };
-
+   
   let contentInitialized = false;
     const Content = () => {
         if (!contentInitialized) {
             contentInitialized = true;
+           
             // Load scripts and initialize Paymob element
             loadScriptsAndInitializePaymob();
         }      
@@ -109,11 +111,11 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
                    
                 } else {
                     // Show the button for other payment methods
-                    jQuery('.wc-block-components-button').show(); 
+                    jQuery('.wc-block-checkout__form .wc-block-components-button').show(); 
                     jQuery('.wc-block-components-checkout-place-order-button').show();
 
                     const placeOrderSelectors = [
-                        '.wc-block-components-button',
+                        '.wc-block-checkout__form .wc-block-components-button',
                         '.wc-block-components-checkout-place-order-button',
                         '#place_order'
                     ];
@@ -128,10 +130,14 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
                 }
             }
         });
-
-        onload = () =>ajaxCall(billingData, totalAmount);
-        
        
+        onload = () => {
+            setTimeout(function () {
+                ajaxCall(billingData, totalAmount);
+                console.log('billing data info' + billingData);
+            }, 500); // Adjust the delay as needed
+        };
+        
     }
     document.addEventListener('DOMContentLoaded', function () {
         const checkoutContainer = document.querySelector('.wc-block-checkout');
@@ -160,7 +166,6 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
         }
         // hide place order in loading page  
         setTimeout(function checkButton() {
-            
             const placeOrderBtn = document.querySelector('.wc-block-checkout__form .wp-block-button__link,.wc-block-checkout__form .wc-block-components-button, .wc-block-checkout__form button[type="submit"]');
             
             if (placeOrderBtn) {
@@ -196,7 +201,6 @@ function isCheckoutFormValid() {
 
 
 function updateCheckoutData(forcereload = false) {
-
     if(!forcereload)
         showLoadingMessage();
     var billingData = {
@@ -517,12 +521,12 @@ function updatePlaceOrderVisibility() {
     console.log("Validation Status:", window.isValid, window.isCardValid);
 
     const placeOrderSelectors = [
-        '.wc-block-components-button',
+        '.wc-block-checkout__form .wc-block-components-button',
         '.wc-block-components-checkout-place-order-button',
         '#place_order'
     ];
-
     if (window.isValid && window.isCardValid) {
+
         placeOrderSelectors.forEach(selector => {
             jQuery(selector).show().prop('disabled', false);
         });
@@ -612,8 +616,8 @@ function showLoadingMessage(reload = false){
 }
 window.previousTotal = null;
 jQuery(document).ready(function ($) {
+   
     showLoadingMessage();
-
     $(document).on('updated_checkout', function () {
         // Get the current total amount        
         var totalElement = jQuery('.order-total .amount').text().replace(/[^0-9.]/g, '');
@@ -644,7 +648,7 @@ jQuery(document).ready(function ($) {
     
     const totalElementSelector = '.wc-block-components-totals-item__value'; // Adjust the selector based on your theme
     window.previousTotalBlock = null;
-
+   
     setInterval(async() => {
         const totalBlockElement = $(totalElementSelector);
         
@@ -668,6 +672,7 @@ jQuery(document).ready(function ($) {
                
 
                 const billingData = cartStore.getCustomerData().billingAddress;
+               
                     showLoadingMessage();
                     ajaxCall(billingData, totalAmount, true);
                    
@@ -796,19 +801,19 @@ function handleOrderCreation() {
 }
 
 jQuery(document).ready(function ($) {
-        if (!window.scriptInitialized) {
-            window.scriptInitialized = true;
-            // Load scripts and initialize Paymob element
-            loadScripts();
-              // Handle changes in billing address inputs
-            jQuery(document).on('input change', '.wc-block-components-form input[required], .wc-block-components-form select[required]', function () {
-                isCheckoutFormValid();
-            });
-
-            // Initial validation on page load
+    if (!window.scriptInitialized) {
+        window.scriptInitialized = true;
+        // Load scripts and initialize Paymob element
+        loadScripts();
+            // Handle changes in billing address inputs
+        jQuery(document).on('input change', '.wc-block-components-form input[required], .wc-block-components-form select[required]', function () {
             isCheckoutFormValid();
-            // handleOrderCreation();
-        }
+        });
+
+        // Initial validation on page load
+        isCheckoutFormValid();
+        // handleOrderCreation();
+    }
         
 });
 

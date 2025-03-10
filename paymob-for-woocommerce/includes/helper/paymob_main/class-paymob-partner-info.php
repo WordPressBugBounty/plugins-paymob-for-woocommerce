@@ -59,6 +59,7 @@ class Paymob_Main_Partner_Info
 
 					update_option('woocommerce_paymob_country', Paymob::getCountryCode($main_settings['pub_key']));
 					delete_option('woocommerce_paymob_gateway_data_failure');
+					delete_option('woocommerce_valu_widget_settings');
 					// Generate gateways 
 					PaymobAutoGenerate::create_gateways($result, 1, $gatewayData);
 

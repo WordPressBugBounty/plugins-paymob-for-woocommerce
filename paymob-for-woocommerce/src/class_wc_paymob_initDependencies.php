@@ -51,7 +51,9 @@ if ( ! class_exists( 'WC_Paymob_UnInstall' ) ) {
 if ( ! class_exists( 'WC_Paymob_Row_Meta' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_rowMeta.php';
 }
-
+if ( ! class_exists( 'WC_Paymob_ValuWidget' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_valu_widget.php';
+}
 if ( ! class_exists( 'WC_Paymob_RedirectFlag' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_set_redirect_flag_on_activation.php';
 }
@@ -154,6 +156,10 @@ if ( ! class_exists( 'Paymob_Hide_Save_Button' ) ) {
 }
 if ( ! class_exists( 'Paymob_Webhook_Url' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/add_gateway/class-paymob-webhook-url.php';
+}
+
+if ( ! class_exists( 'Paymob_Valu_Widget_Settings' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/add_gateway/class-paymob-valu-widget_section.php';
 }
 // add Save Cards init Dependencies
 
@@ -267,6 +273,14 @@ if ( ! class_exists( 'Paymob_Change_Mode_Save' ) ) {
 }
 if ( ! class_exists( 'Paymob_Unset_Old_Setting' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob_main/class-paymob-unset-old-setting.php';
+}
+
+if ( ! class_exists( 'Paymob_Valu_Widget' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle_gateways/class-paymob-valu-widget.php';
+}
+
+if ( ! class_exists( 'Paymob_Custom_Add_To_Cart' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/toggle_gateways/class-paymob-custom-add-to-cart.php';
 }
 
 require_once ABSPATH . 'wp-admin/includes/upgrade.php';

@@ -48,6 +48,8 @@ class Paymob_Manual_Setup_Save {
       
         $addlog = WC_LOG_DIR . 'paymob-auth.log';
         $debug='1';
+        delete_option('woocommerce_valu_widget_settings');
+
         if(!empty($conf))
         {
             

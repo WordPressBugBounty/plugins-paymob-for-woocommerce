@@ -14,7 +14,7 @@ class Paymob_Check_IntergrationMatch {
 
 			$id             = trim( $parts[0] );
 			$entry_currency = isset( $parts[2] ) ? trim( substr( $parts[2], strpos( $parts[2], '(' ) + 1) ) : '';
-			if ( in_array( $id, $integration_id, true ) && $entry_currency === $currency ) {
+			if (is_array($integration_id)&& in_array( $id, $integration_id, true ) && $entry_currency === $currency ) {
 				return true;
 			}
 		}

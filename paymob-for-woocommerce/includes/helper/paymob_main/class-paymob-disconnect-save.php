@@ -17,6 +17,7 @@ class Paymob_Disconnect_Save {
             delete_option( 'woocommerce_paymob_country' );
             delete_option( 'woocommerce_paymob_gateway_data' );
             delete_option( 'woocommerce_paymob_gateway_data_failure' );
+            delete_option('woocommerce_valu_widget_settings');
             $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}paymob_gateways" );
             $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}paymob_cards_token" );
   

@@ -9,6 +9,7 @@ class Paymob_Gateways_HideCss {
 			$css     = '';
 
 			foreach ( $results as $result ) {
+				$css .= 'div[id="' . esc_attr( $result->gateway_id ) . '"] { display: none; }';
 				$css .= 'tr[data-gateway_id="' . esc_attr( $result->gateway_id ) . '"] { display: none; }';
 			}
 

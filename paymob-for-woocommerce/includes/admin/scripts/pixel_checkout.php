@@ -1,10 +1,11 @@
 <div id="paymob-elements"></div>
 <script>
     window.hasEmptyFields = false;
+  
 
-    onload = (event) => {             
+    window.addEventListener('load', function () {           
          updateCheckoutData(); 
-    };
+        });
     jQuery(document).ready(function ($) {
         // Function to toggle the visibility of the Place Order button
         function togglePlaceOrderButton() {
@@ -52,7 +53,14 @@
         });
     }
     jQuery('#place_order').on('click', function (event) {
-        jQuery('button[type="submit"][name="woocommerce_checkout_place_order"]').submit();
+        if(jQuery('button[type="submit"][name="woocommerce_checkout_place_order"]').length =1){
+            jQuery('button[type="submit"][name="woocommerce_checkout_place_order"]').submit();
+        }
+        if(jQuery('input[name="woocommerce_checkout_place_order"]').length =1){
+            jQuery('input[name="woocommerce_checkout_place_order"]').submit();
+        }else{
+            console.info('submit not triggered')
+        }
     });
 
 

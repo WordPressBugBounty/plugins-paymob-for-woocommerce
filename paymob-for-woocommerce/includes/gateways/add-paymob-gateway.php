@@ -42,6 +42,18 @@ function save_paymob_add_gateway_settings() {
 
 	return Paymob_Save_Gateway_Settings::save_paymob_add_gateway_settings();
 }
+
+// Save custom gateway settings.
+add_action( 'woocommerce_update_options_checkout', 'save_paymob_valu_widget_settings' );
+/**
+ * Save paymob_add_gateway settings.
+ *
+ * @return void
+ */
+function save_paymob_valu_widget_settings() {
+
+	return Paymob_Save_Gateway_Settings::save_paymob_valu_widget_settings();
+}
 /**
  * Verifies if the integration ID is valid based on the hidden integration ID and currency.
  *
@@ -244,4 +256,19 @@ add_action( 'admin_head', 'hide_save_changes_button_in_paymob_list_gateways_sect
 function hide_save_changes_button_in_paymob_list_gateways_section() {
 
 	return Paymob_Hide_Save_Button::hide_save_changes_button_in_paymob_list_gateways_section();
+}
+
+// Add fields to the paymob_list_gateways section.
+add_filter( 'woocommerce_get_settings_checkout', 'paymob_valu_widget_settings', 10, 2 );
+
+/**
+ * Adds custom Paymob gateway fields to the WooCommerce settings page.
+ *
+ * @param array  $settings The current WooCommerce settings.
+ * @param string $current_section The current settings section.
+ * @return array The updated settings with custom Paymob gateway fields.
+ */
+function paymob_valu_widget_settings( $settings, $current_section ) {
+
+	return Paymob_Valu_Widget_Settings::paymob_valu_widget_setting( $settings, $current_section );
 }

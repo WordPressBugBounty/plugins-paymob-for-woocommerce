@@ -313,6 +313,52 @@ class PaymobAutoGenerate {
 		}
 		return $integration_ids;
 	}
+
+	public static function get_valu_integration_ids() {
+		global $wpdb;
+		$integration_ids = array();
+		if ( ( Paymob::filterVar( 'section' ) ) && Paymob::filterVar( 'section' ) !== 'paymob' ) {
+			$integration_ids = array(
+				'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
+			);
+		}
+		$paymob_options = get_option( 'woocommerce_paymob_settings' );
+		$paymobReq = new Paymob( '1', WC_LOG_DIR . 'paymob-auth.log' );
+		$mode = $paymobReq->getMode( $paymob_options['sec_key'] );
+		if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
+			$integration_id_hidden = explode( ',', $paymob_options['integration_id_hidden'] );
+			$integration_ids       = []; // Initialize the array
+			foreach ( $integration_id_hidden as $entry ) {
+				$parts = explode( ' : ', $entry );
+				$valu = '-valu';
+				$valuOption = $wpdb->get_results("SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '%$valu%'");
+				$valuEnabled = 'no';
+				if(!empty($valuOption[0])){
+					$valu = maybe_unserialize($valuOption[0]->option_value);
+					$valuEnabled = $valu['enabled'];
+				}
+				if ( stripos( $entry, 'VALU') !== false && stripos($entry, $mode) !== false && $valuEnabled=='yes') { // Only process ValU entries
+					
+					if ( count( $parts ) < 3 ) {
+						continue; // Skip this entry if it doesn't have enough parts.
+					}
+		
+					$id    = trim( $parts[0] );  // Extract the integration ID
+					$label = trim( $parts[1] );  // Extract the label
+		
+					// Ensure closing parenthesis
+					if ( substr( $label, -1 ) !== ')' ) {
+						$label .= ' )'; // Append ")" if not present
+					}
+		
+					$integration_ids[ $id ] = $id . ' : ' . $label; // Store in associative array
+				}
+			}
+		}
+		
+		
+		return $integration_ids;
+	}
 	/**
 	 * Returns the count of enabled gateways and updates the Paymob settings with the new title.
 	 *

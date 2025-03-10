@@ -19,6 +19,7 @@ class WC_Paymob_UnInstall {
 		delete_option( 'woocommerce_paymob_country' );
 		delete_option( 'woocommerce_paymob_gateway_data' );
 		delete_option( 'woocommerce_paymob_gateway_data_failure' );
+		delete_option('woocommerce_valu_widget_settings');
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}paymob_gateways" );
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}paymob_cards_token" );
 	}

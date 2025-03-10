@@ -97,3 +97,19 @@ add_action( 'wp_ajax_paymob_toggle_gateway', 'handle_toggle_gateway' );
 function handle_toggle_gateway() {
 	return Paymob_Handel_Toggle::handle_toggle_gateway();
 }
+
+// AJAX to handle Valu Weight.
+add_action( 'wp_ajax_valu_widget', 'valu_widget' );
+add_action('wp_ajax_nopriv_valu_widget', 'valu_widget');
+
+function valu_widget()
+{
+	return Paymob_Valu_Widget::valu_widget();
+}
+
+add_action('wp_ajax_add_to_cart', 'custom_add_to_cart');
+add_action('wp_ajax_nopriv_add_to_cart', 'custom_add_to_cart'); // Allow guests
+
+function custom_add_to_cart() {
+    return Paymob_Custom_Add_To_Cart::custom_add_to_cart();
+}

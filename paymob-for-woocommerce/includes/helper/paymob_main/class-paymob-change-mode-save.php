@@ -61,8 +61,9 @@ class Paymob_Change_Mode_Save {
             }
 
 
-            update_option('woocommerce_paymob-main_settings', $main_settings);
+            update_option('woocommerce_paymob-main_settings', $main_settings); 
             update_option('woocommerce_paymob_settings', $paymob_settings);
+            delete_option('woocommerce_valu_widget_settings');
             // wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-woocommerce'),
             // 'redirect_url'=>admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob-main')]);
             wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-woocommerce'),

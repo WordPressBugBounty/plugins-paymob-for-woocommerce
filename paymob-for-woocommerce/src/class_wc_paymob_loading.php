@@ -6,9 +6,9 @@ class WC_Paymob_Loading {
 
 	public static function load() {
 		global $wpdb;
-		// Load translation
-		
+
 		// Create table
+		WC_Paymob_Tables::create_paymob_gateways_table();
 		WC_Paymob_Tables::update_paymob_gateways_table();
 		WC_Paymob_Tables::create_paymob_pixel_table();
 
@@ -21,6 +21,7 @@ class WC_Paymob_Loading {
 		foreach ( $gateways as $gateway ) {
 			new Paymob_WooCommerce( $gateway->gateway_id );
 		}
+		// Load translation
 		load_plugin_textdomain( 'paymob-woocommerce', false, PAYMOB_PLUGIN_NAME . '/i18n/languages' );
 	}
 }

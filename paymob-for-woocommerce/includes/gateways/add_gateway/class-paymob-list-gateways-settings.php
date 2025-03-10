@@ -130,7 +130,7 @@ class Paymob_List_Gateways_Settings
 				$paymob_settings = $current_paymob_settings; // Reuse existing settings
 				$paymob_settings['integration_id_hidden'] = implode("\n", $filtered_data);
 				$paymob_settings['integration_id'] = $ids;
-				update_option('woocommerce_paymob_settings', $paymob_settings);
+				// update_option('woocommerce_paymob_settings', $paymob_settings);
 			}
 			
 			if ($pixel_enabled && !empty($pxl_ids)) {
@@ -149,7 +149,7 @@ class Paymob_List_Gateways_Settings
 				$paymobPixel['cards_integration_id'] = $card_integrations;
 				$paymobPixel['enabled'] = $pixel_enabled;
 
-				update_option('woocommerce_paymob-pixel_settings', $paymobPixel);
+				// update_option('woocommerce_paymob-pixel_settings', $paymobPixel);
 
 			}
 		}
