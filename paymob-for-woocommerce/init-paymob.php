@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 3.1.0
+ * Version: 3.1.1
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-woocommerce
@@ -11,8 +11,8 @@
  * Requires at least: 5.0
  * Requires Plugins: woocommerce
  * WC requires at least: 4.0
- * WC tested up to: 9.3
- * Tested up to: 6.7
+ * WC tested up to: 9.7
+ * Tested up to: 6.8
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * Copyright: © 2024 Paymob
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '3.1.0' );
+	define( 'PAYMOB_VERSION', '3.1.1' );
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -50,7 +50,6 @@ class Init_Paymob {
 		// add_action('woocommerce_after_add_to_cart_button',array($this,'paymobValuWidget'));
 		// Check redirect flag and perform redirect with high priority
 		add_action( 'admin_init', array( $this, 'redirect_after_activation' ), 1 );
-		
 		// Declare compatibility with WooCommerce features
 		add_action(
 			'before_woocommerce_init',
@@ -61,16 +60,8 @@ class Init_Paymob {
 				}
 			}
 		);
-
-	// add_filter( 'woocommerce_admin_get_feature_config', function( $features ) {
-	// 			return array_merge(
-	// 				$features,
-	// 				[
-	// 					'reactify-classic-payments-settings' => true,
-	// 				]
-	// 			);
-	// 		}
-	// 	, 999 );
+	
+		
 	}
 
 	public static function add_row_meta( $links, $file ) {
@@ -106,11 +97,34 @@ class Init_Paymob {
 	{
 		return WC_Paymob_ValuWidget::AddValuWidget();
 	}
-	
 }
 
 register_uninstall_hook( __FILE__, array( 'Init_Paymob', 'uninstall' ) );
+// ✅ Add columns to WooCommerce orders table
+add_filter('manage_edit-shop_order_columns','paymob_order_list_columns');
+add_filter('manage_woocommerce_page_wc-orders_columns', 'paymob_order_list_columns');
+
+function paymob_order_list_columns($columns) {
+    $columns["paymob_merchant_order_id"] = __("Paymob Merchant Order ID", "paymob_woocommerce");
+    $columns["paymob_transaction_id"] = __("Paymob Transaction ID", "paymob_woocommerce");
+    return $columns;
+}
+
+// ✅ Output data for the custom columns
+add_action('manage_shop_order_posts_custom_column', 'paymob_order_columns_data', 10, 2);
+add_action('manage_woocommerce_page_wc-orders_custom_column', 'paymob_order_columns_data', 10, 2);
+
+function paymob_order_columns_data($colName, $orderId) {
+    $order = wc_get_order($orderId);
+    $paymobMerchantOrderID = $order->get_meta('PaymobMerchantOrderID'); // ✅ Correct meta key
+    $paymobTransactionId = $order->get_meta('PaymobTransactionId');     // ✅ Correct meta key
+
+    if ($colName === 'paymob_merchant_order_id') {
+        echo !empty($paymobMerchantOrderID) ? esc_html($paymobMerchantOrderID) : "---";
+    }
+
+    if ($colName === 'paymob_transaction_id') {
+        echo !empty($paymobTransactionId) ? esc_html($paymobTransactionId) : "---";
+    }
+}
 new Init_Paymob();
-
-
-

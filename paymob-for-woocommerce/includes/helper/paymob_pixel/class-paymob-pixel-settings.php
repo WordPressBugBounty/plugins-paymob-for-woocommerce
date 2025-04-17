@@ -35,8 +35,13 @@ class Paymob_Pixel_Settings {
                         'default' => !empty($pixel_settings['google_pay_integration_id'])?$pixel_settings['google_pay_integration_id']:null
                     );
             }
-        
+        $tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
             $custom_settings = array(
+                array(
+                    'name' => '',
+                    'type' => 'title',
+                    'desc' => $tabs,
+                ),
                 array(
                     'type'  => 'title',
                     'class' => 'payment-feature-description',

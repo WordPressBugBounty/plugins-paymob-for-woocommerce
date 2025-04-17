@@ -317,48 +317,66 @@ class PaymobAutoGenerate {
 	public static function get_valu_integration_ids() {
 		global $wpdb;
 		$integration_ids = array();
-		if ( ( Paymob::filterVar( 'section' ) ) && Paymob::filterVar( 'section' ) !== 'paymob' ) {
+	
+		if ((Paymob::filterVar('section')) && Paymob::filterVar('section') !== 'paymob') {
 			$integration_ids = array(
-				'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
+				'' => __('Select an Integration ID', 'paymob-woocommerce'),
 			);
 		}
-		$paymob_options = get_option( 'woocommerce_paymob_settings' );
-		$paymobReq = new Paymob( '1', WC_LOG_DIR . 'paymob-auth.log' );
-		$mode = $paymobReq->getMode( $paymob_options['sec_key'] );
-		if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
-			$integration_id_hidden = explode( ',', $paymob_options['integration_id_hidden'] );
-			$integration_ids       = []; // Initialize the array
-			foreach ( $integration_id_hidden as $entry ) {
-				$parts = explode( ' : ', $entry );
-				$valu = '-valu';
-				$valuOption = $wpdb->get_results("SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '%$valu%'");
-				$valuEnabled = 'no';
-				if(!empty($valuOption[0])){
-					$valu = maybe_unserialize($valuOption[0]->option_value);
-					$valuEnabled = $valu['enabled'];
+	
+		$paymob_options = get_option('woocommerce_paymob_settings');
+		$paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
+		$mode = $paymobReq->getMode($paymob_options['sec_key']); // Get the current mode (live/test)
+	
+		if (isset($paymob_options['integration_id_hidden']) && !empty($paymob_options['integration_id_hidden'])) {
+			$integration_id_hidden = explode(',', $paymob_options['integration_id_hidden']);
+			$integration_ids = []; // Initialize array
+	
+			// ✅ Fetch all ValU options once
+			$valuOptions = $wpdb->get_results("SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '%-valu%'");
+	
+			$enabled_integration_ids = [];
+	
+			// ✅ Process ValU settings first
+			foreach ($valuOptions as $option) {
+				$settings = maybe_unserialize($option->option_value);
+	
+				if (
+					isset($settings['enabled']) && $settings['enabled'] === 'yes' &&  // Check if enabled
+					isset($settings['single_integration_id']) &&                      // Check if integration ID exists
+					isset($settings['mode']) && strtolower($settings['mode']) === strtolower($mode) // Match mode
+				) {
+					$enabled_integration_ids[] = (string) $settings['single_integration_id']; // Store as string
 				}
-				if ( stripos( $entry, 'VALU') !== false && stripos($entry, $mode) !== false && $valuEnabled=='yes') { // Only process ValU entries
-					
-					if ( count( $parts ) < 3 ) {
-						continue; // Skip this entry if it doesn't have enough parts.
-					}
-		
-					$id    = trim( $parts[0] );  // Extract the integration ID
-					$label = trim( $parts[1] );  // Extract the label
-		
-					// Ensure closing parenthesis
-					if ( substr( $label, -1 ) !== ')' ) {
-						$label .= ' )'; // Append ")" if not present
-					}
-		
-					$integration_ids[ $id ] = $id . ' : ' . $label; // Store in associative array
+			}
+	
+			// ✅ Now loop over integration_id_hidden and match enabled IDs & mode
+			foreach ($integration_id_hidden as $entry) {
+				$parts = explode(' : ', $entry);
+	
+				if (count($parts) < 3) {
+					continue; // Skip invalid entries
+				}
+	
+				$id = trim($parts[0]); // Extract integration ID
+				$label = trim($parts[1]); // Extract label
+	
+				// Ensure closing parenthesis
+				if (substr($label, -1) !== ')') {
+					$label .= ' )'; // Append ")" if not present
+				}
+	
+				// ✅ Check if the integration ID exists in enabled ValU options & matches mode
+				if (in_array($id, $enabled_integration_ids, true)) {
+					$integration_ids[$id] = $id . ' : ' . $label; // Store in associative array
 				}
 			}
 		}
-		
-		
+	
 		return $integration_ids;
 	}
+	
+	
 	/**
 	 * Returns the count of enabled gateways and updates the Paymob settings with the new title.
 	 *

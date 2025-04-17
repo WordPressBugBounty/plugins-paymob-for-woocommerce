@@ -3,7 +3,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+            
 return array(
+	'tabs'=> array(
+        'name' => '',
+        'type' => 'title',
+        'description' => $tabs,
+    ),
 	'integration_id' => array(
 		'title'             => __( 'Paymob Integration ID(s)', 'paymob-woocommerce' ),
 		'type'              => 'multiselect',

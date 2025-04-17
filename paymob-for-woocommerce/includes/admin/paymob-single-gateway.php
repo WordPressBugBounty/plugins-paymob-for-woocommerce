@@ -4,8 +4,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $single_integration_id_properties = PaymobAutoGenerate::disable_single_integration_id_field();
-
+$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+            
+    
 $settings = array(
+    'tabs'=> array(
+        'name' => '',
+        'type' => 'title',
+        'description' => $tabs,
+    ),
     'single_integration_id' => array(
         'title'             => $single_integration_id_properties['title'],
         'type'              => $single_integration_id_properties['type'],  // Set the type dynamically

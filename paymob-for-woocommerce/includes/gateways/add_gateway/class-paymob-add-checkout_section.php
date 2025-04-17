@@ -13,15 +13,24 @@ class Paymob_Checkout_Section
 		$pub_key = isset($paymob_options['pub_key']) ? $paymob_options['pub_key'] : '';
 		$sec_key = isset($paymob_options['sec_key']) ? $paymob_options['sec_key'] : '';
 		$api_key = isset($paymob_options['api_key']) ? $paymob_options['api_key'] : '';
-		
-		$option_name = $wpdb->get_var("
-                SELECT option_name 
-                FROM {$wpdb->options} 
-                WHERE option_name LIKE 'woocommerce_paymob-%valu%_settings'
-                LIMIT 1
-            ");
-            
-        $option_value = get_option($option_name);
+		$mode = "";
+		$option_names = $wpdb->get_col("
+			SELECT option_name 
+			FROM {$wpdb->options} 
+			WHERE option_name LIKE 'woocommerce_paymob-%valu%_settings'
+		");
+
+		if (!empty($option_names)) {
+			foreach ($option_names as $option_name) {
+				$option_value = get_option($option_name);
+				
+				// Ensure 'mode' exists in the array to prevent errors
+				if (isset($option_value['mode']) && $option_value['mode'] == $paymob_options['mode']) {
+					$mode = $option_value['mode'];
+					break; // Stop looping if a match is found
+				}
+			}
+		}
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
 		foreach ($gateways as $gateway) {
 			$gateway_ids[] = $gateway->gateway_id;

@@ -140,5 +140,31 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 });
 
+jQuery(document).ready(function($) {
+   
+    let shouldUncheck = valuWidgetData.shouldUncheck === 'true';
+    if (shouldUncheck) {
+        setTimeout(function() {
+            let darkModeCheckbox = $('input[name="dark_mode"]');
+            let enable_widget=$('input[name="enable"]');
+            let integrationSelect = $('select[name="integration_id"]');
+            if (darkModeCheckbox.length) {
+                darkModeCheckbox.prop('checked', false); // Force uncheck
+            }
+            if (enable_widget.length) {
+                enable_widget.prop('checked', false); // Force uncheck
+            }
+             // Ensure Integration ID dropdown has "Please Select" as default
+            if (integrationSelect.length) {
+                let integrationOptions = integrationSelect.find('option'); // Get all option elements
+                if (integrationOptions.length > 1) {
+                    integrationSelect.prepend('<option value="" selected>Please Select Enabled Valu integration</option>');
+                    integrationSelect.val(''); 
+                }
+            }
+        }, 500); // Delay to allow WooCommerce settings to load
+    }
+});
+
 
 

@@ -3,6 +3,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 return array(
+	'tabs'       => array(
+		'title'       =>'',
+		'description' => include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php',
+		'type'        => 'title',
+	),
 	'buttons'       => array(
 		'title'       =>'',
 		'description' => include PAYMOB_PLUGIN_PATH . '/includes/admin/views/htmlsviews/html_reconnect_buttons.php',

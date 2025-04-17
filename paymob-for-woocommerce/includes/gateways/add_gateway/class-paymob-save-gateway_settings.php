@@ -72,25 +72,37 @@ class Paymob_Save_Gateway_Settings {
 
 	public static function save_paymob_valu_widget_settings() {
 		global $current_section, $wpdb;
-
+	
 		if ('valu_widget' !== $current_section) {
 			return;
 		}
-
+	
 		// Get form data
-		$payment_enabled           = Paymob::filterVar( 'enable', 'POST' ) ? 'yes' : 'no';
-		$integration_id            = Paymob::filterVar( 'integration_id', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) ) : '';
-		$dark_mode                 = Paymob::filterVar( 'dark_mode', 'POST' ) ? 'yes' : 'no';
-
+		$payment_enabled = Paymob::filterVar('enable', 'POST') ? 'yes' : 'no';
+		$integration_id  = Paymob::filterVar('integration_id', 'POST') ? sanitize_text_field(Paymob::filterVar('integration_id', 'POST')) : '';
+		$dark_mode       = Paymob::filterVar('dark_mode', 'POST') ? 'yes' : 'no';
+	
+		// Check if the ValU Widget is enabled
+		if ($payment_enabled !== 'yes') {
+			// Redirect back with an error message
+			wp_redirect(add_query_arg(array(
+				'page'              => 'wc-settings',
+				'tab'               => 'checkout',
+				'section'           => 'valu_widget',
+				'settings-error'    => 'valu_widget_disabled'
+			), admin_url('admin.php')));
+			exit;
+		}
+	
 		// Save settings
 		$default_settings = array(
 			'enabled_widget'  => $payment_enabled,
-			'integration_id' => $integration_id,
-			'dark_mode'      => $dark_mode
+			'integration_id'  => $integration_id,
+			'dark_mode'       => $dark_mode
 		);
-
+	
 		update_option('woocommerce_valu_widget_settings', $default_settings);
-		
+	
 		// Redirect back with success message
 		wp_redirect(add_query_arg(array(
 			'page'              => 'wc-settings',
@@ -98,18 +110,22 @@ class Paymob_Save_Gateway_Settings {
 			'section'           => 'valu_widget',
 			'settings-updated'  => 'true'
 		), admin_url('admin.php')));
-	
 		exit;
 	}
+	
 }
 
 // ✅ Move this outside the class!
 add_action('admin_notices', function () {
-	if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
-		echo '<div class="updated notice is-dismissible"><p>Your settings have been saved.</p></div>';
-	}
-	
+    if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
+        echo '<div class="updated notice is-dismissible"><p>Your settings have been saved.</p></div>';
+    }
+    
+    if (isset($_GET['settings-error']) && $_GET['settings-error'] === 'valu_widget_disabled') {
+        echo '<div class="notice notice-error is-dismissible"><p>You must enable the ValU Widget before saving settings.</p></div>';
+    }
 });
+
 
 add_action('admin_footer', function () {
     // Show the message only on the ValU Widget settings page

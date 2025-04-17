@@ -143,6 +143,10 @@ class Paymob_WooCommerce {
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
 			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+			update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
+            update_post_meta( $orderId, 'PaymobTransactionId', $transaction );
+
+
 			$order->save();
 			die( esc_html( "Order updated: $orderId" ) );
 		} else {
@@ -258,6 +262,9 @@ class Paymob_WooCommerce {
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
 			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+			update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
+            update_post_meta( $orderId, 'PaymobTransactionId', $transaction );
+
 			$order->save();
 			die( esc_html( "Order updated: $orderId" ) );
 		}
@@ -342,6 +349,8 @@ class Paymob_WooCommerce {
 			$order->update_status( 'failed' );
 			$order->add_order_note( 'Paymob :' . $error );
 			$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+			update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
+
 			$err = '?gatewayerror='.$error ;
 			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
@@ -421,6 +430,9 @@ class Paymob_WooCommerce {
 		}
 		$order->update_meta_data( 'PaymobTransactionId', $id ); 
 		$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+		update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
+        update_post_meta( $orderId, 'PaymobTransactionId', $id );
+
 		$order->save();
 	    WC()->session->set( 'cart', WC()->cart->get_cart() );
 		WC()->session->set( 'chosen_shipping_methods', array() );

@@ -105,3 +105,70 @@
 #confirmDisable:hover {
     background-color: #871b1b;
 }
+/* Container for the tab links */
+.paymob-admin-tab {
+    display: flex;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.paymob-admin-tab .tablinks {
+    background-color: #ffffff !important;
+    color: #2c7bbf !important;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 16px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 6px rgba(44, 123, 191, 0.3);
+    border-top: 1px solid #2c7bbf;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+   
+.paymob-admin-tab .tablinks:hover {
+    background-color: #2c7bbf !important; /* Active = blue */
+    color: #ffffff !important; /* Active text = white */
+    transform: scale(1.05); /* Slight scaling effect */
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+   
+.paymob-admin-tab .tablinks.active {
+    background-color: #2c7bbf !important; /* Active = blue */
+    color: #ffffff !important; /* Active text = white */
+    font-weight: 700;
+    box-shadow: 0 3px 6px rgba(44, 123, 191, 0.3);
+    border: 0.25px solid #2c7bbf;
+    border-bottom: #ffffff; /* Optional: make it blend into the content below */
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+
+  /* Add "New" badge to tab links where href contains section=paymob_pixel */
+.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]::after {
+    content: "New";
+    display: inline-block;
+    background-color: #e46d29;
+    color: white;
+    font-weight: bold;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    margin-left: 6px;
+    margin-top: 1px;
+    animation: pulse 1s infinite;
+}
+
+/* Optional: Adjust hover color of the badge */
+.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]:hover::after {
+    background-color: #d05a1f;
+}
+

@@ -172,6 +172,8 @@ class Paymob_Scripts {
 		
 		$current_section = isset($_GET['section']) ? sanitize_text_field($_GET['section']) : '';
 		if ($current_section === 'valu_widget') {
+			$option_valu_widget = get_option('woocommerce_valu_widget_settings');
+			$should_uncheck = ($option_valu_widget === false || empty($option_valu_widget['dark_mode'])) ? 'true' : 'false';
 			// Enqueue the script
 			wp_enqueue_script(
 				'paymob-pixel-custom-script', // Unique handle
@@ -180,6 +182,9 @@ class Paymob_Scripts {
 				'', // Version
 				true // Load in the footer
 			);
+			wp_localize_script('paymob-pixel-custom-script', 'valuWidgetData', array(
+				'shouldUncheck' => $should_uncheck
+			));
 
 		}
 		

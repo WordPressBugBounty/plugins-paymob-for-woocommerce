@@ -2,11 +2,11 @@
 Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 7.0
 WC requires at least: 4.0
-WC tested up to: 9.3
-Stable tag: 3.1.0
+WC tested up to: 9.7
+Stable tag: 3.1.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -174,11 +174,10 @@ Remember to save your changes for them to reflect on the checkout.
 11. screenshot-11.png
 
 == Changelog ==
-2025-03-10 - version 3.1.0
-Add fix for multi site
-Add fix for pixel place Order button display
-Add fix for re-ordering payments
-Add fix for order delivery plugin
+2025-04-17 - version 3.1.1
+Add new admin tabs due to the inpombatibility of reactify-classic-payments-settings
+List Paymob Merchant Order ID and Transaction ID in Woo order table
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
+
 

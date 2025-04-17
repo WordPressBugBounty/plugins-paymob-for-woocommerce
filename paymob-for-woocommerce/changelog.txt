@@ -1,7 +1,17 @@
 == Changelog ==
 
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
+
 == Changelog ==
+2025-04-17 - version 3.1.1
+Add new admin tabs due to the inpombatibility of reactify-classic-payments-settings
+
+2025-03-10 - version 3.1.0
+Add fix for multi site
+Add fix for pixel place Order button display
+Add fix for re-ordering payments
+Add fix for order delivery plugin
+
 2025-02-18 - version 3.0.3
 Hot-fix error processing while checkout
 Hot-fix hide only checkout button
@@ -93,3 +103,4 @@ Apply fix to load only flash inetgration IDs in the Paymob settings
 
 2023-11-19 - version 1.0.0
 Initiate Paymob WooCommerce Plugin
+

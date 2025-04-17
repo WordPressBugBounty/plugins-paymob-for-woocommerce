@@ -7,7 +7,7 @@
  *
  * @package Paymob_WooCommerce
  */
-add_filter( 'woocommerce_get_sections_checkout', 'add_paymob_checkout_section', 20 );
+// add_filter( 'woocommerce_get_sections_checkout', 'add_paymob_checkout_section', 20 );
 /**
  * Add custom sections to WooCommerce checkout settings
  *

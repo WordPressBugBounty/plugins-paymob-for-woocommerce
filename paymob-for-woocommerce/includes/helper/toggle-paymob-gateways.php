@@ -99,10 +99,10 @@ function handle_toggle_gateway() {
 }
 
 // AJAX to handle Valu Weight.
-add_action( 'wp_ajax_valu_widget', 'valu_widget' );
-add_action('wp_ajax_nopriv_valu_widget', 'valu_widget');
+add_action( 'wp_ajax_valu_widget_paymob', 'valu_widget_paymob' );
+add_action('wp_ajax_nopriv_valu_widget_paymob', 'valu_widget_paymob');
 
-function valu_widget()
+function valu_widget_paymob()
 {
 	return Paymob_Valu_Widget::valu_widget();
 }
