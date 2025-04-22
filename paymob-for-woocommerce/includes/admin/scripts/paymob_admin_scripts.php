@@ -108,7 +108,7 @@ class Paymob_Scripts {
 	public static function paymob_pixel_checkout($customize) {
         $paymobOptions = get_option('woocommerce_paymob-main_settings');
         $paymob_pixel = get_option('woocommerce_paymob-pixel_settings');
-        if(!empty($paymob_pixel['enabled']) && $paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout() && !is_cart() ){
+        if(!empty($paymob_pixel['enabled']) && $paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout()){
 			wp_enqueue_script('paymob-pixel-checkout', plugins_url(PAYMOB_PLUGIN_NAME) . '/assets/js/blocks/paymob-pixel_block.js', array('jquery'), PAYMOB_VERSION, true);
 	        $pubKey = isset($paymobOptions['pub_key']) ? $paymobOptions['pub_key'] : '';
 	        wp_localize_script('paymob-pixel-checkout', 'pxl_object', array(

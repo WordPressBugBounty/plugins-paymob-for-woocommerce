@@ -358,7 +358,8 @@ function initializePaymobElement(key, cs) {
                         // return await new Promise((resolve) => {
                         console.log('Block-based checkout detected for '+ paymentmethod);
                        // showLoadingIndicator("Please wait while we direct you to Bank's OTP Page .");
-                        // await new Promise(res => setTimeout(() => res(''),5000));
+                        window.dispatchEvent(new Event('updateIntentionData'));
+                        await new Promise(res => setTimeout(() => res(''),5000));
                         return true;
                     } else {
                         // Trigger form submission

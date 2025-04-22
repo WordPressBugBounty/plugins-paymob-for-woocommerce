@@ -5,6 +5,7 @@ This file will contains only old changelogs. For newer versions, you can check r
 == Changelog ==
 2025-04-17 - version 3.1.1
 Add new admin tabs due to the inpombatibility of reactify-classic-payments-settings
+List Paymob Merchant Order ID and Transaction ID in Woo order table
 
 2025-03-10 - version 3.1.0
 Add fix for multi site

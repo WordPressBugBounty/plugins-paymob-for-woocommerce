@@ -320,7 +320,7 @@ class Paymob_WooCommerce {
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
 		
 		$merchant_order_id=Paymob::filterVar( 'merchant_order_id' );
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant order id'. $merchant_order_id );
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
 		if(strpos($orderId,'pixel') !== false){
 			global $wpdb;
 			$orderId = $wpdb->get_var(
