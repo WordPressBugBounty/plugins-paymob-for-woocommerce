@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.8
-Stable tag: 3.1.2
+Stable tag: 3.1.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -174,8 +174,8 @@ Remember to save your changes for them to reflect on the checkout.
 11. screenshot-11.png
 
 == Changelog ==
-2025-04-22 - version 3.1.2
-Hot-fix update intension in pixel payment
+2025-05-15 - version 3.1.3
+Hot-fix remove conflict from pixel style
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

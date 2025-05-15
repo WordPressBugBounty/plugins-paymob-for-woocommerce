@@ -230,20 +230,20 @@ function loadScripts() {
     paymobScript.async = true;
     document.head.appendChild(paymobScript);
    
-    const paymobMainCss = document.createElement("link");
-    paymobMainCss.href = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.css";
-    paymobMainCss.rel = "stylesheet";
-    document.head.appendChild(paymobMainCss);
+    // const paymobMainCss = document.createElement("link");
+    // paymobMainCss.href = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.css";
+    // paymobMainCss.rel = "stylesheet";
+    // document.head.appendChild(paymobMainCss);
 
     if (window.googleenabled == 1 ) {
         const googlePayScript = document.createElement('script');
         googlePayScript.src = "https://pay.google.com/gp/p/js/pay.js";
         document.head.appendChild(googlePayScript);
     }
-    const paymobStyleCss = document.createElement("link");
-    paymobStyleCss.href = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/styles.css";
-    paymobStyleCss.rel = "stylesheet";
-    document.head.appendChild(paymobStyleCss);
+    // const paymobStyleCss = document.createElement("link");
+    // paymobStyleCss.href = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/styles.css";
+    // paymobStyleCss.rel = "stylesheet";
+    // document.head.appendChild(paymobStyleCss);
 
     
 }
