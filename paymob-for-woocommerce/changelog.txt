@@ -3,6 +3,8 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+2025-05-15 - version 3.1.3
+Hot-fix remove conflict from pixel style
 
 2025-04-22 - version 3.1.2
 Hot-fix update intension in pixel payment
