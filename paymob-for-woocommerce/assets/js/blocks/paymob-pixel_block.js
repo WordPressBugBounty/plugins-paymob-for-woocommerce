@@ -336,17 +336,37 @@ function initializePaymobElement(key, cs) {
                     console.log('Classic Checkout - Create order manually for '+ paymentmethod);
                     // const wooform = jQuery('form.checkout');
                     // jQuery(wooform).append('<input type="hidden" id="pxl_submit" name="pxl_submit" value="pxl_submit">');
-                    if(validateClassicFrom() === false){
+                  // First, check if Terms & Conditions checkbox is checked
+                    if (jQuery('#terms').length) {
+                        // Check if it's an input of type checkbox
+                        if (jQuery('#terms').is('input[type="checkbox"]')) {
+       
+                            if (!jQuery('#terms').is(':checked')) {
+                                displayWooCommerceError("Please read and accept the terms and conditions to proceed with your order.");
+                                return false;
+                            }
+                        }
+                    }
+
+                    // Then, validate the form
+                    if (validateClassicFrom() === false) {
                         return await new Promise((resolve) => {
-                                jQuery('form.checkout').submit();
-                                jQuery('form.checkout').unblock({ message: null});
-                                console.log('Classic Checkout - Create order before resolve');
+                            console.log('Classic Checkout - Triggering order submission');
+                            
+                            // Trigger the WooCommerce place order button
+                            jQuery('form.checkout button[name="woocommerce_checkout_place_order"]').trigger('click');
+
+                            // Wait 5 seconds for WooCommerce to create the order
+                            setTimeout(() => {
+                                console.log('Classic Checkout - Resolve after delay');
                                 resolve(true);
-                        }, 5000);
-                    }else{
+                            }, 5000);
+                        });
+                    } else {
                         displayWooCommerceError("Please fill the Required Information to complete your payment");
                         return false;
                     }
+
 
                 }
             }
@@ -549,7 +569,20 @@ jQuery('.woocommerce-billing-fields input[aria-required], .woocommerce-billing-f
       return window.hasEmptyFields;
   }
 });
-      return window.hasEmptyFields;
+// Check if #terms exists on the page
+if (jQuery('#terms').length) {
+    // Check if it's an input of type checkbox
+    if (jQuery('#terms').is('input[type="checkbox"]')) {
+        if (!jQuery('#terms').is(':checked')) {
+            hasEmptyFields = true;
+            jQuery('#terms').closest('label').css('color', 'red'); // Highlight terms label
+        } else {
+            jQuery('#terms').closest('label').css('color', ''); // Clear highlight
+        }
+    }
+}
+
+return window.hasEmptyFields;
 }
 function ajaxCall(billingData, totalAmount, forcereload = false) {
     console.log("billingData", billingData);
