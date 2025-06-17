@@ -6,7 +6,13 @@
     window.addEventListener('load', function () {           
          updateCheckoutData(); 
         });
-    jQuery(document).ready(function ($) {
+        jQuery(document).ready(function ($) {
+			$(document).on('change', 'input[name="payment_method"]', function () {
+			if (this.value === 'paymob-pixel') {
+				updateCheckoutData();
+				console.log('updateCheckoutData() called on user change to paymob-pixel');
+			}
+		});
         // Function to toggle the visibility of the Place Order button
         function togglePlaceOrderButton() {
             const selectedPaymentMethod = $('input[name="payment_method"]:checked').val(); // Get selected payment method
