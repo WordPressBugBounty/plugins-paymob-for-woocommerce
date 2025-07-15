@@ -22,6 +22,7 @@ class Paymob_Update_Pixel_Data {
             $addlog = WC_LOG_DIR . 'paymob-pixel.log';
             // Retrieve the updated billing data and amount
             $billing_data = wc_clean(Paymob::filterVar('billing_data', 'POST'));
+            WC()->cart->calculate_totals();
             $total_amount = WC()->cart->get_total('edit');
             // if($total_amount <=1){
             //     $msg = esc_html( __( 'Ops, can not create Paymob Embedded Payment with amount less than ', 'paymob-woocommerce' ) ).get_woocommerce_currency().' 1.<br>';
