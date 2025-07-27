@@ -24,6 +24,10 @@ class Paymob_Update_Pixel_Data {
             $billing_data = wc_clean(Paymob::filterVar('billing_data', 'POST'));
             WC()->cart->calculate_totals();
             $total_amount = WC()->cart->get_total('edit');
+
+            if(Paymob::filterVar('total_amount', 'POST')>= $total_amount){
+              $total_amount=Paymob::filterVar('total_amount', 'POST');
+            }
             // if($total_amount <=1){
             //     $msg = esc_html( __( 'Ops, can not create Paymob Embedded Payment with amount less than ', 'paymob-woocommerce' ) ).get_woocommerce_currency().' 1.<br>';
             //     wp_send_json_error($msg);
