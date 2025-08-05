@@ -51,7 +51,7 @@ class Paymob_Update_Pixel_Data {
                 $cents = 1000;
             }
         
-            $amount =  intval( round($total_amount, $round) * $cents);
+            $amount = intval(round((float) $total_amount, $round) * $cents);
         //    var_dump($amount);die;
             $paymobReq = new Paymob($debug, $addlog);
             $session_id = session_id() ?: uniqid('', true); 
