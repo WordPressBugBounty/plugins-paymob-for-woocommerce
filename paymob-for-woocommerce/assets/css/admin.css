@@ -255,9 +255,9 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
@@ -447,15 +447,15 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
 
 input[type="text"]:focus {
-    border-color: #f3ecef;
+    border-color: #0f0f0f;
     outline: none;
     box-shadow: 0 0 10px rgba(255, 51, 133, 0.5);
 }
@@ -553,7 +553,7 @@ input[type="text"]:focus {
 }
 
 .modal-callback p {
-    color: #928888;
+    color: #2c3338;
     background-color: rgba(255, 255, 255, 16.1);
     padding: 10px;
     border-radius: 10px;
@@ -567,9 +567,9 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
@@ -759,9 +759,9 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
@@ -873,7 +873,7 @@ float:right;
 }
 
 .modal-callback p {
-    color: #928888;
+    color: #2c3338;
     background-color: rgba(255, 255, 255, 16.1);
     padding: 10px;
     border-radius: 10px;
@@ -887,9 +887,9 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
@@ -1079,9 +1079,9 @@ input[type="text"] {
     padding: 6px;
     margin-top: 15px;
     border-radius: 10px;
-    border: 1px solid #f3f0f1;
+    border: 1px solid #060606;
     font-size: 15px;
-    color: #928888;
+    color: #2c3338;
     background-color: #fff;
     transition: 0.3s ease-in-out;
 }
@@ -1352,60 +1352,18 @@ button.woocommerce-save-button:hover {
 }
 
 
-/* Target submenu item links where href contains section=paymob_pixel */
-.subsubsub li a[href*="section=paymob_pixel"] {
-    display: inline-flex; /* Flexbox to align text and "New" notification horizontally */
-    align-items: center; /* Ensure vertical alignment of text and "New" notification */
-}
-
-/* Create the "New" notification beside the link text */
-.subsubsub li a[href*="section=paymob_pixel"]::after {
-    content: "New"; /* Text to indicate the new feature */
-    display: inline-block;
-    background-color: #e46d29; /* Red color for the notification */
-    color: white;
-    font-weight: bold;
-    font-size: 10px; /* Smaller font size */
-    padding: 2px 6px; /* Adjusted padding for a more compact look */
-    border-radius: 10px; /* Rounded corners for the notification */
-    text-align: center;
-    margin-left: 4px; /* Space between the link text and "New" notification */
-    margin-top: 2px; /* Adjust vertical position if needed */
-}
-
-/* Optional: Hover effect for the "New" text */
-.subsubsub li a[href*="section=paymob_pixel"]:hover::after {
-    background-color: #e46d29; /* Darker red on hover */
-}
-
-/* Optional: Animation for the "New" text (pulse effect) */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-.subsubsub li a[href*="section=paymob_pixel"]::after {
-    animation: pulse 1s infinite; /* Apply pulse animation */
-}
 .woocommerce table.form-table .select2-container{
     max-width: 400px !important;
 }
 
-/* Target submenu item links where href contains section=valu_widget */
-.subsubsub li a[href*="section=valu_widget"] {
+/* Target submenu item links where href contains section=paymob_subscription */
+.subsubsub li a[href*="section=paymob_subscription"] {
     display: inline-flex; /* Flexbox to align text and "New" notification horizontally */
     align-items: center; /* Ensure vertical alignment of text and "New" notification */
 }
 
 /* Create the "New" notification beside the link text */
-.subsubsub li a[href*="section=valu_widget"]::after {
+.subsubsub li a[href*="section=paymob_subscription"]::after {
     content: "New"; /* Text to indicate the new feature */
     display: inline-block;
     background-color: #e46d29; /* Red color for the notification */
@@ -1420,7 +1378,7 @@ button.woocommerce-save-button:hover {
 }
 
 /* Optional: Hover effect for the "New" text */
-.subsubsub li a[href*="section=valu_widget"]:hover::after {
+.subsubsub li a[href*="section=paymob_subscription"]:hover::after {
     background-color: #e46d29; /* Darker red on hover */
 }
 
@@ -1437,7 +1395,7 @@ button.woocommerce-save-button:hover {
     }
 }
 
-.subsubsub li a[href*="section=valu_widget"]::after {
+.subsubsub li a[href*="section=paymob_subscription"]::after {
     animation: pulse 1s infinite; /* Apply pulse animation */
 }
 .woocommerce table.form-table .select2-container{
@@ -1490,24 +1448,6 @@ button.woocommerce-save-button:hover {
 }
 
 
-  /* Add "New" badge to tab links where href contains section=paymob_pixel */
-.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]::after {
-    content: "New";
-    display: inline-block;
-    background-color: #e46d29;
-    color: white;
-    font-weight: bold;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    margin-left: 6px;
-    margin-top: 1px;
-    animation: pulse 1s infinite;
-}
 
-/* Optional: Adjust hover color of the badge */
-.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]:hover::after {
-    background-color: #d05a1f;
-}
 
+ 

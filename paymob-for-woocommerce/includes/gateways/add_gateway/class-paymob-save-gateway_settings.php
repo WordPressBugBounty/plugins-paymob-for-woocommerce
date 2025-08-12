@@ -112,6 +112,71 @@ class Paymob_Save_Gateway_Settings {
 		), admin_url('admin.php')));
 		exit;
 	}
+
+	public static function save_paymob_subscription_settings() {
+		global $current_section, $wpdb;
+
+		if ( 'paymob_subscription' !== $current_section ) {
+			return;
+		}
+
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$mode       = isset($mainOptions['mode']) ? $mainOptions['mode'] : 'test';
+
+		// Get subscription settings
+		$subscription_settings = Paymob::filterVar('woocommerce_paymob-subscription_settings', 'POST');
+		$enabled = (!empty($subscription_settings['enabled']) && $subscription_settings['enabled'] === '1') ? 'yes' : 'no';
+		$title        = !empty($subscription_settings['title']) ? sanitize_text_field($subscription_settings['title']) : 'Paymob Subscription';
+		$description  = !empty($subscription_settings['description']) ? sanitize_text_field($subscription_settings['description']) : 'Recurring payment via Paymob.';
+		$moto_id      = !empty($subscription_settings['moto_integration_id']) ? sanitize_text_field($subscription_settings['moto_integration_id']) : '';
+		$threeds_ids  = !empty($subscription_settings['ds3_integration_ids']) ? sanitize_text_field($subscription_settings['ds3_integration_ids']) : '';
+
+		if (empty($moto_id) || empty($threeds_ids)) {
+			WC_Admin_Settings::add_error(__('Please select both MOTO and 3DS Integration IDs.', 'paymob-woocommerce'));
+			return;
+		}
+
+		$gateway_id = 'paymob-subscription';
+
+		// Insert into custom DB table if needed
+		$exists = $wpdb->get_var($wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}paymob_gateways WHERE gateway_id = %s",
+			$gateway_id
+		));
+
+		if (!$exists) {
+			$ordering = $wpdb->get_var("SELECT MAX(ordering) FROM {$wpdb->prefix}paymob_gateways");
+			$ordering++;
+
+			$wpdb->insert("{$wpdb->prefix}paymob_gateways", array(
+				'gateway_id'        => $gateway_id,
+				'class_name'        => 'Paymob_Subscription',
+				'file_name'         => 'class-gateway-paymob-subscription.php',
+				'checkout_title'    => sanitize_text_field($title),
+				'checkout_description' => sanitize_text_field($description),
+				'integration_id'    => implode(',', (array)$threeds_ids),
+				'is_manual'         => '1',
+				'ordering'          => $ordering,
+				'mode'              => $mode,
+			));
+		}
+
+		// Save the WooCommerce gateway settings
+		$default_settings = array(
+			'enabled'                  => $enabled,
+			'title'                    => $title,
+			'description'              => $description,
+			'moto_integration_id'      => $moto_id,
+			'ds3_integration_ids'      => $threeds_ids,
+		);
+
+		update_option('woocommerce_paymob-subscription_settings', $default_settings);
+
+		// Redirect back to the same section with success message
+		wp_safe_redirect(admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob_subscription&settings-updated=true'));
+		exit;
+	}
+
 	
 }
 

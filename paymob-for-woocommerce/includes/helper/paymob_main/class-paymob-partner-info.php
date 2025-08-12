@@ -67,7 +67,7 @@ class Paymob_Main_Partner_Info
 					$main_integration_id_hidden = array();
 					$integration_id_hidden = array();
 					foreach ($result['integrationIDs'] as $value) {
-						$text = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' )';
+                        $text = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' : ' . $value['is_moto'] . ' : ' . $value['is_3DS'] . ' )';
 						$main_integration_id_hidden[] = $text . ',';
 						if (isset($value['mode']) && $value['mode'] == $status['is_live'] ? 'live' : 'test') {
 							$integration_id_hidden[] = $text . ',';
@@ -84,6 +84,7 @@ class Paymob_Main_Partner_Info
 							$paymobReq->updateWebHookUrl($conf, $value['id'], $data);
 						}
 					}
+					// var_dump($ids);die;
 					if (!empty($ids)) {
 						$main_integration_id_hidden = implode("\n", $main_integration_id_hidden);
 						$integration_id_hidden = implode("\n", $integration_id_hidden);

@@ -73,7 +73,7 @@ class Paymob_Manual_Setup_Save {
                     if($value['mode'] ==$isTestMode){
                         $count ++;
                     }
-                    $text = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' )';
+                    $text = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' : ' . $value['is_moto'] . ' : ' . $value['is_3DS'] . ' )';
                     $main_integration_id_hidden[] = $text . ',';
                     if (isset($value['mode']) && $value['mode'] == $isTestMode) {
                         $integration_id_hidden[] = $text . ',';
@@ -232,7 +232,7 @@ class Paymob_Manual_Setup_Save {
                             array( 'integration_id' => $value['id'] )
                         );
                         // error_log(print_r($all_ids, 1)); 
-		    foreach($card_ids as $id){
+		        foreach($card_ids as $id){
                         // error_log(print_r($id, 1)); 
                             $gateway_option = get_option( 'woocommerce_' . $payment_integrations_type . '_settings' );
                             if($value['id']== $id && $gateway_option['enabled'] == 'yes'){

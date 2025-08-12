@@ -3,7 +3,6 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
-
 2025-07-15 - version 3.1.7
 fix Additional Fees issue in pixel   
 

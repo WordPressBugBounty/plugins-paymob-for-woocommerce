@@ -49,3 +49,22 @@ jQuery(document).ready(function ($) {
     });
 });
 
+
+jQuery(document).ready(function ($) {
+    // Initialize Select2 for the Cards Integration ID
+    $('#paymob_subscription_ds3_integration_ids').select2({
+        placeholder: 'Select Integration ID',
+        allowClear: true,
+        width: '100%', // Ensure full width
+    });
+});
+
+
+jQuery(document).ready(function ($) {
+    // Initialize Select2 for the Cards Integration ID
+    $('#paymob_subscription_moto_integration_id').select2({
+        placeholder: 'Select Integration ID',
+        allowClear: true,
+        width: '100%', // Ensure full width
+    });
+});

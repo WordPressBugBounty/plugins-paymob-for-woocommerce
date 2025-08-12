@@ -59,8 +59,7 @@ class Paymob_Reset_gateways {
 		$integration_id_hidden = array();
 		$ids                   = array();
 		foreach ( $result['integrationIDs'] as $value ) {
-			$text                    = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' )';
-			$integration_id_hidden[] = $text . ',';
+ 			$text = $value['id'] . ' : ' . $value['name'] . ' (' . $value['type'] . ' : ' . $value['currency'] . ' : ' . $value['mode'] . ' : ' . $value['is_moto'] . ' : ' . $value['is_3DS'] . ' )';			$integration_id_hidden[] = $text . ',';
 			$ids[]                   = trim( $value['id'] );
 		}
 		if ( 'yes' === $default_enabled ) {

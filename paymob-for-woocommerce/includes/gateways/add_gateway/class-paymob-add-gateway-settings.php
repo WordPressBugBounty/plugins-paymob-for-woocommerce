@@ -12,4 +12,14 @@ class Paymob_Gateway_Settings {
 
 		return $settings;
 	}
+
+	public static function paymob_subscription_settings( $settings, $current_section ){
+		if ( 'paymob_subscription' === $current_section ) {
+			$custom_settings = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob_subscription.php';
+			// Merge custom settings with existing settings.
+			$settings = array_merge( $settings, $custom_settings );
+		}
+	
+		return $settings;
+	}
 }

@@ -43,6 +43,11 @@ function save_paymob_add_gateway_settings() {
 	return Paymob_Save_Gateway_Settings::save_paymob_add_gateway_settings();
 }
 
+add_action('woocommerce_update_options_checkout', 'save_paymob_subscription_settings');
+
+function save_paymob_subscription_settings() {
+	return Paymob_Save_Gateway_Settings::save_paymob_subscription_settings();
+}
 // Save custom gateway settings.
 add_action( 'woocommerce_update_options_checkout', 'save_paymob_valu_widget_settings' );
 /**
@@ -271,4 +276,17 @@ add_filter( 'woocommerce_get_settings_checkout', 'paymob_valu_widget_settings', 
 function paymob_valu_widget_settings( $settings, $current_section ) {
 
 	return Paymob_Valu_Widget_Settings::paymob_valu_widget_setting( $settings, $current_section );
+}
+
+add_filter( 'woocommerce_get_settings_checkout', 'paymob_subscription_settings', 10, 2 );
+
+/**
+ * Load Paymob Subscription settings section.
+ *
+ * @param array  $settings Current settings array.
+ * @param string $current_section Current settings section ID.
+ * @return array
+ */
+function paymob_subscription_settings( $settings, $current_section ) {
+	return Paymob_Gateway_Settings::paymob_subscription_settings( $settings, $current_section );
 }

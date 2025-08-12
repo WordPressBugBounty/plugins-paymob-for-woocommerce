@@ -12,15 +12,17 @@ class Paymob_List_Gateways_Settings
 		//  echo "<pre>";print_r(self::paymob_setting());exit;
 		$mode = isset($paymobOptions['mode']) ? $paymobOptions['mode'] : null;
 
-		if (!empty($mode) && 'paymob_list_gateways' === $current_section) {
-			$results = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM {$wpdb->prefix}paymob_gateways 
-					WHERE mode = %s 
-					ORDER BY CASE WHEN gateway_id = 'paymob-pixel' THEN 0 ELSE 1 END, ordering",
-					$mode
-				),
-				OBJECT
+		    if (!empty($mode) && 'paymob_list_gateways' === $current_section) {
+				$results = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT * FROM {$wpdb->prefix}paymob_gateways 
+						WHERE mode = %s 
+						AND gateway_id != %s
+						ORDER BY CASE WHEN gateway_id = 'paymob-pixel' THEN 0 ELSE 1 END, ordering",
+						$mode,
+						'paymob-subscription'
+					),
+					OBJECT
 			);
 		
 			$custom_settings = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-custom_list_setting.php';

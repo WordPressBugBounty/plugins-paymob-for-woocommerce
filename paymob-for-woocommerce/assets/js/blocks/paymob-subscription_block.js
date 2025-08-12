@@ -1,13 +1,13 @@
 jQuery(function ($) {
-    //check_a_pay
+    
     if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && typeof window.wc.wcSettings !== 'undefined' && typeof window.wc.wcBlocksRegistry !== 'undefined') {
-        const settings = window.wc.wcSettings.getSetting('gateway_id_data', {});
-        const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('checkout_title', 'paymob-woocommerce');
+        const settings = window.wc.wcSettings.getSetting('paymob-subscription_data', {});
+        const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('Debit/Credit Card', 'paymob-woocommerce');
 
         const Icon = () => {
             return settings.icon
                 ? window.wp.element.createElement('img', {
-                    src: settings.icon, id: 'gateway_id-logo', style: {
+                    src: settings.icon, id: 'paymob-subscription-logo', style: {
                         maxWidth: '70px',
                         float: 'right',
                         paddingTop: '6px'
@@ -25,7 +25,7 @@ jQuery(function ($) {
         };
 
         const Block_Gateway = {
-            name: 'gateway_id',
+            name: 'paymob-subscription',
             label: window.wp.element.createElement(LabelWithIcon),
             content: window.wp.element.createElement(Content, null),
             edit: window.wp.element.createElement(Content, null),
@@ -53,10 +53,10 @@ jQuery(function ($) {
 
         // Append the dynamic CSS
         const css = `
-         html[lang="en"] #gateway_id-logo {
+         html[lang="en"] #paymob-subscription-logo {
              float: right !important;
          }
-         html[lang="ar"] #gateway_id-logo {
+         html[lang="ar"] #paymob-subscription-logo {
              float: left !important;
          }
      `;

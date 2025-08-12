@@ -108,7 +108,9 @@ class Paymob_Scripts {
 	public static function paymob_pixel_checkout($customize) {
         $paymobOptions = get_option('woocommerce_paymob-main_settings');
         $paymob_pixel = get_option('woocommerce_paymob-pixel_settings');
-        if(!empty($paymob_pixel['enabled']) && $paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout()){
+		// Condition: pixel enabled + on checkout + subscription is not enabled
+		$is_subscription_cart = self::paymob_cart_has_subscription();
+        if(!empty($paymob_pixel['enabled']) && $paymob_pixel['enabled'] =='yes' && function_exists('is_checkout') && is_checkout()&& ($is_subscription_cart==false)){
 			wp_enqueue_script('paymob-pixel-checkout', plugins_url(PAYMOB_PLUGIN_NAME) . '/assets/js/blocks/paymob-pixel_block.js', array('jquery'), PAYMOB_VERSION, true);
 	        $pubKey = isset($paymobOptions['pub_key']) ? $paymobOptions['pub_key'] : '';
 	        wp_localize_script('paymob-pixel-checkout', 'pxl_object', array(
@@ -124,6 +126,21 @@ class Paymob_Scripts {
 				'callback' => add_query_arg( array( 'wc-api' => 'paymob_callback' ), home_url() )
 	        ));
 	    }
+	}
+
+	public static function paymob_cart_has_subscription() {
+		if (function_exists('wcs_cart_contains_subscription') && wcs_cart_contains_subscription()) {
+			return true;
+		}
+
+		foreach (WC()->cart->get_cart() as $item) {
+			$product = $item['data'];
+			if ($product->is_type('subscription') || $product->get_meta('_subscription_period')) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public static function paymob_main_scripts() {

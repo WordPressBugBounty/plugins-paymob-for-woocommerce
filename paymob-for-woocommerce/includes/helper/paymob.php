@@ -58,8 +58,9 @@ class Paymob {
 			$data        = array(
 				'hmac'           => $hmacRes,
 				'integrationIDs' => $integIDsRes,
+				'token'=>$tokenRes->token,
 			);
-			// var_dump($data);die;
+
 			return $data;
 		} else {
 			throw new Exception( 'Cannot get Token from PayMob account' );
@@ -77,19 +78,37 @@ class Paymob {
 	}
 
 	public function getIntegrationIDs( $token, $apiUrl, $isTest = false ) {
-		$intRes = $this->HttpRequest( $apiUrl . 'api/ecommerce/integrations?is_plugin=true&is_next=yes&page_size=500&is_deprecated=false&is_standalone=false', 'GET', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token ) );
+		$intRes = $this->HttpRequest( $apiUrl . 'api/ecommerce/integrations?is_plugin=true&is_next=yes&page_size=500&is_deprecated=false&is_standalone=false&is_shopify=false', 'GET', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token ) );
 		$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/integrations Response: ' . json_encode( $intRes ) );
 
 		if ( ! empty( $intRes ) ) {
 			$IntegrationIDs = array();
 			foreach ( $intRes->results as $key => $integration ) {
 				$type = $integration->gateway_type;
+				// var_dump($integration);
 				if ( 'VPC' == $type ) {
 					$type = 'Card';
 				} elseif ( 'CAGG' == $type ) {
 					$type = 'Aman';
 				} elseif ( 'UIG' == $type ) {
 					$type = 'Wallet';
+				}
+				if($integration->integration_type =="moto"){
+					$is_moto="yes";
+				}
+				else{
+					$is_moto="no";
+				}
+
+				if (
+					($integration->gateway_type == 'VPC' ||$integration->gateway_type == 'MIGS' ) &&
+					$integration->integration_type == 'online' &&
+					$integration->is_auth == false&&
+					$integration->installments==null
+				) {
+					$is_3DS = "yes";
+				} else {
+					$is_3DS = "no";
 				}
 				if ( false == $integration->is_standalone ) {
 					if($integration->is_live==false){
@@ -106,10 +125,15 @@ class Paymob {
 						'gateway_type' => $integration->gateway_type,
 						'name'         => empty( $integration->installments ) ? $integration->integration_name : 'bank-installments',
 						'currency'     => $integration->currency,
-						'mode'         => $mode
+						'mode'         => $mode,
+						'is_moto'      =>$is_moto,
+						'is_3DS'       =>$is_3DS
+
 					);
 				}
+				
 			}
+			// die;
 			return $IntegrationIDs;
 		} else {
 			throw new Exception( 'Cannot get available integration IDs from PayMob account' );
@@ -309,12 +333,27 @@ class Paymob {
 		return substr( $merchantIntentionId, 0, -11 );
 	}
 
-	public static function verifyHmac( $key, $data, $intention = null, $hmac = null ) {
-		if ( isset( $hmac ) ) {
+	public static function verifyHmac( $key, $data, $intention = null, $hmac = null,$is_subscription=false ) {
+		if ( isset( $hmac) && $is_subscription==true  ) {
+			return self::verifysubscriptionHmac( $key, $data, $hmac );
+		}elseif(isset( $hmac) && $is_subscription==false ){
 			return self::verifyAcceptHmac( $key, $data, $hmac );
 		} else {
 			return self::verifyFlashHmac( $key, $data, $intention );
 		}
+	}
+
+	public static function verifysubscriptionHmac( $key, $subscription_data, $hmac ) {
+		if (empty($subscription_data['trigger_type']) || empty($subscription_data['subscription_data']['id'])) {
+			return false; // Invalid input
+		}
+
+		$concatenated_string = $subscription_data['trigger_type'] . 'for' . $subscription_data['subscription_data']['id'];
+
+		// Step 2: Calculate HMAC using SHA-512 and the secret key
+		$hash = hash_hmac('sha512', $concatenated_string, $key);
+
+		return $hash === $hmac;
 	}
 
 	public static function verifyFlashHmac( $key, $data, $intention = null ) {
@@ -541,6 +580,158 @@ class Paymob {
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $widgets ) );
 		return $widgets;
+	}
+
+	
+	public function createSubscriptionPlan($token,$secKey, $data)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscription-plans', 'POST', $header, $data );
+		$note_i    = 'subscriptionPlans response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+
+	public function suspendSubscription($token,$secKey,$planId)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscriptions/'.$planId.'/suspend', 'POST', $header );
+		$note_i    = 'Suspend subscriptionPlans response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+
+	public function activateSubscription($token,$secKey,$planId)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscriptions/'.$planId.'/resume', 'POST', $header);
+		$note_i    = 'Activate subscriptionPlans response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+
+
+	public function cancelSubscription($token,$secKey, $planId)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscriptions/'.$planId.'/cancel', 'POST', $header );
+		$note_i    = 'Cancel subscriptionPlans response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+	
+	public function updateSubscription($token,$secKey, $data, $subscriptionId)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscriptions/'.$subscriptionId, 'PUT', $header, $data );
+		$note_i    = 'update subscription response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+	
+	public function TransactionSubscriptionID($token,$secKey, $transactionID)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscriptions?transaction='.$transactionID, 'GET', $header );
+		$note_i    = ' Transaction subscriptionPlans ID response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
+	}
+
+	public function updateSubscriptionPlan($token,$secKey, $data,$planId)
+	{
+		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );
+		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$plans = $this->HttpRequest( $apiUrl.'api/acceptance/subscription-plans/'.$planId, 'PUT', $header, $data );
+		$note_i    = 'Update subscriptionPlans response ';
+		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
+		if ( empty( $plans ) ) {
+			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
+		}
+		
+		if ( isset( $plans ) ) {
+			$plans = $plans;
+		}
+		else {
+			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+		}
+		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
+		return $plans;
 	}
 }
 

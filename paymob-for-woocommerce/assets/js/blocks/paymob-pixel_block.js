@@ -67,7 +67,20 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
         canMakePayment: () => true,
         ariaLabel: label,
         supports: {
-            features: settings.supports,
+             features:  [
+                'products',
+                'refunds',
+                'subscriptions',
+                'subscription_cancellation',
+                'subscription_suspension',
+                'subscription_reactivation',
+                'subscription_amount_changes',
+                'subscription_date_changes',
+                'subscription_payment_method_change',
+                'subscription_payment_method_change_customer',
+                'subscription_payment_method_change_admin',
+                'multiple_subscriptions',
+            ],
         },
     };
 
@@ -851,3 +864,36 @@ jQuery(document).ready(function ($) {
         
 });
 
+// handel place order in paymob-subscription
+
+function getSelectedPaymentMethod() {
+    const selected = document.querySelector('input[name="radio-control-wc-payment-method-options"]:checked');
+    if (selected) {
+        const paymentMethodId = selected.id.replace('radio-control-wc-payment-method-options-', '');
+        const placeOrderSelectors = [
+            '.wc-block-checkout__form .wc-block-components-button',
+            '.wc-block-components-checkout-place-order-button',
+            '#place_order'
+        ];
+        if (paymentMethodId=='paymob-subscription') {
+
+            placeOrderSelectors.forEach(selector => {
+                jQuery(selector).show().prop('disabled', false);
+            });
+        }
+    }
+}
+
+function waitForSelectedPaymentMethod(attempts = 20) {
+    const interval = setInterval(() => {
+        const selected = getSelectedPaymentMethod();
+        if (selected || attempts <= 0) {
+            clearInterval(interval);
+        }
+        attempts--;
+    }, 300);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    waitForSelectedPaymentMethod();
+});

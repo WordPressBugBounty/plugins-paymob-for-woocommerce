@@ -588,5 +588,77 @@ class PaymobAutoGenerate {
 	
 		return $integration_ids;
 	}
+
+		public static function get_moto_integration_ids() {
+		return self::filter_integration_ids('MOTO');
+	}
+
+	public static function get_ds3_integration_ids() {
+		return self::filter_integration_ids('3DS');
+	}
+
+	private static function filter_integration_ids($type) {
+		$integration_ids = array(
+			'' => __( 'Select an Integration ID', 'paymob-woocommerce' ),
+		);
+
+		$paymob_options = get_option('woocommerce_paymob_settings');
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$mode       = !empty($mainOptions['mode']) ? $mainOptions['mode'] : 'test';
+
+		if (!empty($paymob_options['integration_id_hidden'])) {
+			$entries = explode(',', $paymob_options['integration_id_hidden']);
+
+			foreach ($entries as $entry) {
+				if (stripos($entry, $mode) === false) {
+					continue;
+				}
+
+				$parts = explode(':', $entry, 2);
+				if (count($parts) < 2) {
+					continue;
+				}
+
+				$id    = trim($parts[0]);
+				$label = trim($parts[1]);
+
+				// ✅ Fix: Get the last ( ) match, not the first one
+				preg_match_all('/\((.*?)\)/', $label, $matches_all);
+				$match_string = end($matches_all[1]);
+
+				if (!$match_string) {
+					continue;
+				}
+
+				$details = array_map('trim', explode(':', $match_string));
+
+				if (count($details) < 5) {
+					continue;
+				}
+
+				list($type_label, $currency, $entry_mode, $moto, $three_ds) = array_map('strtolower', $details);
+
+				if (
+					($type == 'MOTO' && $moto == 'yes') ||
+					($type == '3DS'  && $three_ds == 'yes')
+				) {
+					// Capitalize each detail part
+					$formatted_type   = ucwords($type_label);
+					$formatted_curr   = strtoupper($currency); // Currency typically all caps
+					$formatted_mode   = ucfirst($entry_mode);
+
+					$formatted_label = "$id : ($formatted_type : $formatted_curr : $formatted_mode)";
+					$integration_ids[$id] = $formatted_label;
+				}
+			}
+		}
+
+		if (count($integration_ids) == 2) {
+			unset($integration_ids['']);
+			return $integration_ids;
+		} else {
+			return $integration_ids;
+		}
+	}
 	
 }

@@ -77,11 +77,29 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public $font_size_label;
 	public $dark_mode;
     public $enabled_widget;
-	
+	public $is_moto;
+	public $tabs;
+	public $is_3DS;
+	public $ds3_integration_ids;
+	public $moto_integration_id;
+
 	public function __construct() {
 		// config
 		$this->has_fields = true;
-		$this->supports   = array( 'products', 'refunds' );
+		$this->is_moto    = $this->get_option( 'is_moto' );
+		$this->supports   = array(  'products',
+									'refunds',
+									'subscriptions',
+									'subscription_cancellation',
+									'subscription_suspension',
+									'subscription_reactivation',
+									'subscription_amount_changes',
+									'subscription_date_changes',
+									'subscription_payment_method_change',
+									'subscription_payment_method_change_customer',
+									'subscription_payment_method_change_admin',
+									'multiple_subscriptions',
+								    'gateway_scheduled_payments');
 
 		$this->init_settings();
 		$this->init_form_fields();
@@ -109,7 +127,16 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		add_action( 'admin_enqueue_scripts', array( $this, 'paymob_admin_enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'paymob_frontend_enqueue' ) );
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
-	}
+		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+		add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'on_subscription_cancelled' ), 10, 1 );
+		add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'on_subscription_suspended' ), 10, 1 );
+		add_action( 'woocommerce_subscription_status_active',array( $this, 'on_subscription_reactivated' ),10,1);
+		//stop default behaviour on renew 
+		add_action('woocommerce_scheduled_subscription_payment_paymob-subscription',array( $this, 'handle_scheduled_subscription_payment' ),10, 2);
+		add_filter( 'wcs_renewal_order_created', '__return_false', 100 );
+		add_filter( 'woocommerce_subscriptions_process_renewal_payment', '__return_false', 100 );
+
+			}
 
 	public function paymob_frontend_enqueue() {
 		if ( is_checkout() ) {
@@ -129,10 +156,20 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		foreach ( $gateways as $gateway ) {
 			$gateway_ids[] = $gateway->gateway_id;
 		}
-		if ( ( Paymob::filterVar( 'section' ) ) && ( in_array( Paymob::filterVar( 'section' ), $gateway_ids ) || Paymob::filterVar( 'section' ) == 'paymob-main' || Paymob::filterVar( 'section' ) == 'paymob_add_gateway' || Paymob::filterVar( 'section' ) == 'paymob_list_gateways' ) ) {
-			Paymob_Scripts::paymob_admin( $params );
-			Paymob_Style::paymob_admin();
-		}
+		if ( 
+				Paymob::filterVar( 'section' ) &&
+				( 
+					in_array( Paymob::filterVar( 'section' ), $gateway_ids ) || 
+					Paymob::filterVar( 'section' ) == 'paymob-main' || 
+					Paymob::filterVar( 'section' ) == 'paymob_add_gateway' || 
+					Paymob::filterVar( 'section' ) == 'paymob_list_gateways' || 
+					Paymob::filterVar( 'section' ) == 'paymob_subscription' 
+				) 
+			) {
+				Paymob_Scripts::paymob_admin( $params );
+				Paymob_Style::paymob_admin();
+			}
+
 	}
 
 	public function admin_options() {
@@ -359,4 +396,87 @@ class Paymob_Payment extends WC_Payment_Gateway {
 
 		return false;
 	}
+
+	public function on_subscription_cancelled( $subscription ) {
+		$order = $subscription->get_parent();
+	    $orderId=$order->get_id();
+		$paymob_plan_id = $order->get_meta('PaymobSubscriptionID');
+		// Cancle subscription plan
+		$mainOptions    = get_option('woocommerce_paymob-main_settings');
+		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
+		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
+		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
+
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+
+		// Authenticate with Paymob
+		$token = $paymobReq->authToken($conf);
+		if (empty($token['token'])) {
+			return ['error' => 'Unable to authenticate with Paymob.'];
+		}
+		$response = $paymobReq->cancelSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
+
+		set_transient('paymob_flash_notice', [
+			'type' => 'success',
+			'message' => 'Subscription has been cancelled successfully.'
+		], 30);
+		
+	}
+	
+	function on_subscription_suspended( $subscription ) {
+	    $order = $subscription->get_parent();
+		$orderId=$order->get_id();
+		$paymob_plan_id = $order->get_meta('PaymobSubscriptionID');
+	
+		// suspended subscription plan
+		$mainOptions    = get_option('woocommerce_paymob-main_settings');
+		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
+		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
+		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
+
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+
+		// Authenticate with Paymob
+		$token = $paymobReq->authToken($conf);
+		if (empty($token['token'])) {
+			return ['error' => 'Unable to authenticate with Paymob.'];
+		}
+		$response = $paymobReq->suspendSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
+		set_transient('paymob_flash_notice', [
+			'type' => 'success',
+			'message' => 'Subscription has been Paused successfully.'
+		], 30);
+		
+	}
+
+	public function on_subscription_reactivated($subscription)
+	{
+		$order = $subscription->get_parent();
+		$orderId=$order->get_id();
+		$paymob_plan_id = $order->get_meta('PaymobSubscriptionID');
+		// active subscription plan
+		$mainOptions    = get_option('woocommerce_paymob-main_settings');
+		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
+		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
+		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
+
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+
+		// Authenticate with Paymob
+		$token = $paymobReq->authToken($conf);
+		if (empty($token['token'])) {
+			return ['error' => 'Unable to authenticate with Paymob.'];
+		}
+		
+		$response = $paymobReq->activateSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
+		set_transient('paymob_flash_notice', [
+			'type' => 'success',
+			'message' => 'Subscription has been resumed successfully.'
+		], 30);
+		
+		
+	}
+
+
+
 }

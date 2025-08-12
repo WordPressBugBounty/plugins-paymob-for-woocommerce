@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 9.8
-Stable tag: 3.1.8
+Stable tag: 4.0.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -154,6 +154,13 @@ Payment methods will appear in the WooCommerce checkout in the same order as lis
 * Force Save Card: When enabled, cards are automatically saved after a transaction without user consent. Users will be notified that their card will be saved on Checkout. 
 * Customization: Customize the component using CSS properties. Default settings are applied initially, and you can click the “Reset Default” button to restore them. 
 
+= Subscription Payments (Recurring Billing) =
+* Supports subscription-based products and services using card-based payment methods that support tokenization.
+* Requires the WooCommerce Subscriptions plugin to be installed and activated.
+* Compatible with “Simple Subscription” and “Variable Subscription” product types in WooCommerce. 
+* for more details please visit this link https://developers.paymob.com/egypt/subscriptions-1
+
+
 Remember to save your changes for them to reflect on the checkout. 
 
 = Final Step - Enabling Paymob =
@@ -172,10 +179,12 @@ Remember to save your changes for them to reflect on the checkout.
 9. screenshot-9.png
 10. screenshot-10.png
 11. screenshot-11.png
+12. screenshot-12.png
+
 
 == Changelog ==
-2025-08-05 - version 3.1.8
-fix int amount issue in pixel   
+2025-08-12 - version 4.0.0
+Add subscription feature 
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

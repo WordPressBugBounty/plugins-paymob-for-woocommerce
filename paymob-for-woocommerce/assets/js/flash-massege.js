@@ -32,3 +32,15 @@ function displayWooCommerceError(message) {
         setTimeout(() => flashMessage.remove(), 300); // Wait for the transition to finish
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+	const selected = document.querySelector('input[name="radio-control-wc-payment-method-options"]:checked');
+
+	if (!selected) {
+		// Auto-select your plugin's method if not selected
+		const fallback = document.querySelector('input[name="radio-control-wc-payment-method-options"][value="paymob-subscription"]');
+		if (fallback) {
+			fallback.click();
+		}
+	}
+});

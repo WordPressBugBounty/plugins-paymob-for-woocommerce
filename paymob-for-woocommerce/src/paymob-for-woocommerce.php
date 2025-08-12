@@ -62,17 +62,26 @@ class Paymob_WooCommerce {
 	public function callWebhookAction() {
 		$post_data = file_get_contents( 'php://input' );
 		$json_data = json_decode( $post_data, true );
-		// var_dump($json_data);die();
-
 		$country = Paymob::getCountryCode( $this->gateway->sec_key );
 		$url     = Paymob::getApiUrl( $country );
-		if ( isset( $json_data['type'] ) && Paymob::filterVar( 'hmac', 'REQUEST' ) && 'TRANSACTION' === $json_data['type'] ) {
+	
+	    if(isset( $json_data['subscription_data'] )){
+            $this->subscriptionWebhook( $json_data, $url, $country);
+		}
+		elseif ( isset( $json_data['type'] ) && Paymob::filterVar( 'hmac', 'REQUEST' ) && 'TRANSACTION' === $json_data['type'] ) {
 			$this->acceptWebhook( $json_data, $url );
-		} elseif ( isset( $json_data['type'] ) && 'TOKEN' === $json_data['type'] ) {
+
+		}
+		elseif(isset( $json_data['type'] ) && $json_data['obj']['payment_key_claims']['subscription_plan_id'] && 'TRANSACTION' === $json_data['type']){
+            $this->subscriptionTransactionWebhook( $json_data, $url, $country );
+		}
+		elseif ( isset( $json_data['type'] ) && 'TOKEN' === $json_data['type'] ) {
 			$addlog          = WC_LOG_DIR  . 'paymob-token.log';
 			Paymob::addLogs( $this->gateway->debug, $addlog, ' In TOKEN REQUEST >>>> ', wp_json_encode( $json_data ) );
 			$this->saveCardToken( $json_data );
+
 		} else {
+
 			$this->flashWebhook( $json_data, $url, $country );
 		}
 	}
@@ -315,6 +324,209 @@ class Paymob_WooCommerce {
 			die( esc_html( 'No User Found with this email: ' . $obj['email'] ) );
 		}
 	}
+
+	public function subscriptionTransactionWebhook( $json_data, $url, $country ) {
+		$obj               = $json_data['obj'];
+		$type              = $json_data['type'];
+		$orderId           = Paymob::getIntentionId( $json_data['obj']['order']['merchant_order_id'] );
+		$merchant_order_id = $json_data['obj']['order']['merchant_order_id'];
+		
+		$order            = wc_get_order( $orderId );
+		$OrderIntensionId = $order->get_meta( 'PaymobIntentionId', true );
+		$OrderAmount      = $order->get_meta( 'PaymobCentsAmount', true );
+		$PaymobPaymentId  = $order->get_meta( 'PaymobPaymentId', true );
+		$addlog           = WC_LOG_DIR . $PaymobPaymentId . '.log';
+
+		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
+		$cents = 100;
+		if ( 'omn' == $country ) {
+			$cents = 1000;
+		}
+	  
+		$order           = wc_get_order( $orderId );
+		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
+		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
+		$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
+		$status = $order->get_status();
+
+		if ( 'pending' != $status && 'failed' != $status && 'on-hold' != $status ) {
+			die( esc_html( "can not change status of order: $orderId" ) );
+		}
+
+		$integrationId = $obj['integration_id'];
+		$type          = $obj['source_data']['type'];
+		$subType       = $obj['source_data']['sub_type'];
+		$transaction   = $obj['id'];
+		$paymobId      = $obj['order']['id'];
+
+		$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
+		if (
+			true ===  $obj['success'] &&
+			false === $obj['is_voided'] &&
+			false === $obj['is_refunded'] &&
+			false === $obj['pending'] &&
+			false === $obj['is_void'] &&
+			false === $obj['is_refund'] &&
+			false === $obj['error_occured']
+		) {
+			$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-woocommerce' );
+			$msg  = $msg . ' ' . $note;
+			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
+			$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
+			$order->add_order_note( $note );
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$order->add_order_note( $note2);
+			$order->payment_complete( $orderId );
+			$paymentMethod      = $order->get_payment_method();
+			$paymentMethodTitle = 'Paymob - ' . ucwords( $type );
+			$order->set_payment_method_title( $paymentMethodTitle );
+		} else {
+			$order->update_status( 'failed' );
+			$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-woocommerce' );
+			$msg  = $msg . ' ' . $note;
+			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
+			$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
+			$order->add_order_note( $note );
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$order->add_order_note( $note2);
+		}
+		$order->update_meta_data( 'PaymobTransactionId', $transaction );
+		$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
+		update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
+		update_post_meta( $orderId, 'PaymobTransactionId', $transaction );
+		$order->save();
+		die( esc_html( "Order updated: $orderId" ) );
+	}
+
+	public function subscriptionWebhook( $json_data, $url, $country ) {
+		global $wpdb;
+		$subscription_data = $json_data['subscription_data']; // correct assignment
+		$storedHmac = $json_data['hmac'];
+		$is_subscription = true;
+		
+		if ( Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, $storedHmac, $is_subscription ) ) {
+			$orders = wc_get_orders( array(
+						'limit'       => 1,
+						'meta_key'    => 'PaymobTransactionId',
+						'meta_value'  => $initial_transaction,
+						'return'      => 'objects',
+					) );
+
+			if ( ! empty( $orders ) ) {
+				$order = $orders[0];
+
+				$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
+				foreach ( $subscriptions as $subscription ) {
+					$subscription_total = floatval( $subscription->get_total() ); 
+					$starts_at = ! empty( $subscription_data['starts_at'] ) 
+									? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['starts_at'] ) ) 
+									: null;
+					$paymob_amount      = ! empty( $subscription_data['amount']) ? floatval( $subscription_data['amount'] ) : 0;
+					$start_date_today   = ( ! empty( $starts_at ) && gmdate('Y-m-d', strtotime( $starts_at ) ) === gmdate('Y-m-d') );
+					if ( $start_date_today && $paymob_amount !== $subscription_total )
+					{
+						$sub_id  = $subscription_data['id'];
+						$this->updateSubscriptionamount($order,$subscription_total,$sub_id);
+					}
+				}
+			}
+			$initial_transaction = intval( $subscription_data['initial_transaction'] );
+			$current_transaction = intval( $json_data['transaction_id'] );
+			if ($initial_transaction !== $current_transaction) {
+				$orders = wc_get_orders( array(
+					'limit'       => 1,
+					'meta_key'    => 'PaymobTransactionId',
+					'meta_value'  => $initial_transaction,
+					'return'      => 'objects',
+				) );
+
+				if ( ! empty( $orders ) ) {
+					$order = $orders[0];
+
+					$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
+
+					foreach ( $subscriptions as $subscription ) {
+						$subscription_id = $subscription->get_id();
+						$starts_at      = ! empty( $subscription_data['starts_at'] )      ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['starts_at'] ) )      : null;
+						$next_billing   = ! empty( $subscription_data['next_billing'] )   ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['next_billing'] ) )   : null;
+						$ends_at        = ! empty( $subscription_data['ends_at'] )        ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['ends_at'] ) )        : null;
+						$state          = ! empty( $subscription_data['state'] )          ? sanitize_text_field( $subscription_data['state'] )                         : 'active';
+
+						// Update Subscription Dates
+						$subscription->update_dates(array_filter([
+							'start'        => $starts_at,
+							'next_payment' => $next_billing,
+							'end'          => $ends_at,
+						]));
+
+						// Update status (only if it's a valid WC status)
+						if ( in_array( $state, array( 'active', 'pending-cancel', 'on-hold', 'cancelled' ), true ) ) {
+							$subscription->update_status( $state );
+						}
+
+						// Save changes
+						$subscription->save();
+
+						// Create renewal order after subscription is updated
+						if ( ! empty( $subscription ) && $subscription instanceof WC_Subscription ) {
+							$renewal_order_id = $this->paymob_create_renewal_order( $subscription_data, $json_data,$subscription_id );
+
+							if ( $renewal_order_id ) {
+								$subscription->add_order_note( 'Renewal order created via Paymob Webhook. Order ID: ' . $renewal_order_id );
+							}
+						}
+						
+					
+					}
+				}
+			}
+			die( esc_html( "Subscription updated: subscription ID " . $subscription_data['id'] ) );
+
+		} else {
+			die( esc_html( "Cannot verify Subscription: subscription ID " . $json_data['subscription_data']['id'] ) );
+		}
+	}
+
+	function paymob_create_renewal_order( $subscription_data, $json_data, $subscription_id ) {
+		$subscription = wcs_get_subscription( $subscription_id );
+		if ( ! $subscription ) {
+			return false;
+		}
+
+		$renewal_order = wcs_create_renewal_order( $subscription );
+		if ( ! $renewal_order ) {
+			return false;
+		}
+
+		$total = $subscription_data['amount_cents'] / 100;
+
+		// Update line items
+		foreach ( $renewal_order->get_items() as $item ) {
+			$item->set_subtotal( $total );
+			$item->set_total( $total );
+			$item->save();
+		}
+
+		$renewal_order->set_total( $total );
+
+		// Add Paymob metadata
+		$renewal_order->update_meta_data( 'PaymobTransactionId', $json_data['transaction_id'] );
+		$renewal_order->update_meta_data( '_paymob_is_renewal', 'yes' );
+
+		// Set order status
+		$renewal_order->update_status( 'processing', 'Paymob renewal webhook' );
+
+		$renewal_order->save();
+
+		$renewal_order->add_order_note( 'Renewal payment received from Paymob. Subscription ID: ' . $subscription_id );
+
+		WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger( $renewal_order->get_id() );
+
+		return $renewal_order->get_id();
+	}
+
+
 	public function callReturnAction() {
 		
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
@@ -342,7 +554,13 @@ class Paymob_WooCommerce {
 			wp_safe_redirect(wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, no order found. Please try again.', 'paymob-woocommerce' ));
 			exit();
 		}
-		
+		$amount_cents = Paymob::filterVar('amount_cents');
+		$amount = $amount_cents / 100;
+
+		if ( floatval( $order->get_total() ) == 0 && $amount > 0 ) {
+			$order->set_total( $amount );
+			$order->save();
+		}
 		
 		if(Paymob::filterVar( 'errmsg' ) && Paymob::filterVar( 'errmsg' ) !=='undefined'){
 			$error = Paymob::filterVar( 'errmsg' );
@@ -434,6 +652,10 @@ class Paymob_WooCommerce {
         update_post_meta( $orderId, 'PaymobTransactionId', $id );
 
 		$order->save();
+		$existing_subscription_id = $order->get_meta('PaymobSubscriptionID');
+		if ( empty( $existing_subscription_id ) ) {
+			$this->TransactionSubscriptionID( $order, $id );
+		}
 	    WC()->session->set( 'cart', WC()->cart->get_cart() );
 		WC()->session->set( 'chosen_shipping_methods', array() );
         WC()->session->set( 'chosen_payment_method', '' );
@@ -457,5 +679,67 @@ class Paymob_WooCommerce {
 	public function hide_block_main_gateway() {
 
 		Paymob_Style::hide_main_gateway_enqueue();
+	}
+
+
+	public function TransactionSubscriptionID($order, $transactionID) {
+
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
+		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
+		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
+		$PaymobPaymentId = $order->get_meta('PaymobPaymentId', true);
+		$addlog = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+		// Get auth token
+		$token = $paymobReq->authToken($conf);
+		if (empty($token['token'])) {
+			return ['error' => 'Unable to authenticate with Paymob.'];
+		}
+	
+		// Get subscription data by transaction ID
+		$response = $paymobReq->TransactionSubscriptionID($token['token'], $conf['secKey'], $transactionID);
+		if (!empty($response->results) && is_array($response->results)) {
+			$subscription = $response->results[0];
+			$order->update_meta_data('PaymobSubscriptionID', $subscription->id);
+			$order->save();
+			return $subscription->id;
+			
+		}
+		else{
+			return false;
+		}
+
+
+	}
+
+	public function updateSubscriptionamount($order,$subscription_total,$sub_id) {
+
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
+		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
+		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
+		$PaymobPaymentId = $order->get_meta('PaymobPaymentId', true);
+		$addlog = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+		// Get auth token
+		$token = $paymobReq->authToken($conf);
+		if (empty($token['token'])) {
+			return ['error' => 'Unable to authenticate with Paymob.'];
+		}
+		$country      = Paymob::getCountryCode( $conf['secKey']);
+		$cents   = 100;
+		$round   = 2;
+		if ( 'omn' === $country ) {
+			$round = 3;
+			$cents = 1000;
+		}
+		
+		$data = [
+			'amount_cents' => round( $subscription_total, $round ) * $cents
+		];
+		//update subscription amount 
+		$response = $paymobReq->updateSubscription($token['token'], $conf['secKey'],$data, $sub_id);
+		return $response;
 	}
 }

@@ -151,8 +151,9 @@
 }
 
 
-  /* Add "New" badge to tab links where href contains section=paymob_pixel */
-.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]::after {
+
+ /* Add "New" badge to tab links where href contains section=paymob_subscription */
+.paymob-admin-tab .tablinks[href*="section=paymob_subscription"]::after {
     content: "New";
     display: inline-block;
     background-color: #e46d29;
@@ -168,7 +169,6 @@
 }
 
 /* Optional: Adjust hover color of the badge */
-.paymob-admin-tab .tablinks[href*="section=paymob_pixel"]:hover::after {
+.paymob-admin-tab .tablinks[href*="section=paymob_subscription"]:hover::after {
     background-color: #d05a1f;
 }
-
