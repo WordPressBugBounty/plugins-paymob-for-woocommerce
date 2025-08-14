@@ -66,8 +66,10 @@ class PaymobOrder {
 
 	public function createPayment() {
 		// Check if the order contains a subscription
-		if ( wcs_order_contains_subscription($this->order) || wcs_order_contains_renewal($this->order)) {
-
+		if (
+			( function_exists('wcs_order_contains_subscription') && wcs_order_contains_subscription($this->order) ) ||
+			( function_exists('wcs_order_contains_renewal') && wcs_order_contains_renewal($this->order) )
+		) {
 			return $this->createSubscriptionPayment();
 		}
 		else
@@ -393,8 +395,8 @@ class PaymobOrder {
 					'amount_cents'           => (int)(string)$subscription_price_cents,
 					'is_active'              => true,
 					'integration'            => $moto_integration_id,
-					// 'webhook_url'            => add_query_arg(['wc-api' => 'paymob_callback'], home_url()),
-					'webhook_url'            =>"https://webhook.site/237843cc-b5d1-47b7-a840-e704e096a1f4",
+					'webhook_url'            => add_query_arg(['wc-api' => 'paymob_callback'], home_url()),
+					// 'webhook_url'            =>"https://webhook.site/237843cc-b5d1-47b7-a840-e704e096a1f4",
 					'number_of_deductions'   => $number_of_deductions,
 					'use_transaction_amount' => $use_transaction_amount,
 				];
