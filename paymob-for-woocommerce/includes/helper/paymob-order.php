@@ -314,17 +314,18 @@ class PaymobOrder {
 
 				$has_trial = !empty($subscription->get_date('trial_end'));
 
-				if ($has_trial) {
-					$total = $sign_up_fee + $shipping_total; // Both are already 0 if not set
-				} else {
-					$total = $subscription_price + $sign_up_fee + $shipping_total;
-				}
+				// if ($has_trial) {
+				// 	$total = $sign_up_fee + $shipping_total; // Both are already 0 if not set
+				// } else {
+				// 	$total = $subscription_price + $sign_up_fee + $shipping_total;
+				// }
 
-				// Apply discount from the parent order (if any)
-				if ($parent_order && $parent_order->get_discount_total() > 0) {
-					$discount_total = floatval($parent_order->get_discount_total());
-					$total -= $discount_total;
-				}
+				// // Apply discount from the parent order (if any)
+				// if ($parent_order && $parent_order->get_discount_total() > 0) {
+				// 	$discount_total = floatval($parent_order->get_discount_total());
+				// 	$total -= $discount_total;
+				// }
+				$total = $parent_order ? floatval( $parent_order->get_total() ) : 0;
 				$total = max(0.1, $total);
 				// Currency conversion config
 				$country = Paymob::getCountryCode($this->config->sec_key);
