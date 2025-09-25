@@ -4,6 +4,9 @@ This file will contains only old changelogs. For newer versions, you can check r
 
 == Changelog ==
 
+2025-08-26 - version 4.0.2
+handle subscriptions total amount 
+
 2025-08-14 - version 4.0.1
 handle unsubscriptions merchants 
 

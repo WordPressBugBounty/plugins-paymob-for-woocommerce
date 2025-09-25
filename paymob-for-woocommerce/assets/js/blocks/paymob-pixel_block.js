@@ -624,7 +624,9 @@ function ajaxCall(billingData, totalAmount, forcereload = false) {
             success: function (response) {
                 console.log('Checkout data updated:', response);
                 if (response.success) {
-                    initializePaymobElement(pxl_object.key, response.data.cs);
+                    setTimeout(() => {
+						initializePaymobElement(pxl_object.key, response.data.cs);
+					}, 500);
                 } else {
                     displayWooCommerceError(response.data);
                     hideLoadingIndicator();
