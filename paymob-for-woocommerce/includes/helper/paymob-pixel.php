@@ -195,3 +195,32 @@ function get_order_id_from_session() {
         return wp_send_json_error(array('message' => 'No order ID found in session.'));
     }
 }
+
+
+add_action('wp_ajax_paymob_apply_discount', 'paymob_apply_discount');
+add_action('wp_ajax_nopriv_paymob_apply_discount', 'paymob_apply_discount');
+
+function paymob_apply_discount() {
+    check_ajax_referer('update_checkout', 'security');
+
+    $original  = floatval($_POST['original'] ?? 0);
+    $discount  = floatval($_POST['discount'] ?? 0);
+    $final     = floatval($_POST['final_total'] ?? 0);
+
+    if (WC()->session) {
+        WC()->session->set('paymob_original_amount', $original);
+        WC()->session->set('paymob_discount', $discount);
+        WC()->session->set('paymob_final_total', $final);
+    }
+
+    wp_send_json_success([
+        'original' => $original,
+        'discount' => $discount,
+        'final'    => $final,
+        'session'  => [
+            'orig' => WC()->session->get('paymob_original_amount'),
+            'disc' => WC()->session->get('paymob_discount'),
+            'final' => WC()->session->get('paymob_final_total'),
+        ]
+    ]);
+}

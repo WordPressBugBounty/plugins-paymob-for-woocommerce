@@ -899,3 +899,65 @@ function waitForSelectedPaymentMethod(attempts = 20) {
 document.addEventListener('DOMContentLoaded', () => {
     waitForSelectedPaymentMethod();
 });
+
+window.addEventListener("message", function (event) {
+    if (event.data?.type === "discountResponse") {
+        const discountData = event.data.response?.res?.data;
+
+        if (discountData && discountData.discounted_amount_cents > 0) {
+            // Convert from cents to EGP
+            const original = discountData.original_amount_cents / 100;
+            const finalTotal = discountData.discount_amount_cents / 100;
+            const discountValue = discountData.discounted_amount_cents / 100;
+
+            // Send discount to WooCommerce backend
+            jQuery.ajax({
+                url: pxl_object.ajax_url,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'paymob_apply_discount',
+                    security: pxl_object.update_checkout_nonce,
+                    discount: discountValue,
+                    original: original,
+                    final_total: finalTotal,
+                    discount: discountValue,
+                },
+                success: function (response) {
+                    if (response.success) {
+                        console.log("Discount applied:", response.data);
+
+                        // Trigger WooCommerce cart update
+                        jQuery(document.body).trigger('update_checkout');
+
+                        // Update UI manually after short delay
+                        setTimeout(() => {
+                            // Update the Total value
+                            const totalValueEl = document.querySelector(".wc-block-components-totals-footer-item-tax-value");
+                            if (totalValueEl) {
+                                totalValueEl.textContent = "EGP " + parseFloat(finalTotal).toFixed(2);
+                            }
+
+                            // Insert discount line in order summary
+                            const summary = document.querySelector(".wc-block-components-order-summary");
+                            if (summary) {
+                                let line = document.querySelector(".paymob-discount-line");
+                                if (!line) {
+                                    line = document.createElement("div");
+                                    line.className = "wc-block-components-order-summary-item paymob-discount-line";
+                                    summary.insertBefore(line, summary.lastChild);
+                                }
+                                line.innerHTML = `<span>Paymob BIN Discount</span><span>-EGP ${discountValue.toFixed(2)}</span>`;
+                            }
+                        }, 500); // Delay to allow WooCommerce to render
+                    } else {
+                        console.error("Failed to apply discount:", response);
+                    }
+                },
+                error: function (err) {
+                    console.error("AJAX error applying discount:", err);
+                }
+            });
+        }
+    }
+});
