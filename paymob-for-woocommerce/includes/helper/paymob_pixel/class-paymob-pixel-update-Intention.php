@@ -31,7 +31,6 @@ class Paymob_Pixel_Update_Intention {
 		// Prepare data for Paymob API
 		$data = [
 			'accept_order_id' => $intention_order_id,
-			'amount' =>$amount,
 			'billing_data' => $billing,
 			// 'special_reference' => $order_id . '_' . time(),
 		];
