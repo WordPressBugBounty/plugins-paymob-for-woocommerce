@@ -130,6 +130,9 @@ class Paymob_Save_Gateway_Settings {
 		$description  = !empty($subscription_settings['description']) ? sanitize_text_field($subscription_settings['description']) : 'Recurring payment via Paymob.';
 		$moto_id      = !empty($subscription_settings['moto_integration_id']) ? sanitize_text_field($subscription_settings['moto_integration_id']) : '';
 		$threeds_ids  = !empty($subscription_settings['ds3_integration_ids']) ? sanitize_text_field($subscription_settings['ds3_integration_ids']) : '';
+		$allow_cancel = (!empty($subscription_settings['allow_cancel']) && $subscription_settings['allow_cancel'] === '1')
+		? 'yes'
+		: 'no';
 
 		if (empty($moto_id) || empty($threeds_ids)) {
 			WC_Admin_Settings::add_error(__('Please select both MOTO and 3DS Integration IDs.', 'paymob-woocommerce'));
@@ -168,6 +171,7 @@ class Paymob_Save_Gateway_Settings {
 			'description'              => $description,
 			'moto_integration_id'      => $moto_id,
 			'ds3_integration_ids'      => $threeds_ids,
+			'allow_cancel'             => $allow_cancel,
 		);
 
 		update_option('woocommerce_paymob-subscription_settings', $default_settings);

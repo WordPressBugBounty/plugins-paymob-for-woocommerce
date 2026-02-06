@@ -4,7 +4,6 @@
  */
 class Paymob_WooCommerce {
 
-
 	/**
 	 * Constructor
 	 */
@@ -21,6 +20,7 @@ class Paymob_WooCommerce {
 		add_action( 'woocommerce_api_paymob_callback', array( $this, 'callback' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_enqueue_scripts' ) );
 		add_action( 'admin_head', array( $this, 'hide_block_main_gateway' ) );
+		add_filter( 'woocommerce_get_order_item_totals', array( $this, 'paymob_add_fees_to_order_totals_display'), 20, 2 );
 		$paymob_u_Options  = get_option( 'woocommerce_paymob_settings' );
 		$this->hmac_hidden = isset( $paymob_u_Options['hmac_hidden'] ) ? sanitize_text_field( $paymob_u_Options['hmac_hidden'] ) : '';
 	}
@@ -87,7 +87,6 @@ class Paymob_WooCommerce {
 	}
 
 	public function acceptWebhook( $json_data, $url ) {
-
 		$obj     = $json_data['obj'];
 		$type    = $json_data['type'];
 		$orderId = substr( $obj['order']['merchant_order_id'], 0, -11 );
@@ -121,7 +120,7 @@ class Paymob_WooCommerce {
 
 			$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
 			if (
-				true === $obj['success'] &&
+				true  === $obj['success'] &&
 				false === $obj['is_voided'] &&
 				false === $obj['is_refunded'] &&
 				false === $obj['pending'] &&
@@ -132,11 +131,19 @@ class Paymob_WooCommerce {
 				$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
+				Paymob::addLogs( $this->gateway->debug, $addlog, 'aml fares accept ');
 				$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
 				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
+				// Handle CAF logic
+				$this->handle_caf_logic( $order, $json_data );
+				$this->handle_instant_refund_logic( $order, $obj);
+				$this->update_order_total_after_discount( $order, $obj );
+				$this->paymob_add_fees_to_order_totals( $order );
 				$order->payment_complete( $orderId );
+
+
 				$paymentMethod      = $order->get_payment_method();
 				$paymentMethodTitle = 'Paymob - ' . ucwords( $type );
 				$order->set_payment_method_title( $paymentMethodTitle );
@@ -155,7 +162,6 @@ class Paymob_WooCommerce {
 			update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
             update_post_meta( $orderId, 'PaymobTransactionId', $transaction );
 
-
 			$order->save();
 			die( esc_html( "Order updated: $orderId" ) );
 		} else {
@@ -171,7 +177,7 @@ class Paymob_WooCommerce {
 			$orderId = $wpdb->get_var(
 				
 				"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
-		 );
+		   );
 
 		}
 		$order            = wc_get_order( $orderId );
@@ -181,7 +187,7 @@ class Paymob_WooCommerce {
 		$addlog           = WC_LOG_DIR . $PaymobPaymentId . '.log';
 
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
-
+	   
 		if ( $OrderIntensionId != $json_data['intention']['id'] ) {
 			die( esc_html( "intention ID is not matched for order: $orderId" ) );
 		}
@@ -235,6 +241,11 @@ class Paymob_WooCommerce {
 				$order->add_order_note( $note );
 				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
+				$this->handle_caf_logic( $order, $json_data);
+				$this->handle_instant_refund_logic( $order, $json_data);
+				$this->update_order_total_after_discount( $order, $json_data );
+				$this->paymob_add_fees_to_order_totals( $order );
+
 				$order->payment_complete( $orderId );
 				$paymentMethod = $order->get_payment_method();
 
@@ -400,95 +411,211 @@ class Paymob_WooCommerce {
 	}
 
 	public function subscriptionWebhook( $json_data, $url, $country ) {
-		global $wpdb;
-		$subscription_data = $json_data['subscription_data']; // correct assignment
-		$storedHmac = $json_data['hmac'];
-		$is_subscription = true;
+
+		$subscription_data = $json_data['subscription_data'] ?? [];
+		$trigger_type      = $json_data['trigger_type'] ?? '';
+		$transaction_id    = intval( $json_data['transaction_id'] ?? 0 );
+		$storedHmac        = $json_data['hmac'] ?? '';
+		$is_subscription   = true;
+
+		$normalized = strtolower( trim( $trigger_type ) );
+
+		$is_success = ( $normalized === 'successful transaction' ||
+		                $normalized ==="resumed"||
+						$normalized ==="updated"||
+						str_contains( $normalized, 'successful' ));
+
+		$is_failed  = ( $normalized === 'failed transaction' ||
+						$normalized === 'failed overdue transaction' ||
+						$normalized === 'suspended' ||
+						$normalized === 'canceled'||
+					    str_contains( $normalized, 'failed' ) );
+
+		$is_failed_payment = $is_failed;
+
 		
-		if ( Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, $storedHmac, $is_subscription ) ) {
-			$orders = wc_get_orders( array(
-						'limit'       => 1,
-						'meta_key'    => 'PaymobTransactionId',
-						'meta_value'  => $initial_transaction,
-						'return'      => 'objects',
-					) );
+		$next_billing_str = $subscription_data['next_billing'] ?? null;
+		$next_billing     = $next_billing_str ? strtotime( $next_billing_str ) : 0;
+		$today            = strtotime( date( 'Y-m-d' ) );
 
-			if ( ! empty( $orders ) ) {
-				$order = $orders[0];
+		// ===== LOG FILE =====
+		$addlog = WC_LOG_DIR . 'paymob-subscription.log';
 
-				$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
-				foreach ( $subscriptions as $subscription ) {
-					$subscription_total = floatval( $subscription->get_total() ); 
-					$starts_at = ! empty( $subscription_data['starts_at'] ) 
-									? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['starts_at'] ) ) 
-									: null;
-					$paymob_amount      = ! empty( $subscription_data['amount']) ? floatval( $subscription_data['amount'] ) : 0;
-					$start_date_today   = ( ! empty( $starts_at ) && gmdate('Y-m-d', strtotime( $starts_at ) ) === gmdate('Y-m-d') );
-					if ( $start_date_today && $paymob_amount !== $subscription_total )
-					{
-						$sub_id  = $subscription_data['id'];
-						$this->updateSubscriptionamount($order,$subscription_total,$sub_id);
-					}
-				}
-			}
-			$initial_transaction = intval( $subscription_data['initial_transaction'] );
-			$current_transaction = intval( $json_data['transaction_id'] );
-			if ($initial_transaction !== $current_transaction) {
-				$orders = wc_get_orders( array(
-					'limit'       => 1,
-					'meta_key'    => 'PaymobTransactionId',
-					'meta_value'  => $initial_transaction,
-					'return'      => 'objects',
-				) );
+		Paymob::addLogs(
+			$this->gateway->debug,
+			$addlog,
+			'Incoming Subscription Webhook',
+			wp_json_encode( $json_data )
+		);
+		Paymob::addLogs(
+			$this->gateway->debug,
+			$addlog,
+			'Trigger Evaluation',
+			'normalized=' . $normalized .
+			' | success=' . ( $is_success ? 'yes' : 'no' ) .
+			' | failed=' . ( $is_failed_payment ? 'yes' : 'no' )
+		);
 
-				if ( ! empty( $orders ) ) {
-					$order = $orders[0];
-
-					$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
-
-					foreach ( $subscriptions as $subscription ) {
-						$subscription_id = $subscription->get_id();
-						$starts_at      = ! empty( $subscription_data['starts_at'] )      ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['starts_at'] ) )      : null;
-						$next_billing   = ! empty( $subscription_data['next_billing'] )   ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['next_billing'] ) )   : null;
-						$ends_at        = ! empty( $subscription_data['ends_at'] )        ? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['ends_at'] ) )        : null;
-						$state          = ! empty( $subscription_data['state'] )          ? sanitize_text_field( $subscription_data['state'] )                         : 'active';
-
-						// Update Subscription Dates
-						$subscription->update_dates(array_filter([
-							'start'        => $starts_at,
-							'next_payment' => $next_billing,
-							'end'          => $ends_at,
-						]));
-
-						// Update status (only if it's a valid WC status)
-						if ( in_array( $state, array( 'active', 'pending-cancel', 'on-hold', 'cancelled' ), true ) ) {
-							$subscription->update_status( $state );
-						}
-
-						// Save changes
-						$subscription->save();
-
-						// Create renewal order after subscription is updated
-						if ( ! empty( $subscription ) && $subscription instanceof WC_Subscription ) {
-							$renewal_order_id = $this->paymob_create_renewal_order( $subscription_data, $json_data,$subscription_id );
-
-							if ( $renewal_order_id ) {
-								$subscription->add_order_note( 'Renewal order created via Paymob Webhook. Order ID: ' . $renewal_order_id );
-							}
-						}
-						
-					
-					}
-				}
-			}
-			die( esc_html( "Subscription updated: subscription ID " . $subscription_data['id'] ) );
-
-		} else {
-			die( esc_html( "Cannot verify Subscription: subscription ID " . $json_data['subscription_data']['id'] ) );
+		// ===== VERIFY HMAC =====
+		if ( ! Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, $storedHmac, $is_subscription ) ) {
+			Paymob::addLogs( $this->gateway->debug, $addlog, 'Invalid HMAC – webhook rejected' );
+			die( 'Invalid HMAC' );
 		}
+
+		// ===== TRANSACTION CHECK =====
+		if ( empty( $transaction_id ) ) {
+			Paymob::addLogs( $this->gateway->debug, $addlog, 'No transaction_id – skipping webhook' );
+			die( 'No transaction id' );
+		}
+
+		if ( $this->paymob_renewal_exists( $transaction_id ) ) {
+			Paymob::addLogs(
+				$this->gateway->debug,
+				$addlog,
+				'Renewal already exists for transaction ' . $transaction_id
+			);
+			die( 'Renewal already exists' );
+		}
+
+		$initial_transaction = intval( $subscription_data['initial_transaction'] ?? 0 );
+		if ( ! $initial_transaction || $initial_transaction === $transaction_id ) {
+			Paymob::addLogs(
+				$this->gateway->debug,
+				$addlog,
+				'Initial transaction webhook – no renewal needed'
+			);
+			die( 'Initial transaction' );
+		}
+
+		// ===== FIND ORIGINAL ORDER =====
+		$orders = wc_get_orders([
+			'limit'      => 1,
+			'meta_key'   => 'PaymobTransactionId',
+			'meta_value' => $initial_transaction,
+			'return'     => 'objects',
+		]);
+
+		if ( empty( $orders ) ) {
+			Paymob::addLogs(
+				$this->gateway->debug,
+				$addlog,
+				'Original order not found for transaction ' . $initial_transaction
+			);
+			die( 'Original order not found' );
+		}
+
+		$order = $orders[0];
+
+		Paymob::addLogs(
+			$this->gateway->debug,
+			$addlog,
+			'Processing subscriptions for order #' . $order->get_id()
+		);
+
+		$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
+
+		foreach ( $subscriptions as $subscription ) {
+
+			Paymob::addLogs(
+				$this->gateway->debug,
+				$addlog,
+				'Handling subscription #' . $subscription->get_id()
+			);
+
+			// ===== SUCCESSFUL PAYMENT =====
+			if ( $is_success ) {
+
+				Paymob::addLogs(
+					$this->gateway->debug,
+					$addlog,
+					'Successful renewal detected – updating subscription & creating renewal order'
+				);
+
+				// Update dates ONLY on success
+				$subscription->update_dates( array_filter([
+					'start'        => ! empty( $subscription_data['starts_at'] )
+						? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['starts_at'] ) )
+						: null,
+
+					'next_payment' => ! empty( $subscription_data['next_billing'] )
+						? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['next_billing'] ) )
+						: null,
+
+					'end'          => ! empty( $subscription_data['ends_at'] )
+						? gmdate( 'Y-m-d H:i:s', strtotime( $subscription_data['ends_at'] ) )
+						: null,
+				]) );
+
+				$subscription->save();
+				$renewal_order_id = $this->paymob_create_renewal_order(
+					$subscription_data,
+					$json_data,
+					$subscription->get_id()
+				);
+
+				if ( $renewal_order_id ) {
+					$subscription->add_order_note(
+						'Paymob Renewal Successful. Order ID: ' . $renewal_order_id
+					);
+
+					Paymob::addLogs(
+						$this->gateway->debug,
+						$addlog,
+						'Renewal order created: ' . $renewal_order_id
+					);
+				}
+
+			// ===== FAILED PAYMENT =====
+			} elseif ( $is_failed_payment ) {
+
+				Paymob::addLogs(
+					$this->gateway->debug,
+					$addlog,
+					'Failed renewal detected – creating failed order only'
+				);
+
+				$failed_order_id = $this->paymob_create_failed_renewal_order(
+					$subscription_data,
+					$json_data,
+					$subscription->get_id()
+				);
+
+				if ( $failed_order_id ) {
+					$subscription->add_order_note(
+						'Paymob Renewal Failed. Failed Order ID: ' . $failed_order_id
+					);
+
+					Paymob::addLogs(
+						$this->gateway->debug,
+						$addlog,
+						'Failed renewal order created: ' . $failed_order_id
+					);
+				}
+			} else {
+				Paymob::addLogs(
+					$this->gateway->debug,
+					$addlog,
+					'Webhook ignored – trigger_type: ' . $trigger_type
+				);
+			}
+		}
+
+		Paymob::addLogs(
+			$this->gateway->debug,
+			$addlog,
+			'Subscription webhook finished successfully'
+		);
+
+		die( 'Subscription webhook processed' );
 	}
 
 	function paymob_create_renewal_order( $subscription_data, $json_data, $subscription_id ) {
+
+		$transaction_id = intval( $json_data['transaction_id'] );
+		if ( $this->paymob_renewal_exists( $transaction_id ) ) {
+			return false;
+		}
+
 		$subscription = wcs_get_subscription( $subscription_id );
 		if ( ! $subscription ) {
 			return false;
@@ -501,7 +628,6 @@ class Paymob_WooCommerce {
 
 		$total = $subscription_data['amount_cents'] / 100;
 
-		// Update line items
 		foreach ( $renewal_order->get_items() as $item ) {
 			$item->set_subtotal( $total );
 			$item->set_total( $total );
@@ -510,22 +636,67 @@ class Paymob_WooCommerce {
 
 		$renewal_order->set_total( $total );
 
-		// Add Paymob metadata
-		$renewal_order->update_meta_data( 'PaymobTransactionId', $json_data['transaction_id'] );
+		$renewal_order->update_meta_data( 'PaymobTransactionId', $transaction_id );
 		$renewal_order->update_meta_data( '_paymob_is_renewal', 'yes' );
 
-		// Set order status
 		$renewal_order->update_status( 'processing', 'Paymob renewal webhook' );
-
 		$renewal_order->save();
-
-		$renewal_order->add_order_note( 'Renewal payment received from Paymob. Subscription ID: ' . $subscription_id );
-
-		WC()->mailer()->emails['WC_Email_Customer_Processing_Order']->trigger( $renewal_order->get_id() );
 
 		return $renewal_order->get_id();
 	}
 
+	private function paymob_renewal_exists( $transaction_id ) {
+		$orders = wc_get_orders([
+			'limit'      => 1,
+			'meta_key'   => 'PaymobTransactionId',
+			'meta_value' => $transaction_id,
+			'return'     => 'ids',
+		]);
+
+		return ! empty( $orders );
+	}
+
+	// create a failed renewal order
+	function paymob_create_failed_renewal_order( $subscription_data, $json_data, $subscription_id ) {
+
+		$transaction_id = intval( $json_data['transaction_id'] );
+
+		$subscription = wcs_get_subscription( $subscription_id );
+		if ( ! $subscription ) {
+			return false;
+		}
+
+		$renewal_order = wcs_create_renewal_order( $subscription );
+		if ( ! $renewal_order ) {
+			return false;
+		}
+
+		$total = $subscription_data['amount_cents'] / 100;
+
+		foreach ( $renewal_order->get_items() as $item ) {
+			$item->set_subtotal( $total );
+			$item->set_total( $total );
+			$item->save();
+		}
+
+		$renewal_order->set_total( $total );
+
+		$renewal_order->update_meta_data( 'PaymobTransactionId', $transaction_id );
+		$renewal_order->update_meta_data( '_paymob_is_renewal', 'yes' );
+
+		// Temporarily remove the hook that sets status to on-hold
+		remove_action( 'woocommerce_order_status_changed', 
+			'WC_Subscriptions_Renewal_Order::maybe_record_subscription_payment', 10 );
+
+		$renewal_order->update_status( 'failed', 'Paymob renewal failed webhook' );
+		$renewal_order->save();
+
+		// Re-add the hook
+		add_action( 'woocommerce_order_status_changed', 
+			'WC_Subscriptions_Renewal_Order::maybe_record_subscription_payment', 10, 3 );
+
+		return $renewal_order->get_id();
+	}
 
 	public function callReturnAction() {
 		
@@ -539,18 +710,16 @@ class Paymob_WooCommerce {
 				
 					"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
 		     );
-
-			// Paymob::addLogs( 1, WC_LOG_DIR . "SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'");
+			
 		}
 		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- order id'.$orderId );
 		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- GET'.print_r($_GET,1));
-			Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
+		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
 		
 		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- errorrrrr'.Paymob::filterVar( 'errmsg' ) );
 		$order           = wc_get_order( $orderId );
 		
 		if(!$order ){
-			// wc_add_notice( __( 'Sorry, you are accessing wrong data', 'paymob-woocommerce' ), 'error' );
 			wp_safe_redirect(wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, no order found. Please try again.', 'paymob-woocommerce' ));
 			exit();
 		}
@@ -579,7 +748,6 @@ class Paymob_WooCommerce {
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
 		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
 
-		//echo "<pre>";print_r($PaymobPaymentId);exit;
 		if ( ! Paymob::verifyHmac( $this->hmac_hidden, Paymob::sanitizeVar() ) ) {
 			$checkout_url = wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, you are accessing wrong data due to mismatch verification.', 'paymob-woocommerce' );
 			if(Paymob::filterVar( 'afterpayment' )){
@@ -630,9 +798,6 @@ class Paymob_WooCommerce {
 			$redirect_url = $order->get_checkout_order_received_url();
 		} else {
 			$redirect_url = wc_get_checkout_url();
-			// if ( 'yes' == $this->gateway->empty_cart ) {
-			// 	$redirect_url = $order->get_checkout_payment_url();
-			// }
 			$gatewayError = Paymob::filterVar( 'data_message' );
 			$error        = __( 'Payment is not completed due to ', 'paymob-woocommerce' ) . $gatewayError;
 			$msg          = __( 'In callback action, for order #', 'paymob-woocommerce' ) . ' ' . $orderId . ' ' . $error;
@@ -643,8 +808,6 @@ class Paymob_WooCommerce {
 			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->save();
-
-			// wc_add_notice( $error, 'error' );
 		}
 		$order->update_meta_data( 'PaymobTransactionId', $id ); 
 		$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
@@ -680,7 +843,6 @@ class Paymob_WooCommerce {
 
 		Paymob_Style::hide_main_gateway_enqueue();
 	}
-
 
 	public function TransactionSubscriptionID($order, $transactionID) {
 
@@ -742,4 +904,195 @@ class Paymob_WooCommerce {
 		$response = $paymobReq->updateSubscription($token['token'], $conf['secKey'],$data, $sub_id);
 		return $response;
 	}
+
+	private function handle_caf_logic( WC_Order $order, $json_data ) {
+
+		if ( $order->get_meta( '_paymob_caf_handled' ) ) {
+			return;
+		}
+
+		if ( empty( $json_data['caf'] ) ) {
+			// $order->add_order_note( 'Paymob CAF: Not applied' );
+			$order->update_meta_data( '_paymob_caf_handled', 1 );
+			$order->save();
+			return;
+		}
+
+		$caf = $json_data['caf'];
+
+		$note  = "<b>Paymob CAF Details</b><br/>";
+		$note .= "CAF Applied: " . ( $caf['convenience_fee_applied'] ? 'Yes' : 'No' ) . "<br/>";
+		$note .= "Initial Amount: " . wc_price( $caf['initial_order_amount'] / 100 ) . "<br/>";
+		$note .= "CAF Amount: " . wc_price( $caf['convenience_fee_amount'] / 100 ) . "<br/>";
+		$note .= "CAF Percentage: {$caf['convenience_fee_percentage']}%<br/>";
+		$note .= "Transaction Amount: " . wc_price( $caf['transaction_amount'] / 100 ) . "<br/>";
+		$note .= "Refund CAF Amount: " . ( $caf['refund_caf_amount'] ? 'Yes' : 'No' );
+
+		if ( true === $caf['refund_caf_amount'] ) {
+			$order->set_total( $caf['transaction_amount'] / 100 );
+			$order->add_order_note(
+				'Paymob CAF: Order total updated based on CAF refund logic.<br/>' . $note
+			);
+		} else {
+			$order->add_order_note(
+				'Paymob CAF applied (no order total change).<br/>' . $note
+			);
+		}
+
+		$order->update_meta_data( 'paymob_caf_applied', $caf['convenience_fee_applied'] );
+		$order->update_meta_data( 'paymob_amount_with_caf', $caf['transaction_amount'] );
+		$order->update_meta_data( '_paymob_caf_handled', 1 );
+		$order->save();
+	}
+
+	private function handle_instant_refund_logic( WC_Order $order, $json_data ) {
+
+		// Guard: instant refund not enabled
+		if ( empty( $json_data['source_data']['instant_refund'] ) ) {
+			return;
+		}
+
+		// Prevent duplicate notes (important for webhooks)
+		if ( $order->get_meta( '_paymob_instant_refund_handled' ) ) {
+			return;
+		}
+
+		$transaction = $json_data;
+
+		// ✅ FIX: payment_key_claims is NOT inside transaction
+		$extra = $json_data['payment_key_claims']['extra'] ?? [];
+
+		$instant_refund         = (bool) $transaction['source_data']['instant_refund'];
+		$instant_refund_applied = (bool) ( $extra['instant_refund_applied'] ?? false );
+		$instant_refund_fees    = (int) ( $extra['instant_refund_fees'] ?? 0 );
+		$original_amount_cents  = (int) ( $extra['original_amount_cents'] ?? 0 );
+
+		$note  = '<b>Paymob Instant Refund</b><br/>';
+		$note .= 'Instant Refund: Yes<br/>';
+		$note .= 'Applied: ' . ( $instant_refund_applied ? 'Yes' : 'No' ) . '<br/>';
+
+		if ( $original_amount_cents > 0 ) {
+			$note .= 'Original Amount: ' . wc_price( $original_amount_cents / 100 ) . '<br/>';
+		}
+
+		if ( $instant_refund_fees > 0 ) {
+			$note .= 'Instant Refund Fees: ' . wc_price( $instant_refund_fees / 100 ) . '<br/>';
+		}
+
+		$order->add_order_note( $note );
+
+		// Save meta
+		$order->update_meta_data( '_paymob_instant_refund', 1 );
+		$order->update_meta_data( '_paymob_instant_refund_applied', $instant_refund_applied );
+		$order->update_meta_data( '_paymob_instant_refund_fees', $instant_refund_fees );
+		$order->update_meta_data( '_paymob_original_amount_cents', $original_amount_cents );
+		$order->update_meta_data( '_paymob_instant_refund_handled', 1 );
+
+		$order->save();
+	}
+
+
+
+	
+
+	function paymob_add_fees_to_order_totals_display( $totals, $order ) {
+
+		if ( ! $order instanceof WC_Order ) {
+			return $totals;
+		}
+
+		$caf_fee             = (int) $order->get_meta( 'paymob_caf_fee' );
+		$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		$discount_cents      = (int) $order->get_meta( '_paymob_discount_amount_cents' );
+
+		// Nothing to show
+		if ( $caf_fee <= 0 && $instant_refund_fees <= 0 && $discount_cents <= 0) {
+			return $totals;
+		}
+
+		$new_totals = [];
+
+		foreach ( $totals as $key => $total ) {
+
+			$new_totals[ $key ] = $total;
+
+			// Insert after shipping
+			if ( 'shipping' === $key ) {
+
+				if ( $caf_fee > 0 ) {
+					$new_totals['paymob_caf_fee'] = [
+						'label' => __( 'Convenience Fee', 'paymob' ),
+						'value' => wc_price( $caf_fee / 100 ),
+					];
+				}
+
+				if ( $instant_refund_fees > 0 ) {
+					$new_totals['paymob_instant_refund_fee'] = [
+						'label' => __( 'Instant Refund Fee', 'paymob' ),
+						'value' => wc_price( $instant_refund_fees / 100 ),
+					];
+				}
+
+				if ( $discount_cents > 0 ) {
+					$new_totals['paymob_discount'] = [
+						'label' => __( 'Paymob Discount', 'paymob' ),
+						'value' => wc_price( - $discount_cents / 100 ), // negative value
+					];
+				}
+			}
+		}
+
+		return $new_totals;
+	}
+
+
+	private function update_order_total_after_discount( WC_Order $order, $json_data ) {
+
+		// Prevent duplicate execution
+		if ( $order->get_meta( '_paymob_discount_applied' ) ) {
+			return;
+		}
+
+		$discount_details = $json_data['discount_details'] ?? [];
+
+		if ( empty( $discount_details[0]['discount_amount_cents'] ) ) {
+			return;
+		}
+
+		$discount_cents  = (int) $discount_details[0]['discount_amount_cents'];
+		$discount_amount = $discount_cents / 100;
+
+		if ( $discount_amount <= 0 ) {
+			return;
+		}
+
+		// Current order total
+		$current_total = (float) $order->get_total();
+
+		// New total after discount
+		$new_total = max( 0, $current_total - $discount_amount );
+
+		// ✅ Update total (subtract discount, not override)
+		$order->set_total( $new_total );
+
+		// Store meta for reference
+		$order->update_meta_data( '_paymob_discount_amount_cents', $discount_cents );
+		$order->update_meta_data( '_paymob_discount_applied', 1 );
+
+		// Add order note (audit-safe)
+		$order->add_order_note(
+			sprintf(
+				'Paymob Discount Applied: -%s (Old total: %s → New total: %s)',
+				wc_price( $discount_amount ),
+				wc_price( $current_total ),
+				wc_price( $new_total )
+			)
+		);
+
+		$order->save();
+	}
+
+
+
+
 }

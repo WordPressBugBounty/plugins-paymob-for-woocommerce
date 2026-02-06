@@ -73,6 +73,15 @@ return array(
 	),
 
 	array(
+		'name'     => __( 'Allow Customer Cancel', 'paymob-woocommerce' ),
+		'type'     => 'checkbox',
+		'id'       => 'woocommerce_paymob-subscription_settings[allow_cancel]',
+		'label'    => __( 'Show the "Cancel Subscription" button to customers', 'paymob-woocommerce' ),
+		'default'  => 'no',
+		'desc'     => __( 'If enabled, customers can cancel their subscriptions from My Account > Subscriptions.', 'paymob-woocommerce' ),
+	),
+
+	array(
 		'type' => 'sectionend',
 		'id'   => 'paymob_subscription',
 	),

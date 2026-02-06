@@ -32,11 +32,24 @@ class Paymob_Update_Pixel_Data {
             //     $msg = esc_html( __( 'Ops, can not create Paymob Embedded Payment with amount less than ', 'paymob-woocommerce' ) ).get_woocommerce_currency().' 1.<br>';
             //     wp_send_json_error($msg);
             // }
+            $street = 'NA';
+
+			if ( ! empty( $billing_data['address'] ) ) {
+				$street = $billing_data['address'];
+			} elseif ( ! empty( $billing_data['address_1'] ) ) {
+				$street = $billing_data['address_1'];
+
+				if ( ! empty( $billing_data['address_2'] ) ) {
+					$street .= ' - ' . $billing_data['address_2'];
+				}
+			} elseif ( ! empty( $billing_data['address_2'] ) ) {
+				$street = $billing_data['address_2'];
+			}
             $billing = array(
                 'email' => !empty($billing_data['email']) ? $billing_data['email'] : 'customer@example.com',
                 'first_name' => !empty($billing_data['first_name']) ? $billing_data['first_name'] : 'NA',
                 'last_name' => !empty($billing_data['last_name']) ? $billing_data['last_name'] : 'NA',
-                'street' => !empty($billing_data['address_1']) ? $billing_data['address_1'] . ' - ' . $billing_data['address_2'] : 'NA',
+                'street'   => $street,
                 'phone_number' => ($billing_data['phone']) ? $billing_data['phone'] : 'NA',
                 'city' => !empty($billing_data['city']) ? $billing_data['city'] : 'NA',
                 'country' => !empty($billing_data['country']) ? $billing_data['country'] : 'NA',

@@ -2,11 +2,11 @@
 Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 7.0
 WC requires at least: 4.0
-WC tested up to: 9.8
-Stable tag: 4.0.5
+WC tested up to: 10.4
+Stable tag: 4.0.6
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -183,8 +183,13 @@ Remember to save your changes for them to reflect on the checkout.
 
 
 == Changelog ==
-2025-09-26 - version 4.0.5
-handle pixel discount amount issue
+2026-01-14 - version 4.0.6
+-Handle some cases for pixel discount amount issue
+-Add cancel feature to subscriptions 
+-Handle Instant Refunds
+-Handle CAF Fees
+
+
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 

@@ -901,16 +901,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener("message", function (event) {
-    if (event.data?.type === "discountResponse") {
+    if (event.data?.type === "discountResponse" || event.data?.type ==="cardData") {
         const discountData = event.data.response?.res?.data;
-
+        // Prevent duplicate discount injection
+        if (window.paymobDiscountApplied) {
+            console.log("Paymob discount already applied, skipping duplicate.");
+            return;
+        }
+ 
         if (discountData && discountData.discounted_amount_cents > 0) {
+            window.paymobDiscountApplied = true;
+ 
             // Convert from cents to EGP
             const original = discountData.original_amount_cents / 100;
             const finalTotal = discountData.discount_amount_cents / 100;
             const discountValue = discountData.discounted_amount_cents / 100;
-
-            // Send discount to WooCommerce backend
+ 
+            // Send discount to backend
             jQuery.ajax({
                 url: pxl_object.ajax_url,
                 type: 'POST',
@@ -921,35 +928,72 @@ window.addEventListener("message", function (event) {
                     discount: discountValue,
                     original: original,
                     final_total: finalTotal,
-                    discount: discountValue,
                 },
                 success: function (response) {
                     if (response.success) {
                         console.log("Discount applied:", response.data);
-
-                        // Trigger WooCommerce cart update
-                        jQuery(document.body).trigger('update_checkout');
-
-                        // Update UI manually after short delay
+ 
+                        // Detect checkout type
+                        const isBlocksCheckout = document.querySelector(".wc-block-checkout") !== null;
+ 
+                        // Trigger WooCommerce cart refresh
+                        // jQuery(document.body).trigger('update_checkout');
+ 
                         setTimeout(() => {
-                            // Update the Total value
-                            const totalValueEl = document.querySelector(".wc-block-components-totals-footer-item-tax-value");
-                            if (totalValueEl) {
-                                totalValueEl.textContent = "EGP " + parseFloat(finalTotal).toFixed(2);
-                            }
-
-                            // Insert discount line in order summary
-                            const summary = document.querySelector(".wc-block-components-order-summary");
-                            if (summary) {
-                                let line = document.querySelector(".paymob-discount-line");
-                                if (!line) {
-                                    line = document.createElement("div");
-                                    line.className = "wc-block-components-order-summary-item paymob-discount-line";
-                                    summary.insertBefore(line, summary.lastChild);
+                            if (isBlocksCheckout) {
+                                // --- BLOCKS CHECKOUT ---
+                                console.log("WooCommerce Blocks checkout detected");
+ 
+                                // Find official discount block container
+                                const discountContainer = document.querySelector(".wp-block-woocommerce-checkout-order-summary-discount-block.wc-block-components-totals-wrapper");
+ 
+                                if (discountContainer) {
+                                    // Create or update discount line
+                                    let line = document.querySelector(".paymob-discount-line");
+                                    if (!line) {
+                                        line = document.createElement("div");
+                                        line.className = "wc-block-components-totals-item paymob-discount-line";
+                                        discountContainer.appendChild(line);
+                                    }
+ 
+                                    line.innerHTML = `
+                                        <span class="wc-block-components-totals-item__label">Discount</span>
+                                        <span class="wc-block-components-totals-item__value">-EGP ${discountValue.toFixed(2)}</span>
+                                    `;
                                 }
-                                line.innerHTML = `<span>Paymob BIN Discount</span><span>-EGP ${discountValue.toFixed(2)}</span>`;
+ 
+                                // Optionally update the total manually
+                                const totalEl = document.querySelector(".wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value");
+                                if (totalEl) {
+                                    totalEl.textContent = "EGP " + parseFloat(finalTotal).toFixed(2);
+                                }
+ 
+                            } else {
+                                // --- CLASSIC CHECKOUT ---
+                                console.log("Classic checkout detected");
+ 
+                                // Update total in classic layout
+                                const totalEl = document.querySelector("tr.order-total .woocommerce-Price-amount.amount bdi");
+                                if (totalEl) {
+                                    totalEl.innerHTML = `<span class="woocommerce-Price-currencySymbol">EGP</span>${finalTotal.toFixed(2)}`;
+                                }
+ 
+                                // Add discount row after subtotal
+                                const subtotalRow = document.querySelector("tr.cart-subtotal");
+                                if (subtotalRow && !document.querySelector(".paymob-discount-row")) {
+                                    const row = document.createElement("tr");
+                                    row.className = "paymob-discount-row";
+                                    row.innerHTML = `
+                                        <th>Discount</th>
+                                        <td data-title="Discount">
+                                            <span class="woocommerce-Price-amount amount">
+                                                <bdi><span class="woocommerce-Price-currencySymbol">EGP</span>-${discountValue.toFixed(2)}</bdi>
+                                            </span>
+                                        </td>`;
+                                    subtotalRow.parentNode.insertBefore(row, subtotalRow.nextSibling);
+                                }
                             }
-                        }, 500); // Delay to allow WooCommerce to render
+                        }, 500);
                     } else {
                         console.error("Failed to apply discount:", response);
                     }

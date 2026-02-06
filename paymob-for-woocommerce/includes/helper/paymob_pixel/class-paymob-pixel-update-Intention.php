@@ -34,16 +34,17 @@ class Paymob_Pixel_Update_Intention {
 			'billing_data' => $billing,
 			// 'special_reference' => $order_id . '_' . time(),
 		];
-
-		$final_total = WC()->session->get('paymob_final_total');
+        $final_total = WC()->session->get('paymob_final_total');
+        $discount_value = WC()->session->get('paymob_discount');
         $amount = round($final_total , $country === 'omn' ? 3 : 2) * $cents_multiplier;
-
-		if ($final_total && $final_total > 0) {
-			// Update WooCommerce order total directly
-			$data['amount'] = $amount;
-			$order->set_total($final_total);
-			$order->save();
-		}
+ 
+        if ($final_total && $final_total > 0) {
+            // Update WooCommerce order total directly
+            $data['amount'] = $amount;
+            $order->set_total($final_total);
+            $order->set_discount_total( $discount_value );
+            $order->save();
+        }
 		
 		// Send the request to Paymob
 		$paymobReq = new Paymob($debug, $log_file);

@@ -82,6 +82,8 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public $is_3DS;
 	public $ds3_integration_ids;
 	public $moto_integration_id;
+	public $allow_cancel;
+	private $paymobToken = null;
 
 	public function __construct() {
 		// config
@@ -131,6 +133,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'on_subscription_cancelled' ), 10, 1 );
 		add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'on_subscription_suspended' ), 10, 1 );
 		add_action( 'woocommerce_subscription_status_active',array( $this, 'on_subscription_reactivated' ),10,1);
+		add_action( 'woocommerce_subscription_status_pending-cancel', array( $this, 'on_subscription_pending_cancelled' ), 10, 1 );
 		//stop default behaviour on renew 
 		add_action('woocommerce_scheduled_subscription_payment_paymob-subscription',array( $this, 'handle_scheduled_subscription_payment' ),10, 2);
 		add_filter( 'wcs_renewal_order_created', '__return_false', 100 );
@@ -396,158 +399,122 @@ class Paymob_Payment extends WC_Payment_Gateway {
 
 		return false;
 	}
-
-	public function on_subscription_cancelled( $subscription ) {
-		$order = $subscription->get_parent();
-	    $orderId=$order->get_id();
-		$paymob_subscription_id = $order->get_meta('PaymobSubscriptionID');
-
-		if(isset($paymob_subscription_id) &&!empty($paymob_subscription_id))
-		{
-			$paymob_plan_id=$paymob_subscription_id;
-		}
-		else
-		{
-			$paymobTransactionId = get_post_meta( $orderId, 'PaymobTransactionId', true );
-			$paymob_plan_id=$this->TransactionSubscriptionID($order,$paymobTransactionId);
-			// Load Paymob keys
-			$order->update_meta_data('PaymobSubscriptionID', $paymob_plan_id);
-			$order->save();
-
-
-		}
-		// Cancle subscription plan
-		$mainOptions    = get_option('woocommerce_paymob-main_settings');
-		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
-		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
-		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
-
-		$paymobReq = new Paymob($this->debug, $this->addlog);
-
-		// Authenticate with Paymob
-		$token = $paymobReq->authToken($conf);
-		if (empty($token['token'])) {
-			return ['error' => 'Unable to authenticate with Paymob.'];
-		}
-		$response = $paymobReq->cancelSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
-
-		set_transient('paymob_flash_notice', [
-			'type' => 'success',
-			'message' => 'Subscription has been cancelled successfully.'
-		], 30);
-		
-	}
 	
-	function on_subscription_suspended( $subscription ) {
-	    $order = $subscription->get_parent();
-		$orderId=$order->get_id();
-		$paymob_subscription_id = $order->get_meta('PaymobSubscriptionID');
 
-		if(isset($paymob_subscription_id) &&!empty($paymob_subscription_id))
-		{
-			$paymob_plan_id=$paymob_subscription_id;
-		}
-		else
-		{
-			$paymobTransactionId = get_post_meta( $orderId, 'PaymobTransactionId', true );
-			$paymob_plan_id=$this->TransactionSubscriptionID($order,$paymobTransactionId);
-			// Load Paymob keys
-			$order->update_meta_data('PaymobSubscriptionID', $paymob_plan_id);
-			$order->save();
-
-
-		}
-		// suspended subscription plan
-		$mainOptions    = get_option('woocommerce_paymob-main_settings');
-		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
-		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
-		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
-
-		$paymobReq = new Paymob($this->debug, $this->addlog);
-
-		// Authenticate with Paymob
-		$token = $paymobReq->authToken($conf);
-		if (empty($token['token'])) {
-			return ['error' => 'Unable to authenticate with Paymob.'];
-		}
-		$response = $paymobReq->suspendSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
-		set_transient('paymob_flash_notice', [
-			'type' => 'success',
-			'message' => 'Subscription has been Paused successfully.'
-		], 30);
-		
-	}
-
-	public function on_subscription_reactivated($subscription)
-	{
-		$order = $subscription->get_parent();
-		$orderId=$order->get_id();
-		$paymob_subscription_id = $order->get_meta('PaymobSubscriptionID');
-
-		if(isset($paymob_subscription_id) &&!empty($paymob_subscription_id))
-		{
-			$paymob_plan_id=$paymob_subscription_id;
-		}
-		else
-		{
-			$paymobTransactionId = get_post_meta( $orderId, 'PaymobTransactionId', true );
-			$paymob_plan_id=$this->TransactionSubscriptionID($order,$paymobTransactionId);
-			// Load Paymob keys
-			$order->update_meta_data('PaymobSubscriptionID', $paymob_plan_id);
-			$order->save();
-
-
-		}
-		// active subscription plan
-		$mainOptions    = get_option('woocommerce_paymob-main_settings');
-		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
-		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
-		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
-
-		$paymobReq = new Paymob($this->debug, $this->addlog);
-
-		// Authenticate with Paymob
-		$token = $paymobReq->authToken($conf);
-		if (empty($token['token'])) {
-			return ['error' => 'Unable to authenticate with Paymob.'];
-		}
-		
-		$response = $paymobReq->activateSubscription($token['token'], $conf['secKey'],$paymob_plan_id);
-		set_transient('paymob_flash_notice', [
-			'type' => 'success',
-			'message' => 'Subscription has been resumed successfully.'
-		], 30);
-		
-		
-	}
-
-	public function TransactionSubscriptionID($order, $transactionID) {
+	/**
+	 * Get Paymob Auth Token (cached per request)
+	 */
+	private function getPaymobAuthToken() {
+		if ($this->paymobToken) return $this->paymobToken;
 
 		$mainOptions = get_option('woocommerce_paymob-main_settings');
-		$conf['apiKey'] = $mainOptions['api_key'] ?? '';
-		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
-		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
-		$PaymobPaymentId = $order->get_meta('PaymobPaymentId', true);
-		$addlog = WC_LOG_DIR . $PaymobPaymentId . '.log';
-		$paymobReq = new Paymob($this->debug, $this->addlog);
-	
-		// Get auth token
-		$token = $paymobReq->authToken($conf);
-		if (empty($token['token'])) {
-			return ['error' => 'Unable to authenticate with Paymob.'];
+		$conf = [
+			'apiKey' => $mainOptions['api_key'] ?? '',
+			'pubKey' => $mainOptions['pub_key'] ?? '',
+			'secKey' => $mainOptions['sec_key'] ?? '',
+		];
+
+		// check transient first
+		$token = get_transient('paymob_auth_token');
+		if (!$token) {
+			$paymobReq = new Paymob($this->debug, $this->addlog);
+			$tokenData = $paymobReq->authToken($conf);
+			if (empty($tokenData['token'])) return false;
+
+			$token = $tokenData['token'];
+			set_transient('paymob_auth_token', $token, 50*60);
 		}
-	
-		// Get subscription data by transaction ID
-		$response = $paymobReq->TransactionSubscriptionID($token['token'], $conf['secKey'], $transactionID);
-		if (!empty($response->results) && is_array($response->results)) {
-			$subscription = $response->results[0];
-			return $subscription->id;
-			
-		}
-		else{
-			return false;
-		}
+
+		$this->paymobToken = $token;
+		return $token;
 	}
+
+	/**
+	 * Get Paymob Subscription ID for order (cached)
+	 */
+	private function getPaymobSubscriptionID($order) {
+		$cached = $order->get_meta('PaymobSubscriptionID');
+		if (!empty($cached)) return $cached;
+
+		$transactionID = $order->get_meta('PaymobTransactionId');
+		if (empty($transactionID)) return false;
+
+		$token = $this->getPaymobAuthToken();
+		if (!$token) return false;
+
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$secKey = $mainOptions['sec_key'] ?? '';
+
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+		$response = $paymobReq->TransactionSubscriptionID($token, $secKey, $transactionID);
+
+		if (!empty($response->results) && is_array($response->results)) {
+			$subId = $response->results[0]->id;
+			$order->update_meta_data('PaymobSubscriptionID', $subId);
+			$order->save();
+			return $subId;
+		}
+
+		return false;
+	}
+
+	/**
+	 * General method to handle subscription actions
+	 */
+	private function handleSubscriptionAction($subscription, $action) {
+		$order = $subscription->get_parent();
+		if (!$order) return;
+
+		$subId = $this->getPaymobSubscriptionID($order);
+		if (!$subId) return;
+
+		$token = $this->getPaymobAuthToken();
+		if (!$token) return;
+
+		$mainOptions = get_option('woocommerce_paymob-main_settings');
+		$secKey = $mainOptions['sec_key'] ?? '';
+
+		$paymobReq = new Paymob($this->debug, $this->addlog);
+
+		switch($action) {
+			case 'cancel':
+			case 'pending_cancel':
+				$paymobReq->cancelSubscription($token, $secKey, $subId);
+				$msg = $action === 'cancel' ? 'Subscription cancelled successfully' : 'Subscription pending cancel';
+				break;
+			case 'suspend':
+				$paymobReq->suspendSubscription($token, $secKey, $subId);
+				$msg = 'Subscription paused successfully';
+				break;
+			case 'activate':
+				$paymobReq->activateSubscription($token, $secKey, $subId);
+				$msg = 'Subscription resumed successfully';
+				break;
+			default: return;
+		}
+
+		set_transient('paymob_flash_notice', [
+			'type' => 'success',
+			'message' => $msg
+		], 30);
+	}
+
+	/**
+	 * Hooks
+	 */
+	public function on_subscription_cancelled($subscription) {
+		$this->handleSubscriptionAction($subscription, 'cancel');
+	}
+	public function on_subscription_pending_cancelled($subscription) {
+		$this->handleSubscriptionAction($subscription, 'pending_cancel');
+	}
+	public function on_subscription_suspended($subscription) {
+		$this->handleSubscriptionAction($subscription, 'suspend');
+	}
+	public function on_subscription_reactivated($subscription) {
+		$this->handleSubscriptionAction($subscription, 'activate');
+	}
+
 
 
 
