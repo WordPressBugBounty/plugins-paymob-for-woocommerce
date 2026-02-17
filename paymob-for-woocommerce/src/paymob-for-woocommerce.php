@@ -141,7 +141,7 @@ class Paymob_WooCommerce {
 				$this->handle_caf_logic( $order, $json_data );
 				$this->handle_instant_refund_logic( $order, $obj);
 				
-				$this->paymob_add_fees_to_order_totals( $order );
+				$this->paymob_add_fees_to_order_totals_display( $order );
 				$order->payment_complete( $orderId );
 
 
@@ -246,7 +246,7 @@ class Paymob_WooCommerce {
 				$this->handle_caf_logic( $order, $json_data);
 				$this->handle_instant_refund_logic( $order, $json_data);
 				
-				$this->paymob_add_fees_to_order_totals( $order );
+				$this->paymob_add_fees_to_order_totals_display( $order );
 
 				$order->payment_complete( $orderId );
 				$paymentMethod = $order->get_payment_method();
