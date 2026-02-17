@@ -137,9 +137,10 @@ class Paymob_WooCommerce {
 				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
 				// Handle CAF logic
+				$this->update_order_total_after_discount( $order, $obj );
 				$this->handle_caf_logic( $order, $json_data );
 				$this->handle_instant_refund_logic( $order, $obj);
-				$this->update_order_total_after_discount( $order, $obj );
+				
 				$this->paymob_add_fees_to_order_totals( $order );
 				$order->payment_complete( $orderId );
 
@@ -241,9 +242,10 @@ class Paymob_WooCommerce {
 				$order->add_order_note( $note );
 				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
+				$this->update_order_total_after_discount( $order, $json_data );
 				$this->handle_caf_logic( $order, $json_data);
 				$this->handle_instant_refund_logic( $order, $json_data);
-				$this->update_order_total_after_discount( $order, $json_data );
+				
 				$this->paymob_add_fees_to_order_totals( $order );
 
 				$order->payment_complete( $orderId );
@@ -933,6 +935,7 @@ class Paymob_WooCommerce {
 			$order->add_order_note(
 				'Paymob CAF: Order total updated based on CAF refund logic.<br/>' . $note
 			);
+			$order->update_meta_data( 'paymob_caf_fee', $caf['convenience_fee_amount'] );
 		} else {
 			$order->add_order_note(
 				'Paymob CAF applied (no order total change).<br/>' . $note
@@ -940,7 +943,7 @@ class Paymob_WooCommerce {
 		}
 
 		$order->update_meta_data( 'paymob_caf_applied', $caf['convenience_fee_applied'] );
-		$order->update_meta_data( 'paymob_amount_with_caf', $caf['transaction_amount'] );
+		
 		$order->update_meta_data( '_paymob_caf_handled', 1 );
 		$order->save();
 	}
@@ -1017,7 +1020,7 @@ class Paymob_WooCommerce {
 			$new_totals[ $key ] = $total;
 
 			// Insert after shipping
-			if ( 'shipping' === $key ) {
+			// if ( 'shipping' === $key ) {
 
 				if ( $caf_fee > 0 ) {
 					$new_totals['paymob_caf_fee'] = [
@@ -1039,7 +1042,7 @@ class Paymob_WooCommerce {
 						'value' => wc_price( - $discount_cents / 100 ), // negative value
 					];
 				}
-			}
+			// }
 		}
 
 		return $new_totals;

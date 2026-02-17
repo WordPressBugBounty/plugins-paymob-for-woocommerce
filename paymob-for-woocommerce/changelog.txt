@@ -4,6 +4,15 @@ This file will contains only old changelogs. For newer versions, you can check r
 
 == Changelog ==
 
+2026-01-25 - version 4.0.7
+-Handle CAF Fees and discount in thank you page
+
+2026-01-14 - version 4.0.6
+-Handle some cases for pixel discount amount issue
+-Add cancel feature to subscriptions 
+-Handle Instant Refunds
+-Handle CAF Fees
+
 2025-09-26 - version 4.0.5
 handle pixel discount amount issue
 
