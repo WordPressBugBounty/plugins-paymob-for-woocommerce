@@ -20,7 +20,6 @@ class Paymob_WooCommerce {
 		add_action( 'woocommerce_api_paymob_callback', array( $this, 'callback' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_enqueue_scripts' ) );
 		add_action( 'admin_head', array( $this, 'hide_block_main_gateway' ) );
-		add_filter( 'woocommerce_get_order_item_totals', array( $this, 'paymob_add_fees_to_order_totals_display'), 20, 2 );
 		$paymob_u_Options  = get_option( 'woocommerce_paymob_settings' );
 		$this->hmac_hidden = isset( $paymob_u_Options['hmac_hidden'] ) ? sanitize_text_field( $paymob_u_Options['hmac_hidden'] ) : '';
 	}
@@ -140,8 +139,6 @@ class Paymob_WooCommerce {
 				$this->update_order_total_after_discount( $order, $obj );
 				$this->handle_caf_logic( $order, $json_data );
 				$this->handle_instant_refund_logic( $order, $obj);
-				
-				$this->paymob_add_fees_to_order_totals_display( $order );
 				$order->payment_complete( $orderId );
 
 
@@ -246,7 +243,7 @@ class Paymob_WooCommerce {
 				$this->handle_caf_logic( $order, $json_data);
 				$this->handle_instant_refund_logic( $order, $json_data);
 				
-				$this->paymob_add_fees_to_order_totals_display( $order );
+
 
 				$order->payment_complete( $orderId );
 				$paymentMethod = $order->get_payment_method();
