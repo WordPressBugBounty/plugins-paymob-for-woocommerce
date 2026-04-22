@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.0
+ * Version: 4.1.1
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-woocommerce
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.0');
+	define( 'PAYMOB_VERSION', '4.1.1');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -227,19 +227,7 @@ function prevent_mixed_subscription_checkout( $passed, $product_id, $quantity ) 
 	return $passed;
 }
 
-add_action('woocommerce_checkout_order_processed', 'custom_clear_cache_checkout', 10, 3);
 
-function custom_clear_cache_checkout($order_id, $posted_data, $order) {
-    // Clear any cache here
-    wp_cache_flush(); // or any plugin-specific logic
-}
-
-// Clear cache for every front-end page load
-add_action( 'init', 'custom_clear_cache_every_reload', 5 ); // Run early
-function custom_clear_cache_every_reload() {
-    if ( is_admin() ) return;
-    wp_cache_flush();
-}
 
 function paymob_check_subscription_product_update( $post_id ) {
 
