@@ -57,7 +57,7 @@ class Paymob_Manual_Setup_Save {
                 $paymobReq = new Paymob($debug, $addlog);
                 $result = $paymobReq->authToken($conf);
                 Paymob::addLogs($debug, $addlog, __('Merchant configuration: ', 'paymob-woocommerce'), $result);
-                $gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/');
+                $gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
                 Paymob_Unset_Old_Setting::unset_old_settings();
                 // $wpdb->delete($wpdb->prefix . 'paymob_gateways', array('gateway_id' => 'paymob-pixel'));
                 update_option('woocommerce_paymob_gateway_data', $gatewayData);

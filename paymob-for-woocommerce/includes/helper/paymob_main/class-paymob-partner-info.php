@@ -49,7 +49,7 @@ class Paymob_Main_Partner_Info
 
 					$result = $paymobReq->authToken($conf);
 					Paymob::addLogs('1', WC_LOG_DIR . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-woocommerce'), $result);
-					$gatewayData = $paymobReq->getPaymobGateways($main_settings['sec_key'], PAYMOB_PLUGIN_PATH . 'assets/img/');
+					$gatewayData = $paymobReq->getPaymobGateways($main_settings['sec_key'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 
 					if ($testPubKey !== $status['pk_key_test'] && $livePubKey !== $status['pk_key_live']) {

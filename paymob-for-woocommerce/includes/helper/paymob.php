@@ -197,10 +197,13 @@ class Paymob {
 	 *
 	 * @return array of Paymob data
 	 */
-	public function getPaymobGateways( $secKey, $path ) {
-		// get gateways data
-		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
-		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
+	public function getPaymobGateways( $secKey, $path, $token = '' ) {
+		// get gateways data with Bearer token auth (same auth flow as other endpoints)
+		$flash = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$header = array(
+			'Content-Type: application/json',
+			'Authorization: Bearer ' . $token,
+		);
 
 		$getways = $this->HttpRequest( $flash . 'api/ecommerce/gateways', 'GET', $header );
 		$this->addLogs( $this->debug_order, $this->file, 'In api/ecommerce/gateways Response: ', json_encode( $getways ) );

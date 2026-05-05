@@ -52,7 +52,7 @@ class Paymob_Reset_gateways {
 		$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
 		// Get the auth token and gateway data.
 		$result       = $paymob_req->authToken( $conf );
-		$gateway_data = $paymob_req->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
+		$gateway_data = $paymob_req->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '' );
 		update_option( 'woocommerce_paymob_gateway_data', $gateway_data );
 		// Auto-generate the gateways.
 		PaymobAutoGenerate::create_gateways( $result, 1, $gateway_data );

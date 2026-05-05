@@ -116,7 +116,7 @@ class WC_Paymob_HandelUpdate {
 					PaymobAutoGenerate::register_framework( $ids );
 					$gatewayData = get_option( 'woocommerce_paymob_gateway_data' );
 					if ( empty( $gatewayData ) ) {
-						$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' );
+						$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '' );
 						update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
 						delete_option( 'woocommerce_paymob_gateway_data_failure' );
 					}
