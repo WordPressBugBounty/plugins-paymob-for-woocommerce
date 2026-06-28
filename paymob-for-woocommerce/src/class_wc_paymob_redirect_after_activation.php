@@ -23,7 +23,7 @@ class WC_Paymob_RedirectUrl
                     $paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
                     $response = $paymobReq->getOnboardingUrl('egy', $data);
                     // Check for errors in Paymob response
-                    $currentURL = str_replace('amp;', '', esc_attr( self_admin_url(('admin.php?page=wc-settings&tab=checkout&section=paymob-main&popup=true') )));
+                    $currentURL = Paymob_Main_Partner_Info::get_onboarding_redirect_url();
                     $encoded_url=urlencode($currentURL);
                     $url='https://onboarding.paymob.com/auth/country-selection?partner=woocommerce&redirect_url='.$encoded_url;
                     // If successful, return the URL

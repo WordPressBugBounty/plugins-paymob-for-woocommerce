@@ -158,7 +158,7 @@ class Paymob_Scripts {
 			$popup = 'true';
 		}
 
-		$currentURL = str_replace('amp;', '', esc_attr( self_admin_url(('admin.php?page=wc-settings&tab=checkout&section=paymob-main') )));
+		$currentURL = Paymob_Main_Partner_Info::get_onboarding_redirect_url();
 		wp_localize_script('paymob-main-script', 'main', array(
 			'ajax_url' => admin_url('admin-ajax.php'),
 			'connect_paymob_nonce' => wp_create_nonce('connect_paymob'),

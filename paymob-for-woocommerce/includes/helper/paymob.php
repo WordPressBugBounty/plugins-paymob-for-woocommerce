@@ -227,24 +227,19 @@ class Paymob {
 		}
 
 		foreach ( $gateways as $gateway ) {
-			$logoPath = $path . strtolower( $gateway['code'] ) . '.png';
-			// Skip downloading the logo if the logo URL is empty
-			if ( ! empty( $gateway['logo'] ) ) {
-				if ( ! file_exists( $logoPath ) ) {
-					$ch = curl_init();
-					curl_setopt( $ch, CURLOPT_HEADER, 0 );
-					curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
-					curl_setopt( $ch, CURLOPT_URL, $gateway['logo'] );
-					$data = curl_exec( $ch );
-					curl_close( $ch );
-					file_put_contents( $logoPath, $data );
-				}
-			} else {
-				// If logo URL is empty, use a placeholder or skip the download
-				$logoPath = ''; // Leave it empty if no logo is available
+			$gateway      = (array) $gateway;
+			$raw_code     = isset( $gateway['code'] ) ? (string) $gateway['code'] : '';
+			$gateway_key  = strtolower( $raw_code );
+
+			if ( ! empty( $gateway['logo'] ) && is_string( $gateway['logo'] ) ) {
+				self::maybeDownloadGatewayLogo( $raw_code, $gateway['logo'], $path );
 			}
 
-			$gatewaysData[ strtolower( $gateway['code'] ) ] = array(
+			if ( '' === $gateway_key ) {
+				continue;
+			}
+
+			$gatewaysData[ $gateway_key ] = array(
 				'title' => $gateway['label'],
 				'desc'  => $gateway['description'],
 				'logo'  => $gateway['logo'],
@@ -252,6 +247,98 @@ class Paymob {
 		}
 
 		return $gatewaysData;
+	}
+
+	/**
+	 * Download and cache a gateway logo when the code, URL, and file contents are safe.
+	 *
+	 * @param string $raw_code Gateway code from the Paymob catalogue.
+	 * @param string $logo_url Remote logo URL from the Paymob catalogue.
+	 * @param string $path     Target assets directory.
+	 * @return bool
+	 */
+	public static function maybeDownloadGatewayLogo( $raw_code, $logo_url, $path ) {
+		$gateway_code = strtolower( basename( sanitize_file_name( (string) $raw_code ) ) );
+		if ( empty( $gateway_code ) || ! preg_match( '/^[a-z0-9_-]+$/', $gateway_code ) ) {
+			return false;
+		}
+
+		$assets_dir = realpath( $path );
+		if ( false === $assets_dir ) {
+			$assets_dir = wp_normalize_path( rtrim( $path, '/\\' ) );
+		} else {
+			$assets_dir = wp_normalize_path( $assets_dir );
+		}
+		$assets_dir = trailingslashit( $assets_dir );
+
+		$logo_path = wp_normalize_path( $assets_dir . $gateway_code . '.png' );
+		if ( 0 !== strpos( $logo_path, $assets_dir ) || file_exists( $logo_path ) ) {
+			return false;
+		}
+
+		if ( empty( $logo_url ) || ! is_string( $logo_url ) || ! self::isValidPaymobLogoUrl( $logo_url ) ) {
+			return false;
+		}
+
+		$logo_data = self::fetchPaymobLogo( $logo_url );
+		if ( false === $logo_data || ! self::isValidPngImage( $logo_data ) ) {
+			return false;
+		}
+
+		return false !== file_put_contents( $logo_path, $logo_data );
+	}
+
+	/**
+	 * Validate that a gateway logo URL points to an expected Paymob host.
+	 *
+	 * @param string $url Logo URL from the Paymob gateway catalogue.
+	 * @return bool
+	 */
+	private static function isValidPaymobLogoUrl( $url ) {
+		$parsed = wp_parse_url( $url );
+		if ( empty( $parsed['host'] ) || empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/^(.*\.)?paymob\.com$/i', $parsed['host'] );
+	}
+
+	/**
+	 * Fetch gateway logo bytes from Paymob.
+	 *
+	 * @param string $url Logo URL from the Paymob gateway catalogue.
+	 * @return string|false
+	 */
+	private static function fetchPaymobLogo( $url ) {
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'    => 30,
+				'user-agent' => self::filterVar( 'HTTP_USER_AGENT', 'SERVER' ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
+		if ( ! empty( $content_type ) && false === stripos( $content_type, 'image' ) ) {
+			return false;
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		return ( '' !== $body ) ? $body : false;
+	}
+
+	/**
+	 * Verify downloaded logo bytes are a PNG image.
+	 *
+	 * @param string $data Raw file contents.
+	 * @return bool
+	 */
+	private static function isValidPngImage( $data ) {
+		return is_string( $data ) && strlen( $data ) > 8 && 0 === strpos( $data, "\x89PNG\r\n\x1a\n" );
 	}
 	public function registerFramework( $secKey, $data ) {
 		$flash       = $this->getApiUrl( $this->getCountryCode( $secKey ) );

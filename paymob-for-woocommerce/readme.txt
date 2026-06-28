@@ -6,7 +6,7 @@ Tested up to: 6.9
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 10.4
-Stable tag: 4.1.2
+Stable tag: 4.1.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -183,11 +183,13 @@ Remember to save your changes for them to reflect on the checkout.
 
 
 == Changelog ==
-2026-05-05 - version 4.1.2
--api enhancement   
+2026-06-28 - version 4.1.3
+- Security: require manage_woocommerce capability and nonce verification for Paymob .
+-
+  
 
 
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 
-
+fz3qrsmisfydtivr4l7jpdhitc6sun69

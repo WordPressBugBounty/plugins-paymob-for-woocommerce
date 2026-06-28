@@ -3,26 +3,54 @@
 class Paymob_Main_Partner_Info
 {
 
+	/**
+	 * Build the WooCommerce settings URL Paymob redirects to after onboarding.
+	 *
+	 * @param bool $popup Whether to include the popup query arg.
+	 * @return string
+	 */
+	public static function get_onboarding_redirect_url( $popup = true ) {
+		$url = self_admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' );
+		if ( $popup ) {
+			$url = add_query_arg( 'popup', 'true', $url );
+		}
+		$url = add_query_arg( 'paymob_onboarding_nonce', wp_create_nonce( 'paymob_partner_onboarding' ), $url );
+		return str_replace( 'amp;', '', esc_attr( $url ) );
+	}
+
 	public static function partner_info()
 	{
 		global $wpdb;
-		if (
-			!empty(Paymob::filterVar('woocode', 'GET'))
-		) {
-			$main_settings = get_option('woocommerce_paymob-main_settings', array());
-			$testPubKey = isset($main_settings['test_pub_key']) ? sanitize_text_field($main_settings['test_pub_key']) : '';
-			$livePubKey = isset($main_settings['live_pub_key']) ? sanitize_text_field($main_settings['live_pub_key']) : '';
-			$testSecKey = isset($main_settings['test_sec_key']) ? sanitize_text_field($main_settings['test_sec_key']) : '';
-			$livesecKey = isset($main_settings['live_sec_key']) ? sanitize_text_field($main_settings['live_sec_key']) : '';
-			$apiKey = isset($paymobOptions['api_key']) ? sanitize_text_field($main_settings['api_key']) : '';
-			$main_settings['enabled'] = isset($main_settings['enabled']) ? ($main_settings['enabled']) :'yes';
+		$woo_code = Paymob::filterVar( 'woocode', 'GET' );
+		if ( empty( $woo_code ) ) {
+			return;
+		}
 
-			// if (
-			// 	!empty(Paymob::filterVar('woocode', 'GET'))
-			// ) {
-			// echo Paymob::filterVar('woocode', 'GET');exit;
-			try {
-				$woo_code = Paymob::filterVar('woocode', 'GET');
+		if ( ! is_admin() || ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+
+		$nonce = Paymob::filterVar( 'paymob_onboarding_nonce', 'GET' );
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'paymob_partner_onboarding' ) ) {
+			if ( class_exists( 'WC_Admin_Settings' ) ) {
+				WC_Admin_Settings::add_error( __( 'Invalid onboarding request. Please try connecting your Paymob account again.', 'paymob-woocommerce' ) );
+			}
+			return;
+		}
+
+		$main_settings = get_option('woocommerce_paymob-main_settings', array());
+		$testPubKey = isset($main_settings['test_pub_key']) ? sanitize_text_field($main_settings['test_pub_key']) : '';
+		$livePubKey = isset($main_settings['live_pub_key']) ? sanitize_text_field($main_settings['live_pub_key']) : '';
+		$testSecKey = isset($main_settings['test_sec_key']) ? sanitize_text_field($main_settings['test_sec_key']) : '';
+		$livesecKey = isset($main_settings['live_sec_key']) ? sanitize_text_field($main_settings['live_sec_key']) : '';
+		$apiKey = isset($paymobOptions['api_key']) ? sanitize_text_field($main_settings['api_key']) : '';
+		$main_settings['enabled'] = isset($main_settings['enabled']) ? ($main_settings['enabled']) :'yes';
+
+		// if (
+		// 	!empty(Paymob::filterVar('woocode', 'GET'))
+		// ) {
+		// echo Paymob::filterVar('woocode', 'GET');exit;
+		try {
 				$data = [
 					'partner' => 'woocommerce',
 					'clt' => Paymob_Main_Partner_Info::get_public_ip(),
@@ -35,7 +63,7 @@ class Paymob_Main_Partner_Info
 
 				if (!empty($status['api_key'])) {
 					get_plugin_data(__FILE__);
-					$currentURL = str_replace('amp;', '', esc_attr(self_admin_url(('admin.php?page=wc-settings&tab=checkout&section=paymob-main&popup=true'))));
+					$currentURL = self::get_onboarding_redirect_url();
 					$encoded_url = urlencode($currentURL);
 					// Replace with your desired custom URL
 					if (isset($status['error']) || isset($status['detail'])) {
@@ -130,9 +158,8 @@ class Paymob_Main_Partner_Info
 
 				}
 
-			} catch (\Exception $e) {
-				WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
-			}
+		} catch (\Exception $e) {
+			WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
 		}
 	}
 	public static function get_public_ip()

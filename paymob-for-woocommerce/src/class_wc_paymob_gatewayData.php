@@ -30,18 +30,8 @@ class WC_Paymob_GatewayData
 		}else {
 			if (!empty($gatewayData)) {
 				foreach ($gatewayData as $key => $gateway) {
-					$logoPath = PAYMOB_PLUGIN_PATH . 'assets/img/' . strtolower($key) . '.png';
-					// Skip downloading the logo if the logo URL is empty
 					if (!empty($gateway['logo'])) {
-						if (!file_exists($logoPath)) {
-							$ch = curl_init();
-							curl_setopt($ch, CURLOPT_HEADER, 0);
-							curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-							curl_setopt($ch, CURLOPT_URL, $gateway['logo']);
-							$data = curl_exec($ch);
-							curl_close($ch);
-							file_put_contents($logoPath, $data);
-						}
+						Paymob::maybeDownloadGatewayLogo($key, $gateway['logo'], PAYMOB_PLUGIN_PATH . 'assets/img/');
 					}
 				}
 			}

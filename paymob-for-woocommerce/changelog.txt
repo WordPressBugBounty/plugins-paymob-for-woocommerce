@@ -4,6 +4,10 @@ This file will contains only old changelogs. For newer versions, you can check r
 
 == Changelog ==
 
+2026-05-05 - version 4.1.2
+-api enhancement   
+
+
 2026-04-22 - version 4.1.1
 -cache enhancement 
 
