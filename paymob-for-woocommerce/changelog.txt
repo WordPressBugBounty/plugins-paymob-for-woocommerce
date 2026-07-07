@@ -3,6 +3,10 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+2026-06-28 - version 4.1.3
+- Security: require manage_woocommerce capability and nonce verification for Paymob .
+
+
 
 2026-05-05 - version 4.1.2
 -api enhancement   
