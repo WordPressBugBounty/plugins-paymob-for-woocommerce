@@ -14,6 +14,8 @@ if ( class_exists( 'WC_Subscriptions' ) ) {
 	$output .= '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob_subscription') . '" class="tablinks ' . ($current_section === 'paymob_subscription' ? 'active' : '') . '">' . __('Subscription', 'paymob-woocommerce') . '</a>';
 }
 
+$output .= '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=widget') . '" class="tablinks ' . ($current_section === 'widget' ? 'active' : '') . '"><span class="paymob-admin-tab__label">' . __('Affordability Widget', 'paymob-woocommerce') . '</span><span class="paymob-tab-new-badge">' . __('New', 'paymob-woocommerce') . '</span></a>';
+
 // $output .= '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob_add_gateway') . '" class="tablinks ' . ($current_section === 'paymob_add_gateway' ? 'active' : '') . '">' . __('Add Payment Integration', 'paymob-woocommerce') . '</a>';
 $output .='</div>';
 

@@ -2,11 +2,11 @@
 Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 10.4
-Stable tag: 4.1.4
+Stable tag: 4.1.6
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -183,13 +183,14 @@ Remember to save your changes for them to reflect on the checkout.
 
 
 == Changelog ==
-2026-07-06 - version 4.1.4
-- update pixel sdk .
--
+2026-07-15 - version 4.1.6
+- handle instant refund on pixel
+- add error tool to record any error in understandable way 
+
   
 
 
 
 See [changelog.txt](http://plugins.svn.wordpress.org/paymob-for-woocommerce/trunk/changelog.txt) for older logs.
 
-fz3qrsmisfydtivr4l7jpdhitc6sun69
+

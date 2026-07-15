@@ -166,7 +166,9 @@ class Paymob_Payment extends WC_Payment_Gateway {
 					Paymob::filterVar( 'section' ) == 'paymob-main' || 
 					Paymob::filterVar( 'section' ) == 'paymob_add_gateway' || 
 					Paymob::filterVar( 'section' ) == 'paymob_list_gateways' || 
-					Paymob::filterVar( 'section' ) == 'paymob_subscription' 
+					Paymob::filterVar( 'section' ) == 'paymob_subscription' ||
+					Paymob::filterVar( 'section' ) == 'paymob_pixel' ||
+					Paymob::filterVar( 'section' ) == 'widget'
 				) 
 			) {
 				Paymob_Scripts::paymob_admin( $params );
@@ -252,6 +254,9 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		}else{
 			$status = Paymob_Pixel_Update_Intention::update_intention($orderId,$order);
 			if (!$status['success']) {
+				if ( class_exists( 'Paymob_Error_Logs' ) ) {
+					Paymob_Error_Logs::add( $status['message'], 'pixel_checkout', 'gateway' );
+				}
 				wc_add_notice( $status['message'], 'error' );
 				wp_safe_redirect( wc_get_checkout_url() );
 				exit;
@@ -289,12 +294,33 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			return new WP_Error( 'invalid_order', __( 'Order not found.', 'woocommerce' ) );
 		}
 
+		$ir_fee_cents = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		$ir_fee_major = $ir_fee_cents > 0 ? round( $ir_fee_cents / $cents, $round ) : 0;
+		$refundable   = max( 0, round( (float) $order->get_total() - $ir_fee_major, $round ) );
+
+		if ( null === $amount ) {
+			$amount = $refundable;
+		}
+		$amount = round( (float) $amount, $round );
+
+		if ( $ir_fee_major > 0 && $amount > $refundable ) {
+			return new WP_Error(
+				'paymob_ir_non_refundable',
+				sprintf(
+					/* translators: 1: non-refundable fee, 2: max refundable */
+					__( 'Instant Refund Fee %1$s is non-refundable. Maximum refundable amount is %2$s.', 'paymob-woocommerce' ),
+					wc_price( $ir_fee_major, array( 'currency' => $order->get_currency() ) ),
+					wc_price( $refundable, array( 'currency' => $order->get_currency() ) )
+				)
+			);
+		}
+
 		$transactionId   = $order->get_meta( 'PaymobTransactionId', true );
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
 		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
 		$data            = array(
 			'transaction_id' => $transactionId,
-			'amount_cents'   => intval(round( $amount, $round ) * $cents),
+			'amount_cents'   => (int) round( $amount * $cents ),
 		);
 		$paymobReq       = new Paymob( $this->debug, $addlog );
 		$status          = $paymobReq->refundPayment( $this->sec_key, $data );

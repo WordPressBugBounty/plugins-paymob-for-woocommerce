@@ -1356,52 +1356,6 @@ button.woocommerce-save-button:hover {
     max-width: 400px !important;
 }
 
-/* Target submenu item links where href contains section=paymob_subscription */
-.subsubsub li a[href*="section=paymob_subscription"] {
-    display: inline-flex; /* Flexbox to align text and "New" notification horizontally */
-    align-items: center; /* Ensure vertical alignment of text and "New" notification */
-}
-
-/* Create the "New" notification beside the link text */
-.subsubsub li a[href*="section=paymob_subscription"]::after {
-    content: "New"; /* Text to indicate the new feature */
-    display: inline-block;
-    background-color: #e46d29; /* Red color for the notification */
-    color: white;
-    font-weight: bold;
-    font-size: 10px; /* Smaller font size */
-    padding: 2px 6px; /* Adjusted padding for a more compact look */
-    border-radius: 10px; /* Rounded corners for the notification */
-    text-align: center;
-    margin-left: 4px; /* Space between the link text and "New" notification */
-    margin-top: 2px; /* Adjust vertical position if needed */
-}
-
-/* Optional: Hover effect for the "New" text */
-.subsubsub li a[href*="section=paymob_subscription"]:hover::after {
-    background-color: #e46d29; /* Darker red on hover */
-}
-
-/* Optional: Animation for the "New" text (pulse effect) */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-.subsubsub li a[href*="section=paymob_subscription"]::after {
-    animation: pulse 1s infinite; /* Apply pulse animation */
-}
-.woocommerce table.form-table .select2-container{
-    max-width: 400px !important;
-}
-
 /* Container for the tab links */
 .paymob-admin-tab {
     display: flex;
@@ -1410,6 +1364,9 @@ button.woocommerce-save-button:hover {
 }
 
 .paymob-admin-tab .tablinks {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background-color: #ffffff !important;
     color: #2c7bbf !important;
     font-weight: 600;
@@ -1447,7 +1404,28 @@ button.woocommerce-save-button:hover {
     border-top-right-radius: 20px;
 }
 
+.paymob-admin-tab .tablinks .paymob-tab-new-badge {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 0;
+    padding: 2px 7px;
+    background: linear-gradient(135deg, #edf2ff, #d0dbff) !important;
+    color: #144dff !important;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    border: 1px solid #b8c9ff;
+    text-transform: uppercase;
+    line-height: 1;
+    vertical-align: middle;
+}
 
-
-
- 
+.paymob-admin-tab .tablinks.active .paymob-tab-new-badge,
+.paymob-admin-tab .tablinks:hover .paymob-tab-new-badge {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3);
+}

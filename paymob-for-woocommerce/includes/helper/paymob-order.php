@@ -57,6 +57,9 @@ class PaymobOrder {
 	}
 
 	public function throwErrors( $error ) {
+		if ( class_exists( 'Paymob_Error_Logs' ) ) {
+			Paymob_Error_Logs::add( $error, 'order', 'gateway' );
+		}
 		if ( Paymob::filterVar( 'pay_for_order', 'REQUEST' ) ) {
 			wc_add_notice( $error, 'error' );
 		} else {
@@ -103,6 +106,14 @@ class PaymobOrder {
 					$data['items'] = $itemsArr;
 				}
 				$data['card_tokens'] = Paymob_Saved_Cards_Tokens::getUserTokens();
+				$data = apply_filters(
+					'paymob_intention_data',
+					$data,
+					array(
+						'order_id' => $this->order->get_id(),
+						'context'  => 'createPayment',
+					)
+				);
 				$paymobReq = new Paymob( $this->config->debug, $this->config->addlog );
 				return $paymobReq->createIntention( $this->config->sec_key, $data, $this->order->get_id() ,$cs='','POST');
 			}
@@ -282,6 +293,12 @@ class PaymobOrder {
 		$order = self::getOrder( $orderId );
 
 		$paymentMethod = $order->get_payment_method();
+		// Pixel AJAX create_order may omit PaymobPaymentId on older orders — treat paymob-pixel as valid.
+		if ( empty( $PaymentId ) && 'paymob-pixel' === $paymentMethod ) {
+			$order->update_meta_data( 'PaymobPaymentId', 'paymob-pixel' );
+			$order->save();
+			return $order;
+		}
 		if ( $PaymentId != $paymentMethod ) {
 			die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-woocommerce' ) ) );
 		}

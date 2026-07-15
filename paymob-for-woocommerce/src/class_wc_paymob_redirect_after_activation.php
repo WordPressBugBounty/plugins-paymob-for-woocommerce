@@ -6,6 +6,10 @@ class WC_Paymob_RedirectUrl
 {
 		// Check the redirect flag and perform redirect if true
         public static function redirect_after_activation() {
+            if ( ! current_user_can( 'manage_woocommerce' ) ) {
+                return;
+            }
+
             $gatewayData = get_option('woocommerce_paymob_gateway_data');
             $mainOptions = get_option('woocommerce_paymob-main_settings');
             
@@ -23,8 +27,9 @@ class WC_Paymob_RedirectUrl
                     $paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
                     $response = $paymobReq->getOnboardingUrl('egy', $data);
                     // Check for errors in Paymob response
-                    $currentURL = Paymob_Main_Partner_Info::get_onboarding_redirect_url();
-                    $encoded_url=urlencode($currentURL);
+                    Paymob_Main_Partner_Info::mark_partner_connect_started();
+                    $currentURL = Paymob_Main_Partner_Info::get_partner_redirect_url();
+                    $encoded_url = urlencode( $currentURL );
                     $url='https://onboarding.paymob.com/auth/country-selection?partner=woocommerce&redirect_url='.$encoded_url;
                     // If successful, return the URL
                     if (isset($response->url)) {

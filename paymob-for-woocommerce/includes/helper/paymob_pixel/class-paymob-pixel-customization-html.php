@@ -25,7 +25,7 @@ class Paymob_Pixel_Customization_Html
                         <tr>
                                 <td><?php esc_html_e('Font Family', 'paymob-woocommerce'); ?></td>
                                 <td>
-                                        <select name="woocommerce_paymob_pixel_font_family">
+                                        <select id="woocommerce_paymob_pixel_font_family" name="woocommerce_paymob_pixel_font_family">
                                                 <?php
                                                 $fonts = [
                                                         'Arial',
@@ -55,8 +55,11 @@ class Paymob_Pixel_Customization_Html
                                                         'Ui-serif',
                                                         'Ui-rounded'
                                                 ];
-                                                $selected_font = isset($pixel_settings['font_family']) ? $pixel_settings['font_family'] : 'Gotham';
-                                                foreach ($fonts as $font) {
+                                                $selected_font = isset( $pixel_settings['font_family'] ) ? (string) $pixel_settings['font_family'] : 'Gotham';
+                                                if ( ! in_array( $selected_font, $fonts, true ) ) {
+                                                        $selected_font = 'Gotham';
+                                                }
+                                                foreach ( $fonts as $font ) {
                                                         printf(
                                                                 '<option value="%s"%s>%s</option>',
                                                                 esc_attr($font),
@@ -180,6 +183,53 @@ class Paymob_Pixel_Customization_Html
                                 </td>
                         </tr>
                 </table>
+                <script>
+                ( function() {
+                        function unlockPixelSettingsForm() {
+                                var form = document.getElementById( 'mainform' );
+                                if ( ! form ) {
+                                        return;
+                                }
+
+                                form.setAttribute( 'novalidate', 'novalidate' );
+
+                                form.querySelectorAll(
+                                        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id'
+                                ).forEach( function( field ) {
+                                        field.removeAttribute( 'required' );
+                                        field.setAttribute( 'aria-required', 'false' );
+                                } );
+
+                                form.querySelectorAll( '.customization-settings-table .red-star' ).forEach( function( star ) {
+                                        star.remove();
+                                } );
+                        }
+
+                        if ( 'loading' !== document.readyState ) {
+                                unlockPixelSettingsForm();
+                        } else {
+                                document.addEventListener( 'DOMContentLoaded', unlockPixelSettingsForm );
+                        }
+
+                        document.addEventListener(
+                                'click',
+                                function( event ) {
+                                        var target = event.target;
+                                        if ( ! target || ! target.classList ) {
+                                                return;
+                                        }
+                                        if ( target.classList.contains( 'woocommerce-save-button' ) ) {
+                                                unlockPixelSettingsForm();
+                                        }
+                                },
+                                true
+                        );
+
+                        window.setTimeout( unlockPixelSettingsForm, 0 );
+                        window.setTimeout( unlockPixelSettingsForm, 250 );
+                        window.setTimeout( unlockPixelSettingsForm, 1000 );
+                } )();
+                </script>
                 <?php
         }
 }

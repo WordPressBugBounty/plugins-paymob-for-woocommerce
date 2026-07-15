@@ -64,7 +64,6 @@ class Paymob_Pixel_Settings {
                     'id' => 'title',
                     'desc_tip' => true,
                     'default' => isset($pixel_settings['title']) ? $pixel_settings['title'] : '',
-                    'custom_attributes' => array('required' => 'required'),
                 ),
                 array(
                     'name' => __('Cards', 'paymob-woocommerce'),

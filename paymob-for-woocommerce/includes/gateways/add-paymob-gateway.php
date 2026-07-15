@@ -49,15 +49,15 @@ function save_paymob_subscription_settings() {
 	return Paymob_Save_Gateway_Settings::save_paymob_subscription_settings();
 }
 // Save custom gateway settings.
-add_action( 'woocommerce_update_options_checkout', 'save_paymob_valu_widget_settings' );
+add_action( 'woocommerce_update_options_checkout', 'save_paymob_widget_settings' );
 /**
  * Save paymob_add_gateway settings.
  *
  * @return void
  */
-function save_paymob_valu_widget_settings() {
+function save_paymob_widget_settings() {
 
-	return Paymob_Save_Gateway_Settings::save_paymob_valu_widget_settings();
+	return Paymob_Save_Gateway_Settings::save_paymob_widget_settings();
 }
 /**
  * Verifies if the integration ID is valid based on the hidden integration ID and currency.
@@ -247,6 +247,7 @@ function enqueue_paymob_list_gateways_styles() {
 }
 
 add_action( 'admin_enqueue_scripts', 'enqueue_paymob_admin_scripts' );
+add_action( 'admin_enqueue_scripts', array( 'Paymob_Style', 'maybe_enqueue_checkout_tabs_styles' ), 20 );
 /**
  * Enqueue JavaScript to handle AJAX for gateway deletion and enabling/disabling.
  */
@@ -264,7 +265,7 @@ function hide_save_changes_button_in_paymob_list_gateways_section() {
 }
 
 // Add fields to the paymob_list_gateways section.
-add_filter( 'woocommerce_get_settings_checkout', 'paymob_valu_widget_settings', 10, 2 );
+add_filter( 'woocommerce_get_settings_checkout', 'paymob_widget_settings', 10, 2 );
 
 /**
  * Adds custom Paymob gateway fields to the WooCommerce settings page.
@@ -273,9 +274,9 @@ add_filter( 'woocommerce_get_settings_checkout', 'paymob_valu_widget_settings', 
  * @param string $current_section The current settings section.
  * @return array The updated settings with custom Paymob gateway fields.
  */
-function paymob_valu_widget_settings( $settings, $current_section ) {
+function paymob_widget_settings( $settings, $current_section ) {
 
-	return Paymob_Valu_Widget_Settings::paymob_valu_widget_setting( $settings, $current_section );
+	return Paymob_Widget_Settings::paymob_widget_setting( $settings, $current_section );
 }
 
 add_filter( 'woocommerce_get_settings_checkout', 'paymob_subscription_settings', 10, 2 );

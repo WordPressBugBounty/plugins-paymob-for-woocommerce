@@ -12,7 +12,7 @@ class WC_Paymob_Loading {
 		WC_Paymob_Tables::update_paymob_gateways_table();
 		WC_Paymob_Tables::create_paymob_pixel_table();
 
-		add_action( 'admin_init', array( 'Paymob_Main_Partner_Info', 'partner_info' ), 1 );
+		Paymob_Main_Partner_Info::partner_info();
 		// Gateways Files Creation on Updates
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
 		// print_r($gateways ); die;

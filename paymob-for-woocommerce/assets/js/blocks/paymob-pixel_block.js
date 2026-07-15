@@ -28,13 +28,20 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
     };
    
   let contentInitialized = false;
+    const { useEffect } = window.wp.element;
+
     const Content = () => {
-        if (!contentInitialized) {
-            contentInitialized = true;
-           
-            // Load scripts and initialize Paymob element
-            loadScriptsAndInitializePaymob();
-        }      
+        useEffect(function () {
+            if (!contentInitialized) {
+                contentInitialized = true;
+                loadScriptsAndInitializePaymob();
+            }
+
+            window.setTimeout(function () {
+                tryInitializeBlocksPixel();
+            }, 150);
+        }, []);
+
         const selectedGateway = document.querySelector(
             'input[name="radio-control-wc-payment-method-options"]:checked'
         );
@@ -52,7 +59,16 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
                 }
             });
         }
-        return window.wp.element.createElement('div', { id: 'paymob-elements' });
+        return window.wp.element.createElement('div', {
+            id: 'paymob-elements',
+            style: {
+                maxWidth: '100%',
+                width: '100%',
+                boxSizing: 'border-box',
+                overflowX: 'auto',
+                overflowY: 'visible'
+            }
+        });
     };
 
     const LabelWithIcon = () => {
@@ -94,6 +110,15 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
          html[lang="ar"] #paymob-pixel-logo {
              float: left !important;
          }
+         .wc-block-checkout .wc-block-components-sidebar-layout .wc-block-components-main {
+             flex: 1 1 0% !important;
+             min-width: 0 !important;
+             width: 0 !important;
+         }
+         .wc-block-checkout #paymob-elements {
+             overflow-x: auto !important;
+             overflow-y: visible !important;
+         }
         `;
        
     const style = document.createElement('style');
@@ -117,39 +142,62 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
         document.addEventListener("click", function(event) {
             // Check if the clicked element is a payment method radio button
             if (event.target.id.startsWith("radio-control-wc-payment-method-options-")) {
+                const methodId = event.target.value || '';
+                const ctx = getBlocksCheckoutContext();
+                const billingData = ctx ? ctx.billingData : {};
+                const totalAmount = ctx ? ctx.totalAmount : 0;
                 // Hide the button if "pixel" payment method is selected
                 if (event.target.id.includes("paymob-pixel")) {
-                    showLoadingMessage();
-                    ajaxCall(billingData, totalAmount);
-                   
+                    releaseWidgetPreselectForPixelSelection();
+                    // Prefer reuse — do not force a new intention on every radio click.
+                    ajaxCall(billingData, totalAmount, false);
+                    updatePlaceOrderVisibility();
+                } else if (methodId.indexOf('bank-installments') !== -1) {
+                    updatePlaceOrderVisibility();
                 } else {
                     // Show the button for other payment methods
-                    jQuery('.wc-block-checkout__form .wc-block-components-button').show(); 
-                    jQuery('.wc-block-components-checkout-place-order-button').show();
-
-                    const placeOrderSelectors = [
-                        '.wc-block-checkout__form .wc-block-components-button',
-                        '.wc-block-components-checkout-place-order-button',
-                        '#place_order'
-                    ];
-                
-                    
-                    placeOrderSelectors.forEach(selector => {
-                        jQuery(selector).show().prop('disabled', false);
-                    });
-                    
-
-                    jQuery('#place_order').show();
+                    setPlaceOrderButtonsVisible(true);
+                    updatePlaceOrderVisibility();
                 }
             }
         });
-       
-        onload = () => {
-            setTimeout(function () {
-                ajaxCall(billingData, totalAmount);
-                console.log('billing data info' + billingData);
-            }, 500); // Adjust the delay as needed
-        };
+
+        if (wp.data && typeof wp.data.subscribe === 'function') {
+            let previousPaymentMethod = '';
+
+            wp.data.subscribe(function () {
+                try {
+                    const activeMethod = wp.data.select('wc/store/payment').getActivePaymentMethod() || '';
+                    if (activeMethod === previousPaymentMethod) {
+                        return;
+                    }
+                    const leftPixel = isPixelPaymentMethod(previousPaymentMethod) && !isPixelPaymentMethod(activeMethod);
+                    previousPaymentMethod = activeMethod;
+
+                    if (isPixelPaymentMethod(activeMethod)) {
+                        releaseWidgetPreselectForPixelSelection();
+                        const ctx = getBlocksCheckoutContext();
+                        // Skip while failure-reset owns remount (stops reload loop + "Already being processed").
+                        if (window.paymobPixelFailureResetInProgress && !window.paymobPixelFailureRemountDone) {
+                            return;
+                        }
+                        // Only init if Pixel is not already mounted — avoids 2nd/3rd intention.
+                        if (ctx && !isPaymobPixelMounted()) {
+                            ajaxCall(ctx.billingData, ctx.totalAmount, false);
+                        }
+                    } else if (leftPixel) {
+                        // Leaving Pixel: clear Instant Refund / discount summary + session.
+                        if (typeof clearPaymobPixelCheckoutAdjustments === 'function') {
+                            clearPaymobPixelCheckoutAdjustments();
+                        }
+                    }
+
+                    updatePlaceOrderVisibility();
+                } catch (err) {
+                    return;
+                }
+            });
+        }
         
     }
     document.addEventListener('DOMContentLoaded', function () {
@@ -161,15 +209,54 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
 
                 if (placeOrderButton) {
                     placeOrderButton.addEventListener('click', function (e) {
-                        e.preventDefault();
                         const selectedGateway = document.querySelector(
                             'input[name="radio-control-wc-payment-method-options"]:checked'
                         );
-                        if (isCheckoutFormValid() === true && selectedGateway && selectedGateway.value === 'paymob-pixel') {
-                            console.log('Paymob Pixel selected.');
+                        const selectedMethodId = selectedGateway ? selectedGateway.value : '';
+
+                        // Only intercept Place Order for Paymob Pixel; other gateways (e.g. bank
+                        // installments) must use the native WooCommerce Blocks checkout flow.
+                        if (selectedMethodId !== 'paymob-pixel') {
+                            return;
+                        }
+
+                        if (isCheckoutFormValid() !== true) {
+                            return;
+                        }
+
+                        e.preventDefault();
+                        console.log('Paymob Pixel selected.');
+
+                        // Dim Place Order while Pixel payment is processing.
+                        window.paymobPaymentProcessing = true;
+                        placeOrderButton.disabled = true;
+                        placeOrderButton.setAttribute('aria-disabled', 'true');
+                        placeOrderButton.classList.add('is-disabled', 'paymob-processing');
+                        placeOrderButton.style.opacity = '0.55';
+                        placeOrderButton.style.pointerEvents = 'none';
+                        if (typeof showLoadingIndicator === 'function') {
+                            showLoadingIndicator('Processing payment, please wait...');
+                        }
+
+                        // Sync intention amount (discount / IR) before Pixel confirmation / pay.
+                        const triggerPay = function () {
                             const payFromOutside = new Event('payFromOutside');
                             window.dispatchEvent(payFromOutside);
                             window.dispatchEvent(new Event('updateIntentionData'));
+                        };
+                        if (window.paymobTotalsSignature || window.paymobDiscountApplied) {
+                            jQuery.ajax({
+                                url: pxl_object.ajax_url,
+                                type: 'POST',
+                                dataType: 'json',
+                                data: {
+                                    action: 'paymob_sync_pixel_intention',
+                                    security: pxl_object.update_checkout_nonce,
+                                },
+                                complete: triggerPay,
+                            });
+                        } else {
+                            triggerPay();
                         }
                     });
                     observer.disconnect();
@@ -177,8 +264,24 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
             });
             observer.observe(checkoutContainer, { childList: true, subtree: true });
         }
-        // hide place order in loading page  
+        // hide place order in loading page unless bank installments are pre-selected
         setTimeout(function checkButton() {
+            if (shouldPreserveBankInstallmentSelection()) {
+                document.body.classList.add('paymob-aw-show-place-order');
+                hideLoadingIndicator();
+                ensureBankInstallmentPreselection();
+                updatePlaceOrderVisibility();
+                scheduleBankInstallmentPreselection();
+                startBlocksPlaceOrderGuard();
+                bindBlocksPlaceOrderClickFallback();
+                return;
+            }
+
+            if (document.querySelector('.wc-block-checkout')) {
+                updatePlaceOrderVisibility();
+                return;
+            }
+
             const placeOrderBtn = document.querySelector('.wc-block-checkout__form .wp-block-button__link,.wc-block-checkout__form .wc-block-components-button, .wc-block-checkout__form button[type="submit"]');
             
             if (placeOrderBtn) {
@@ -208,7 +311,11 @@ function isCheckoutFormValid() {
     });
 
     window.isValid = isValid;
-    updatePlaceOrderVisibility();
+    if (shouldPreserveBankInstallmentSelection() && !isPixelPaymentMethod(getSelectedPaymentMethodId())) {
+        setPlaceOrderButtonsVisible(true);
+    } else {
+        updatePlaceOrderVisibility();
+    }
     return isValid;
 }
 
@@ -232,14 +339,16 @@ function updateCheckoutData(forcereload = false) {
     if(totalAmount == null){
         var totalAmount = jQuery('#order_review').find('.order-total .woocommerce-Price-amount').text().replace(/[^0-9.]/g, ''); // Extract total amount
     }
-    ajaxCall(billingData, totalAmount, forcereload);
+    var opts = window.paymobPixelNextUpdateOptions || {};
+    window.paymobPixelNextUpdateOptions = null;
+    ajaxCall(billingData, totalAmount, forcereload, opts);
 }
 // loadScripts();
 function loadScripts() {
     // alert(window.googleenabled);
     const paymobScript = document.createElement('script');
-    // paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.js";
-    paymobScript.src ="https://cdn.jsdelivr.net/npm/paymob-pixel@1.2.4/main.js";
+    paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.js";
+    // paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel-alpha@latest/main.js";
     paymobScript.type = "module";
     paymobScript.async = true;
     document.head.appendChild(paymobScript);
@@ -263,6 +372,16 @@ function loadScripts() {
 }
 function initializePaymobElement(key, cs) {
     // alert(key+" --- "+ cs)
+    if (!cs) {
+        return;
+    }
+    // Same client secret already mounted — skip remount (prevents duplicate Paymob fetches).
+    if (window.paymobActiveClientSecret === cs && isPaymobPixelMounted()) {
+        hideLoadingIndicator();
+        return;
+    }
+    window.paymobActiveClientSecret = cs;
+
     jQuery('.wc-block-store-notice').hide() ;
     var forcesavecard = false;
     var customArr = {};
@@ -290,7 +409,13 @@ function initializePaymobElement(key, cs) {
     }
 
     var customStyles = pxl_object.customize;
+    var pixelContainerWidth = '100%';
     if (customStyles.font_family !== "" || customStyles.font_family !== null) {
+        if (document.querySelector('.wc-block-checkout')) {
+            pixelContainerWidth = '100%';
+        } else if (customStyles.width_of_container !== '' && customStyles.width_of_container !== null) {
+            pixelContainerWidth = customStyles.width_of_container + '%';
+        }
         customArr = {
             Font_Family: customStyles.font_family,
             Font_Size_Label: customStyles.font_family,
@@ -311,7 +436,7 @@ function initializePaymobElement(key, cs) {
             Text_Color_For_Payment_Button: customStyles.text_color_for_payment_button,
             Text_Color_For_Input_Fields: customStyles.text_color_for_input_fields,
             Color_For_Text_Placeholder: customStyles.color_for_text_placeholder,
-            Width_of_Container: customStyles.width_of_container + '%',
+            Width_of_Container: pixelContainerWidth,
             Vertical_Padding: customStyles.vertical_padding,
             Vertical_Spacing_between_components: customStyles.vertical_spacing_between_components,
             Container_Padding: customStyles.container_padding
@@ -319,6 +444,8 @@ function initializePaymobElement(key, cs) {
     }
     
     hideLoadingIndicator();
+    // Clear placeholder before Pixel mounts into #paymob-elements.
+    jQuery('#paymob-elements').empty();
     new Pixel({
         publicKey: key,
         clientSecret: cs,
@@ -389,11 +516,30 @@ function initializePaymobElement(key, cs) {
                 try {
                     if (jQuery('.wc-block-checkout').length) {
                         // For block-based checkout
-                        // return await new Promise((resolve) => {
                         console.log('Block-based checkout detected for '+ paymentmethod);
-                       // showLoadingIndicator("Please wait while we direct you to Bank's OTP Page .");
-                        window.dispatchEvent(new Event('updateIntentionData'));
-                        await new Promise(res => setTimeout(() => res(''),5000));
+                        // Ensure discounted intention amount is on Paymob before confirmation / pay.
+                        await new Promise(function (resolve) {
+                            jQuery.ajax({
+                                url: pxl_object.ajax_url,
+                                type: 'POST',
+                                dataType: 'json',
+                                data: {
+                                    action: 'paymob_sync_pixel_intention',
+                                    security: pxl_object.update_checkout_nonce,
+                                },
+                                complete: function () {
+                                    try {
+                                        window.dispatchEvent(new Event('updateIntentionData'));
+                                    } catch (e) {}
+                                    resolve();
+                                },
+                            });
+                        });
+                        // Create Woo order with discounted total so order page matches confirmation.
+                        if (typeof handleOrderCreation === 'function') {
+                            handleOrderCreation();
+                        }
+                        await new Promise(res => setTimeout(() => res(''), 3000));
                         return true;
                     } else {
                         // Trigger form submission
@@ -510,6 +656,18 @@ function initializePaymobElement(key, cs) {
                         console.log('inside errorMessage' + errorMessage);
                         response.data.errmsg = errorMessage;
 
+                        // Bug 1: clear discounted session before checkout reload so retry base = cart.
+                        if (typeof pxl_object !== 'undefined' && pxl_object && pxl_object.ajax_url) {
+                            jQuery.post(pxl_object.ajax_url, {
+                                action: 'paymob_clear_discount',
+                                security: pxl_object.update_checkout_nonce,
+                                invalidate_intention: 1,
+                            });
+                        }
+                        window.paymobDiscountApplied = false;
+                        window.paymobTotalsSignature = null;
+                        window.paymobActiveClientSecret = null;
+
                         const redirectUrl = new URL(window.location);
             
                         // Remove existing gateway error parameter if present
@@ -532,6 +690,9 @@ function initializePaymobElement(key, cs) {
                 } catch (error) {
                     // Handle any unexpected errors
                     console.log('Error during afterPaymentComplete:', error);
+                    if (typeof resetPaymobPixelAfterPaymentFailure === 'function') {
+                        resetPaymobPixelAfterPaymentFailure();
+                    }
                     hideLoadingIndicator();
 
                 }
@@ -540,6 +701,9 @@ function initializePaymobElement(key, cs) {
         
         onPaymentCancel: (response) => {
             console.log('Payment has been canceled');
+            if (typeof resetPaymobPixelAfterPaymentFailure === 'function') {
+                resetPaymobPixelAfterPaymentFailure();
+            }
             response.data.afterpayment = true;
             callbackAjaxCall(response.data, null);
         }, 
@@ -547,30 +711,730 @@ function initializePaymobElement(key, cs) {
             console.log(isValid);
             window.isCardValid = isValid === 'true' || isValid === true;
             updatePlaceOrderVisibility();
+            constrainPaymobPixelLayout();
         },   
         customStyle: customArr,
     });
+    schedulePaymobLayoutFix();
+}
+
+function constrainPaymobPixelLayout() {
+    const container = document.getElementById('paymob-elements');
+    if (!container) {
+        return;
+    }
+
+    container.style.setProperty('max-width', '100%', 'important');
+    container.style.setProperty('width', '100%', 'important');
+    container.style.setProperty('overflow-x', 'auto', 'important');
+    container.style.setProperty('overflow-y', 'visible', 'important');
+
+    const accordion = container.closest('.wc-block-components-radio-control-accordion-content');
+    if (accordion) {
+        accordion.style.maxWidth = '100%';
+        accordion.style.overflowX = 'auto';
+    }
+
+    Array.from(container.children).forEach(function (child) {
+        child.style.maxWidth = '100%';
+        child.style.boxSizing = 'border-box';
+
+        if (container.clientWidth > 0 && child.scrollWidth > container.clientWidth) {
+            child.style.width = '100%';
+            child.style.overflowX = 'auto';
+        }
+    });
+}
+
+function schedulePaymobLayoutFix() {
+    [100, 500, 1200, 2500].forEach(function (delay) {
+        window.setTimeout(constrainPaymobPixelLayout, delay);
+    });
+}
+
+function getSelectedPaymentMethodId() {
+    let storeMethod = '';
+
+    if (typeof wp !== 'undefined' && wp.data) {
+        try {
+            storeMethod = wp.data.select('wc/store/payment').getActivePaymentMethod() || '';
+        } catch (err) {
+            storeMethod = '';
+        }
+    }
+
+    const blocksInput = document.querySelector('input[name="radio-control-wc-payment-method-options"]:checked');
+    const domBlocksMethod = blocksInput && blocksInput.value ? blocksInput.value : '';
+
+    const classicInput = document.querySelector('input[name="payment_method"]:checked');
+    const classicMethod = classicInput && classicInput.value ? classicInput.value : '';
+
+    if (isBankInstallmentPaymentMethod(storeMethod)) {
+        return storeMethod;
+    }
+    if (isBankInstallmentPaymentMethod(domBlocksMethod)) {
+        return domBlocksMethod;
+    }
+    if (isBankInstallmentPaymentMethod(classicMethod)) {
+        return classicMethod;
+    }
+
+    return domBlocksMethod || storeMethod || classicMethod || '';
+}
+
+function isBankInstallmentPaymentMethod(methodId) {
+    return typeof methodId === 'string' && methodId.indexOf('bank-installments') !== -1;
+}
+
+function isPixelPaymentMethod(methodId) {
+    return methodId === 'paymob-pixel';
+}
+
+function shouldPreserveBankInstallmentSelection() {
+    if (typeof window.paymobAffordabilityCheckout === 'object' && window.paymobAffordabilityCheckout.preselect) {
+        return true;
+    }
+
+    if (new URLSearchParams(window.location.search).has('paymob_aw_preselect')) {
+        return true;
+    }
+
+    return false;
+}
+
+function ensureBankInstallmentPreselection() {
+    if (!shouldPreserveBankInstallmentSelection()) {
+        return false;
+    }
+
+    if (typeof window.paymobAwAttemptBankPreselect === 'function') {
+        const selected = !!window.paymobAwAttemptBankPreselect();
+        if (selected) {
+            updatePlaceOrderVisibility();
+        }
+        return selected;
+    }
+
+    const config = window.paymobAffordabilityCheckout || {};
+    const gatewayId = config.gatewayId || '';
+
+    if (gatewayId && expandBlocksPaymentMethod(gatewayId)) {
+        setBlocksActivePaymentMethod(gatewayId);
+        updatePlaceOrderVisibility();
+        return true;
+    }
+
+    const bankInput = document.querySelector('input[name="radio-control-wc-payment-method-options"][value*="bank-installments"]');
+    if (bankInput && bankInput.value) {
+        expandBlocksPaymentMethod(bankInput.value);
+        setBlocksActivePaymentMethod(bankInput.value);
+        updatePlaceOrderVisibility();
+        return true;
+    }
+
+    return false;
+}
+
+function scheduleBankInstallmentPreselection() {
+    [500, 1200, 2500, 4000].forEach(function (delay) {
+        window.setTimeout(function () {
+            ensureBankInstallmentPreselection();
+        }, delay);
+    });
+}
+
+function getBlocksCheckoutContext() {
+    if (typeof wp === 'undefined' || !wp.data) {
+        return null;
+    }
+
+    try {
+        const { select } = wp.data;
+        const cartStore = select('wc/store/cart');
+        if (!cartStore) {
+            return null;
+        }
+        const cartTotals = cartStore.getCartTotals();
+        const totalAmount = (parseInt(cartTotals.total_price, 10) /
+            10 ** cartTotals.currency_minor_unit);
+
+        return {
+            billingData: cartStore.getCustomerData().billingAddress,
+            totalAmount: totalAmount
+        };
+    } catch (err) {
+        return null;
+    }
+}
+
+function getStoreApiCartUrl() {
+    if (window.wc && window.wc.wcSettings && window.wc.wcSettings.storeApiUrl) {
+        const url = String(window.wc.wcSettings.storeApiUrl);
+        if (url.indexOf('/cart') !== -1) {
+            return url;
+        }
+        return url.replace(/\/$/, '') + '/cart';
+    }
+
+    const root = (window.wpApiSettings && window.wpApiSettings.root) ? window.wpApiSettings.root : '/wp-json/';
+    return root.replace(/\/$/, '') + '/wc/store/v1/cart';
+}
+
+function setBlocksActivePaymentMethod(methodId) {
+    if (!methodId || typeof wp === 'undefined' || !wp.data) {
+        return false;
+    }
+
+    try {
+        const dispatch = wp.data.dispatch('wc/store/payment');
+        if (dispatch && typeof dispatch.__internalSetActivePaymentMethod === 'function') {
+            dispatch.__internalSetActivePaymentMethod(methodId, {});
+            return true;
+        }
+    } catch (err) {
+        return false;
+    }
+
+    return false;
+}
+
+function tryInitializeBlocksPixel() {
+    const methodId = getSelectedPaymentMethodId();
+    if (shouldPreserveBankInstallmentSelection() && !isPixelPaymentMethod(methodId)) {
+        return;
+    }
+    // Failure reset owns the only remount after gatewayerror.
+    if (window.paymobPixelFailureResetInProgress || window.paymobSkipScheduledActivation) {
+        if (!window.paymobPixelFailureRemountDone) {
+            return;
+        }
+    }
+    if (!jQuery('#paymob-elements').length) {
+        return;
+    }
+    if (isPaymobPixelMounted()) {
+        return;
+    }
+    if (window.paymobPixelAjaxInFlight) {
+        return;
+    }
+
+    const ctx = getBlocksCheckoutContext();
+    if (!ctx) {
+        return;
+    }
+
+    showLoadingMessage();
+    // ajaxCall owns the in-flight lock (do not set it here).
+    ajaxCall(ctx.billingData, ctx.totalAmount, false);
+}
+
+function isBlocksPaymentPanelOpen(methodId) {
+    const content = document.querySelector('.wc-block-components-radio-control-accordion-content[data-payment-method="' + methodId + '"]');
+    if (!content) {
+        return false;
+    }
+
+    return content.classList.contains('is-open') || content.offsetHeight > 0;
+}
+
+function expandBlocksPaymentMethod(methodId) {
+    const input = document.querySelector('input[name="radio-control-wc-payment-method-options"][value="' + methodId + '"]');
+    if (!input) {
+        return false;
+    }
+
+    setBlocksActivePaymentMethod(methodId);
+
+    if (!input.checked) {
+        input.click();
+    } else if (!isBlocksPaymentPanelOpen(methodId)) {
+        const label = document.querySelector('label[for="' + input.id + '"]');
+        if (label) {
+            label.click();
+        } else {
+            input.click();
+        }
+    }
+
+    const content = document.querySelector('.wc-block-components-radio-control-accordion-content[data-payment-method="' + methodId + '"]');
+    if (content) {
+        content.classList.add('is-open');
+        content.style.removeProperty('display');
+    }
+
+    return true;
+}
+
+function openBlocksPaymentAccordion(methodId) {
+    return expandBlocksPaymentMethod(methodId);
+}
+
+function activateBlocksPixelCheckout() {
+    const methodId = getSelectedPaymentMethodId();
+    if (shouldPreserveBankInstallmentSelection() && !isPixelPaymentMethod(methodId)) {
+        return false;
+    }
+
+    const paymentMethod = 'paymob-pixel';
+    const paymentClassicInput = jQuery('#payment_method_' + paymentMethod);
+
+    if (!document.querySelector('.wc-block-checkout')) {
+        if (paymentClassicInput.length && !paymentClassicInput.is(':checked')) {
+            paymentClassicInput.prop('checked', true).trigger('change');
+        }
+        return paymentClassicInput.length > 0;
+    }
+
+    if (!expandBlocksPaymentMethod(paymentMethod)) {
+        return false;
+    }
+
+    window.setTimeout(function () {
+        tryInitializeBlocksPixel();
+    }, 400);
+
+    return true;
+}
+
+function ensureBlocksPixelPanelOpen() {
+    const methodId = getSelectedPaymentMethodId();
+    if (shouldPreserveBankInstallmentSelection() && !isPixelPaymentMethod(methodId)) {
+        return;
+    }
+    if (!document.querySelector('.wc-block-checkout')) {
+        return;
+    }
+
+    const selected = getSelectedPaymentMethodId();
+    if (selected && selected !== 'paymob-pixel') {
+        return;
+    }
+
+    expandBlocksPaymentMethod('paymob-pixel');
+    window.setTimeout(function () {
+        tryInitializeBlocksPixel();
+    }, 400);
+}
+
+function scheduleBlocksPixelActivation() {
+    // One delayed activation only — previous [500,1200,2200] caused 3 intentions.
+    if (window.paymobSkipScheduledActivation) {
+        return;
+    }
+    window.setTimeout(function () {
+        if (window.paymobSkipScheduledActivation || window.paymobActiveClientSecret) {
+            return;
+        }
+        activateBlocksPixelCheckout();
+    }, 600);
+}
+
+function isPaymobPixelMounted() {
+    const container = jQuery('#paymob-elements');
+    if (!container.length || container.children().length === 0) {
+        return false;
+    }
+    const text = (container.text() || '').trim();
+    if (text.indexOf('Loading payments') === 0) {
+        return false;
+    }
+    return !!window.paymobActiveClientSecret;
+}
+
+function isWidgetPreselectGateway(methodId) {
+    const config = window.paymobAffordabilityCheckout || {};
+    return !!config.preselect && !!config.gatewayId && methodId === config.gatewayId;
+}
+
+function shouldSkipPixelCheckoutSideEffects() {
+    const methodId = getSelectedPaymentMethodId();
+
+    // Shopper explicitly chose Pixel — load it normally even during widget preselect.
+    if (isPixelPaymentMethod(methodId)) {
+        return false;
+    }
+
+    if (shouldPreserveBankInstallmentSelection()) {
+        return true;
+    }
+
+    return isBankInstallmentPaymentMethod(methodId) || isWidgetPreselectGateway(methodId);
+}
+
+function releaseWidgetPreselectForPixelSelection() {
+    if (typeof window.paymobAffordabilityCheckout === 'object' && window.paymobAffordabilityCheckout) {
+        window.paymobAffordabilityCheckout.preselect = false;
+    }
+
+    stopBlocksPlaceOrderGuard();
+    document.body.classList.remove('paymob-aw-show-place-order');
+}
+
+function enableBlocksPlaceOrderButton() {
+    const selectors = [
+        '.wc-block-components-checkout-place-order-button',
+        '.wc-block-checkout__actions .wc-block-components-button',
+        '.wc-block-checkout__form .wc-block-components-button'
+    ];
+
+    selectors.forEach(function (selector) {
+        document.querySelectorAll(selector).forEach(function (button) {
+            button.disabled = false;
+            button.removeAttribute('disabled');
+            button.removeAttribute('aria-disabled');
+            button.classList.remove('wc-block-components-checkout-place-order-button--loading');
+            button.style.pointerEvents = 'auto';
+            button.style.cursor = 'pointer';
+            button.style.display = 'flex';
+            button.style.alignItems = 'center';
+            button.style.justifyContent = 'center';
+            button.style.width = '100%';
+            button.style.textAlign = 'center';
+        });
+    });
+}
+
+function isBlocksPlaceOrderButtonClickable() {
+    const selectors = [
+        '.wc-block-components-checkout-place-order-button',
+        '.wc-block-checkout__actions .wc-block-components-button',
+        '.wc-block-checkout__form .wc-block-components-button'
+    ];
+
+    for (let i = 0; i < selectors.length; i++) {
+        const element = document.querySelector(selectors[i]);
+        if (!element) {
+            continue;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        if (
+            rect.height > 0
+            && rect.width > 0
+            && style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && parseFloat(style.opacity) > 0
+            && !element.disabled
+            && element.getAttribute('aria-disabled') !== 'true'
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function triggerBlocksPlaceOrderClick(button) {
+    if (!button) {
+        return false;
+    }
+
+    button.disabled = false;
+    button.removeAttribute('disabled');
+    button.removeAttribute('aria-disabled');
+    button.classList.remove('wc-block-components-checkout-place-order-button--loading');
+
+    const eventOptions = { bubbles: true, cancelable: true, view: window };
+    button.dispatchEvent(new PointerEvent('pointerdown', eventOptions));
+    button.dispatchEvent(new MouseEvent('mousedown', eventOptions));
+    button.dispatchEvent(new MouseEvent('mouseup', eventOptions));
+    button.dispatchEvent(new MouseEvent('click', eventOptions));
+    return true;
+}
+
+function bindBlocksPlaceOrderClickFallback() {
+    if (window.paymobAwBlocksPlaceOrderClickBound || !document.querySelector('.wc-block-checkout')) {
+        return;
+    }
+
+    window.paymobAwBlocksPlaceOrderClickBound = true;
+
+    document.addEventListener('click', function (event) {
+        if (!shouldForceBlocksPlaceOrderVisible()) {
+            return;
+        }
+
+        const button = event.target.closest('.wc-block-components-checkout-place-order-button, .wc-block-checkout__actions .wc-block-components-button, .wc-block-checkout__form .wc-block-components-button');
+        if (!button) {
+            return;
+        }
+
+        const methodId = getSelectedPaymentMethodId();
+        if (!isBankInstallmentPaymentMethod(methodId) && !isWidgetPreselectGateway(methodId)) {
+            return;
+        }
+
+        hideLoadingIndicator();
+
+        if (!button.disabled && button.getAttribute('aria-disabled') !== 'true') {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        triggerBlocksPlaceOrderClick(button);
+    }, true);
+}
+
+function shouldForceBlocksPlaceOrderVisible() {
+    if (!document.querySelector('.wc-block-checkout')) {
+        return false;
+    }
+
+    const methodId = getSelectedPaymentMethodId();
+    if (isPixelPaymentMethod(methodId)) {
+        return false;
+    }
+
+    // Widget Buy Now + Pixel: keep Place Order visible while preselect is active,
+    // even if Blocks still has paymob-pixel as the interim default payment method.
+    if (shouldPreserveBankInstallmentSelection()) {
+        return true;
+    }
+
+    const config = window.paymobAffordabilityCheckout || {};
+    const targetGateway = config.gatewayId || '';
+
+    if (isBankInstallmentPaymentMethod(methodId) || isWidgetPreselectGateway(methodId)) {
+        return true;
+    }
+
+    return isBankInstallmentPaymentMethod(targetGateway) || isWidgetPreselectGateway(targetGateway);
+}
+
+function unhideBlocksCheckoutActions() {
+    const containerSelectors = [
+        '.wc-block-checkout__actions',
+        '.wp-block-woocommerce-checkout-actions-block',
+        '.wc-block-checkout__sidebar'
+    ];
+
+    containerSelectors.forEach(function (selector) {
+        document.querySelectorAll(selector).forEach(function (element) {
+            element.style.setProperty('display', 'block', 'important');
+            element.style.setProperty('visibility', 'visible', 'important');
+            element.style.setProperty('opacity', '1', 'important');
+            element.removeAttribute('hidden');
+            element.removeAttribute('aria-hidden');
+        });
+    });
+}
+
+function setPlaceOrderButtonsVisible(visible) {
+    const forceVisible = shouldForceBlocksPlaceOrderVisible();
+
+    if (!visible && forceVisible) {
+        visible = true;
+    }
+
+    const placeOrderSelectors = [
+        '.wc-block-checkout__actions .wc-block-components-checkout-place-order-button',
+        '.wp-block-woocommerce-checkout-actions-block .wc-block-components-checkout-place-order-button',
+        '.wc-block-checkout__form .wc-block-components-button',
+        '.wc-block-components-checkout-place-order-button',
+        '.wc-block-checkout__form .wp-block-button__link',
+        '.wc-block-checkout__form button[type="submit"]',
+        '#place_order'
+    ];
+
+    if (visible && document.querySelector('.wc-block-checkout')) {
+        document.body.classList.add('paymob-aw-show-place-order');
+        unhideBlocksCheckoutActions();
+    } else if (!visible) {
+        document.body.classList.remove('paymob-aw-show-place-order');
+    }
+
+    placeOrderSelectors.forEach(function (selector) {
+        document.querySelectorAll(selector).forEach(function (element) {
+            if (visible) {
+                const isBlocksPlaceOrderButton = element.classList.contains('wc-block-components-checkout-place-order-button')
+                    || element.classList.contains('wc-block-components-button');
+
+                if (isBlocksPlaceOrderButton) {
+                    element.style.setProperty('display', 'flex', 'important');
+                    element.style.setProperty('align-items', 'center', 'important');
+                    element.style.setProperty('justify-content', 'center', 'important');
+                    element.style.setProperty('width', '100%', 'important');
+                    element.style.setProperty('text-align', 'center', 'important');
+                } else {
+                    element.style.setProperty('display', 'block', 'important');
+                }
+
+                element.style.setProperty('visibility', 'visible', 'important');
+                element.style.setProperty('opacity', '1', 'important');
+                element.removeAttribute('hidden');
+                element.removeAttribute('aria-hidden');
+                element.disabled = false;
+                element.removeAttribute('disabled');
+                element.removeAttribute('aria-disabled');
+                element.classList.remove('wc-block-components-checkout-place-order-button--loading');
+                element.style.pointerEvents = 'auto';
+                jQuery(element).show().prop('disabled', false);
+            } else if (!forceVisible) {
+                element.style.display = 'none';
+                element.disabled = true;
+                jQuery(element).hide().prop('disabled', true);
+            }
+        });
+    });
+
+    if (visible) {
+        enableBlocksPlaceOrderButton();
+        bindBlocksPlaceOrderClickFallback();
+    }
+}
+
+function isBlocksPlaceOrderButtonVisible() {
+    const selectors = [
+        '.wc-block-components-checkout-place-order-button',
+        '.wc-block-checkout__actions .wc-block-components-button',
+        '.wc-block-checkout__form .wc-block-components-button'
+    ];
+
+    for (let i = 0; i < selectors.length; i++) {
+        const element = document.querySelector(selectors[i]);
+        if (!element) {
+            continue;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        if (
+            rect.height > 0
+            && rect.width > 0
+            && style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && parseFloat(style.opacity) > 0
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+var blocksPlaceOrderGuardTimer = null;
+var blocksPlaceOrderGuardObserver = null;
+
+function stopBlocksPlaceOrderGuard() {
+    if (blocksPlaceOrderGuardTimer) {
+        window.clearInterval(blocksPlaceOrderGuardTimer);
+        blocksPlaceOrderGuardTimer = null;
+    }
+
+    if (blocksPlaceOrderGuardObserver) {
+        blocksPlaceOrderGuardObserver.disconnect();
+        blocksPlaceOrderGuardObserver = null;
+    }
+}
+
+function startBlocksPlaceOrderGuard() {
+    if (!document.querySelector('.wc-block-checkout') || !shouldPreserveBankInstallmentSelection()) {
+        return;
+    }
+
+    function guard() {
+        if (!shouldPreserveBankInstallmentSelection()) {
+            stopBlocksPlaceOrderGuard();
+            return;
+        }
+
+        if (shouldForceBlocksPlaceOrderVisible()) {
+            setPlaceOrderButtonsVisible(true);
+            enableBlocksPlaceOrderButton();
+            hideLoadingIndicator();
+        }
+
+        if (isBlocksPlaceOrderButtonClickable()) {
+            stopBlocksPlaceOrderGuard();
+        }
+    }
+
+    guard();
+
+    if (blocksPlaceOrderGuardTimer) {
+        return;
+    }
+
+    blocksPlaceOrderGuardTimer = window.setInterval(guard, 250);
+
+    const checkoutRoot = document.querySelector('.wc-block-checkout');
+    if (checkoutRoot && window.MutationObserver) {
+        blocksPlaceOrderGuardObserver = new MutationObserver(guard);
+        blocksPlaceOrderGuardObserver.observe(checkoutRoot, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class', 'hidden', 'aria-hidden', 'disabled']
+        });
+    }
+
+    window.setTimeout(stopBlocksPlaceOrderGuard, shouldPreserveBankInstallmentSelection() ? 120000 : 30000);
 }
 
 function updatePlaceOrderVisibility() {
-    console.log("Validation Status:", window.isValid, window.isCardValid);
+    const methodId = getSelectedPaymentMethodId();
 
-    const placeOrderSelectors = [
-        '.wc-block-checkout__form .wc-block-components-button',
-        '.wc-block-components-checkout-place-order-button',
-        '#place_order'
-    ];
+    if (isPixelPaymentMethod(methodId)) {
+        if (window.isValid && window.isCardValid) {
+            setPlaceOrderButtonsVisible(true);
+        } else {
+            setPlaceOrderButtonsVisible(false);
+        }
+        return;
+    }
+
+    if (isBankInstallmentPaymentMethod(methodId) || isWidgetPreselectGateway(methodId)) {
+        hideLoadingIndicator();
+        setPlaceOrderButtonsVisible(true);
+        startBlocksPlaceOrderGuard();
+        bindBlocksPlaceOrderClickFallback();
+        return;
+    }
+
+    if (shouldPreserveBankInstallmentSelection() && document.querySelector('.wc-block-checkout')) {
+        hideLoadingIndicator();
+        setPlaceOrderButtonsVisible(true);
+        startBlocksPlaceOrderGuard();
+        bindBlocksPlaceOrderClickFallback();
+        return;
+    }
+
+    if (shouldForceBlocksPlaceOrderVisible()) {
+        setPlaceOrderButtonsVisible(true);
+        startBlocksPlaceOrderGuard();
+        return;
+    }
+
+    if (methodId && !isPixelPaymentMethod(methodId)) {
+        setPlaceOrderButtonsVisible(!!window.isValid);
+        return;
+    }
+
     if (window.isValid && window.isCardValid) {
-
-        placeOrderSelectors.forEach(selector => {
-            jQuery(selector).show().prop('disabled', false);
-        });
-    } else {
-        placeOrderSelectors.forEach(selector => {
-            jQuery(selector).hide().prop('disabled', true);
-        });
+        setPlaceOrderButtonsVisible(true);
+    } else if (!shouldPreserveBankInstallmentSelection()) {
+        setPlaceOrderButtonsVisible(false);
     }
 }
+
+window.updatePlaceOrderVisibility = updatePlaceOrderVisibility;
+window.setPlaceOrderButtonsVisible = setPlaceOrderButtonsVisible;
+window.startBlocksPlaceOrderGuard = startBlocksPlaceOrderGuard;
+window.enableBlocksPlaceOrderButton = enableBlocksPlaceOrderButton;
+window.bindBlocksPlaceOrderClickFallback = bindBlocksPlaceOrderClickFallback;
+window.hideLoadingIndicator = hideLoadingIndicator;
+window.releaseWidgetPreselectForPixelSelection = releaseWidgetPreselectForPixelSelection;
+window.shouldPreserveBankInstallmentSelection = shouldPreserveBankInstallmentSelection;
+window.ensureBlocksPixelPanelOpen = ensureBlocksPixelPanelOpen;
+window.activateBlocksPixelCheckout = activateBlocksPixelCheckout;
+window.tryInitializeBlocksPixel = tryInitializeBlocksPixel;
+window.expandBlocksPaymentMethod = expandBlocksPaymentMethod;
+window.constrainPaymobPixelLayout = constrainPaymobPixelLayout;
 
 
 
@@ -598,45 +1462,193 @@ if (jQuery('#terms').length) {
 
 return window.hasEmptyFields;
 }
-function ajaxCall(billingData, totalAmount, forcereload = false) {
+function shouldInitializePaymobElement(forceReload) {
+    if (forceReload) {
+        return true;
+    }
+
+    const container = jQuery('#paymob-elements');
+    if (!container.length || container.children().length === 0) {
+        return true;
+    }
+
+    const text = container.text().trim();
+    return text.indexOf('Loading payments') === 0;
+}
+
+function ajaxCall(billingData, totalAmount, forcereload = false, options = {}) {
+    if (shouldSkipPixelCheckoutSideEffects()) {
+        hideLoadingIndicator();
+        return;
+    }
+
+    const opts = options || {};
+    const resetDiscount = !!opts.resetDiscount;
+    const forceNew = !!opts.forceNew;
+
+    // During gatewayerror recovery, only the failure remount (resetDiscount) may call update_pixel_data.
+    if (window.paymobPixelFailureResetInProgress && !resetDiscount && !window.paymobPixelFailureRemountDone) {
+        hideLoadingIndicator();
+        return;
+    }
+
+    // Already mounted successfully — ignore extra remount requests (causes reload loop).
+    if (!forceNew && !resetDiscount && window.paymobActiveClientSecret && isPaymobPixelMounted()) {
+        hideLoadingIndicator();
+        return;
+    }
+
+    // Serialize calls — parallel POSTs created 3 different client secrets.
+    if (window.paymobPixelAjaxInFlight) {
+        // Prefer keeping the first request; only replace pending with force/reset.
+        if (forceNew || resetDiscount || !window.paymobPixelPendingReload) {
+            window.paymobPixelPendingReload = {
+                billingData: billingData,
+                totalAmount: totalAmount,
+                forcereload: forcereload,
+                options: opts,
+            };
+        }
+        return;
+    }
+    window.paymobPixelAjaxInFlight = true;
+
     console.log("billingData", billingData);
     console.log("totalAmount", totalAmount);
-    if(jQuery("#paymob-elements").children().length == 0 || forcereload ==true){
-        setTimeout(() => {
-            const paymentMethod = 'paymob-pixel'; // Replace with the desired payment method ID
-            const paymentBlockInput = jQuery(`input[name="radio-control-wc-payment-method-options"][value="${paymentMethod}"]`);
-            const paymentClassicInput = jQuery('#payment_method_'+paymentMethod);
-            if (paymentBlockInput.length > 0 || paymentClassicInput.length > 0) {
-             showLoadingMessage(true);
-                    showLoadingIndicator("Loading Checkout. Please wait.");
-                    console.log('After 5 milli seconds');
-                }
-        }, 500);
-        jQuery.ajax({
-            url: pxl_object.ajax_url,
-            type: 'POST',
-            // async: false,
-            data: {
-                action: 'update_pixel_data',
-                security: pxl_object.update_checkout_nonce,
-                billing_data: billingData,
-                total_amount: totalAmount
-            },
-            success: function (response) {
-                console.log('Checkout data updated:', response);
-                if (response.success) {
-                    setTimeout(() => {
-						initializePaymobElement(pxl_object.key, response.data.cs);
-					}, 500);
-                } else {
-                    displayWooCommerceError(response.data);
-                    hideLoadingIndicator();
-                }
 
-            }
-        });
+    const needsInit = shouldInitializePaymobElement(forcereload) || resetDiscount || forceNew || forcereload;
+    if (!needsInit && isPaymobPixelMounted()) {
+        window.paymobPixelAjaxInFlight = false;
+        hideLoadingIndicator();
+        return;
     }
+
+    if (forceNew || resetDiscount || forcereload || !isPaymobPixelMounted()) {
+        showLoadingMessage(true);
+    }
+
+    jQuery.ajax({
+        url: pxl_object.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'update_pixel_data',
+            security: pxl_object.update_checkout_nonce,
+            billing_data: billingData,
+            total_amount: totalAmount,
+            reset_discount: resetDiscount ? 1 : 0,
+            force_new: forceNew ? 1 : 0,
+        },
+        success: function (response) {
+            console.log('Checkout data updated:', response);
+            if (response.success && response.data && response.data.cs) {
+                // Reused intention + already mounted: do not remount Pixel SDK.
+                if (response.data.reused && window.paymobActiveClientSecret === response.data.cs && isPaymobPixelMounted()) {
+                    hideLoadingIndicator();
+                    return;
+                }
+                initializePaymobElement(pxl_object.key, response.data.cs);
+                hideLoadingIndicator();
+            } else {
+                displayWooCommerceError(response.data);
+                hideLoadingIndicator();
+            }
+        },
+        error: function () {
+            hideLoadingIndicator();
+        },
+        complete: function () {
+            window.paymobPixelAjaxInFlight = false;
+            if (window.paymobPixelPendingReload) {
+                const pending = window.paymobPixelPendingReload;
+                window.paymobPixelPendingReload = null;
+                // Drop queued remounts once Pixel has a client secret (stops reload loop).
+                if (window.paymobActiveClientSecret || isPaymobPixelMounted()) {
+                    hideLoadingIndicator();
+                    return;
+                }
+                ajaxCall(pending.billingData, pending.totalAmount, false, pending.options || {});
+            }
+        }
+    });
 }
+
+/**
+ * Bug 1: after failed payment redirect, clear discount session and remount ONCE from cart.
+ * Avoid force_new spam — that caused "Already being processed" + many Pixel reloads.
+ */
+function resetPaymobPixelAfterPaymentFailure() {
+    if (window.paymobPixelFailureAlreadyReset) {
+        return;
+    }
+    window.paymobPixelFailureAlreadyReset = true;
+    window.paymobPixelFailureResetInProgress = true;
+    window.paymobSkipScheduledActivation = true;
+    window.paymobPixelPendingReload = null;
+    window.paymobDiscountApplied = false;
+    window.paymobTotalsSignature = null;
+    window.paymobActiveClientSecret = null;
+    window.previousTotal = null;
+    window.previousTotalBlock = null;
+
+    // Remove gatewayerror from the URL so refresh/history does not re-trigger reset.
+    try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('gatewayerror')) {
+            url.searchParams.delete('gatewayerror');
+            window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+        }
+    } catch (err) {}
+
+    document.querySelectorAll(
+        '.paymob-discount-line, .paymob-instant-refund-line, .paymob-discount-row, .paymob-instant-refund-row'
+    ).forEach(function (el) {
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    });
+
+    const remountOnce = function () {
+        if (window.paymobPixelFailureRemountDone) {
+            window.paymobPixelFailureResetInProgress = false;
+            return;
+        }
+        window.paymobPixelFailureRemountDone = true;
+        const ctx = (typeof getBlocksCheckoutContext === 'function') ? getBlocksCheckoutContext() : null;
+        if (ctx) {
+            // resetDiscount clears stale discount; do NOT force_new (avoids intention churn).
+            ajaxCall(ctx.billingData, ctx.totalAmount, true, { resetDiscount: true });
+            window.paymobPixelFailureResetInProgress = false;
+            // Allow later user-driven activates; keep FailureAlreadyReset so we do not loop.
+            window.paymobSkipScheduledActivation = false;
+            return;
+        }
+        if (typeof updateCheckoutData === 'function') {
+            window.paymobPixelNextUpdateOptions = { resetDiscount: true };
+            updateCheckoutData(true);
+        }
+        window.paymobPixelFailureResetInProgress = false;
+        window.paymobSkipScheduledActivation = false;
+    };
+
+    if (typeof pxl_object !== 'undefined' && pxl_object && pxl_object.ajax_url) {
+        jQuery.post(pxl_object.ajax_url, {
+            action: 'paymob_clear_discount',
+            security: pxl_object.update_checkout_nonce,
+            invalidate_intention: 1,
+        }).always(function () {
+            remountOnce();
+            // Failsafe: never leave overlay stuck.
+            window.setTimeout(function () {
+                hideLoadingIndicator();
+            }, 8000);
+        });
+        return;
+    }
+    remountOnce();
+}
+
+window.resetPaymobPixelAfterPaymentFailure = resetPaymobPixelAfterPaymentFailure;
+
 function callbackAjaxCall(data, url = null) {
     console.info(' callbackAjaxCall ', data);
     console.info(' callbackAjaxCall url ', url);
@@ -667,7 +1679,13 @@ function showLoadingMessage(reload = false){
 window.previousTotal = null;
 jQuery(document).ready(function ($) {
    
-    showLoadingMessage();
+    if (!shouldSkipPixelCheckoutSideEffects()) {
+        showLoadingMessage();
+    } else {
+        hideLoadingIndicator();
+    }
+
+    bindBlocksPlaceOrderClickFallback();
     $(document).on('updated_checkout', function () {
         // Get the current total amount        
         var totalElement = jQuery('.order-total .amount').text().replace(/[^0-9.]/g, '');
@@ -687,6 +1705,10 @@ jQuery(document).ready(function ($) {
                 console.log('Previous Total:', window.previousTotal);
                 console.log('Current Total:', currentTotal);
 
+                window.paymobDiscountApplied = false;
+                window.paymobTotalsSignature = null;
+                window.paymobActiveClientSecret = null;
+                window.paymobPixelNextUpdateOptions = { resetDiscount: true };
                 updateCheckoutData(true);
             }
 
@@ -700,6 +1722,11 @@ jQuery(document).ready(function ($) {
     window.previousTotalBlock = null;
    
     setInterval(async() => {
+        if (shouldSkipPixelCheckoutSideEffects()) {
+            hideLoadingIndicator();
+            return;
+        }
+
         const totalBlockElement = $(totalElementSelector);
         
         if (totalBlockElement.length) {
@@ -717,15 +1744,19 @@ jQuery(document).ready(function ($) {
 
                 // Update the previous total
                 window.previousTotalBlock = currentBlockTotal;
-               
-                //const totalAmount = cartTotals ? cartTotals.total_price : null;
-               
+
+                if (window.paymobPixelFailureResetInProgress) {
+                    return;
+                }
 
                 const billingData = cartStore.getCustomerData().billingAddress;
-               
-                    showLoadingMessage();
-                    ajaxCall(billingData, totalAmount, true);
-                   
+
+                    showLoadingMessage(true);
+                    window.paymobDiscountApplied = false;
+                    window.paymobTotalsSignature = null;
+                    window.paymobActiveClientSecret = null;
+                    ajaxCall(billingData, totalAmount, true, { resetDiscount: true });
+
             }
 
             if (window.previousTotalBlock === null) {
@@ -736,19 +1767,33 @@ jQuery(document).ready(function ($) {
 
 
 
-    const paymentMethod = 'paymob-pixel'; // Replace with the desired payment method ID
-    const paymentBlockInput = jQuery(`input[name="radio-control-wc-payment-method-options"][value="${paymentMethod}"]`);
-    const paymentClassicInput = jQuery('#payment_method_'+paymentMethod);
-    if (paymentBlockInput.length > 0 || paymentClassicInput.length > 0) {        
-        paymentBlockInput.prop('checked', true).trigger('change'); // Select and trigger the change event
-        paymentClassicInput.prop('checked', true).trigger('change'); // Select and trigger the change event
-        console.log('Payment method set to:', paymentMethod);
-       
-    } 
+    const hasGatewayError = (function () {
+        try {
+            return !!new URLSearchParams(window.location.search).get('gatewayerror');
+        } catch (e) {
+            return false;
+        }
+    })();
+
+    // On gatewayerror, reset owns a single remount — skip scheduled activation to avoid reload loops.
+    if (!shouldPreserveBankInstallmentSelection() && !hasGatewayError) {
+        scheduleBlocksPixelActivation();
+    }
+
+    if (hasGatewayError && typeof resetPaymobPixelAfterPaymentFailure === 'function') {
+        window.paymobSkipScheduledActivation = true;
+        resetPaymobPixelAfterPaymentFailure();
+    }
 });
 
 
 function showLoadingIndicator(message = "Processing, please wait...") {
+    if (shouldSkipPixelCheckoutSideEffects()) {
+        return;
+    }
+
+    hideLoadingIndicator();
+
     const loadingContainer = document.createElement('div');
     loadingContainer.id = 'paymob-loading-indicator';
     loadingContainer.style.position = 'fixed';
@@ -822,7 +1867,12 @@ function hideLoadingIndicator() {
 
 /////////////////////////////////////////////////Ajax To Place Order/////
 function handleOrderCreation() {
-  
+        if (window.paymobCreateOrderInFlight) {
+            console.log('create_order already in flight — skip duplicate');
+            return;
+        }
+        window.paymobCreateOrderInFlight = true;
+
         const { select } = wp.data;
         const cartStore = select('wc/store/cart');
         const billingData = cartStore.getCustomerData().billingAddress;
@@ -843,6 +1893,9 @@ function handleOrderCreation() {
                    
                 }
 
+            },
+            complete: function () {
+                window.paymobCreateOrderInFlight = false;
             }
             
         });
@@ -902,107 +1955,354 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener("message", function (event) {
-    if (event.data?.type === "discountResponse" || event.data?.type ==="cardData") {
-        const discountData = event.data.response?.res?.data;
-        // Prevent duplicate discount injection
+    const type = event.data?.type;
+    if (type !== "discountResponse" && type !== "cardData" && type !== "instantRefundToggleResponse") {
+        return;
+    }
+
+    const discountData = event.data.response?.res?.data;
+    if (!discountData || typeof discountData !== "object") {
+        return;
+    }
+
+    const discountCents = parseInt(discountData.discounted_amount_cents, 10) || 0;
+    const feeCents = parseInt(discountData.instant_refund_fees, 10) || 0;
+    const originalCents = parseInt(discountData.original_amount_cents, 10) || 0;
+    let finalCents = parseInt(discountData.discount_amount_cents, 10) || 0;
+    const hasDiscount = discountCents > 0;
+
+    // Live cart in cents — if Paymob "original" is already below cart, intention reused a
+    // previous discounted final and is about to double-discount (e.g. 5→4.50→4.05).
+    let cartCents = 0;
+    try {
+        if (typeof wp !== 'undefined' && wp.data) {
+            const cartTotals = wp.data.select('wc/store/cart').getCartTotals();
+            if (cartTotals && cartTotals.total_price) {
+                cartCents = parseInt(cartTotals.total_price, 10) || 0;
+            }
+        }
+    } catch (err) {}
+    if (cartCents <= 0 && typeof getBlocksCheckoutContext === 'function') {
+        const ctx = getBlocksCheckoutContext();
+        if (ctx && ctx.totalAmount) {
+            cartCents = Math.round(parseFloat(ctx.totalAmount) * 100);
+        }
+    }
+
+    if (hasDiscount && cartCents > 0 && originalCents > 0 && originalCents < cartCents - 1) {
+        console.warn('Paymob discount original below cart — resetting intention to cart to avoid double discount.', {
+            originalCents: originalCents,
+            cartCents: cartCents,
+        });
+        window.paymobDiscountApplied = false;
+        window.paymobTotalsSignature = null;
+        if (typeof clearPaymobPixelCheckoutAdjustments === 'function') {
+            clearPaymobPixelCheckoutAdjustments();
+        }
+        const ctx = (typeof getBlocksCheckoutContext === 'function') ? getBlocksCheckoutContext() : null;
+        if (ctx && typeof ajaxCall === 'function') {
+            ajaxCall(ctx.billingData, ctx.totalAmount, true, { resetDiscount: true });
+        }
+        return;
+    }
+
+    // Paymob often returns instant_refund_fees as an *eligible* amount even when
+    // the Instant Refund toggle is OFF. Only treat IR as applied when explicit
+    // flags say so, or when the final amount clearly includes the fee.
+    const expectedWithoutFee = Math.max(0, originalCents - discountCents);
+    const expectedWithFee = expectedWithoutFee + feeCents;
+    const finalIncludesFee = feeCents > 0
+        && finalCents > 0
+        && Math.abs(finalCents - expectedWithFee) <= 2
+        && Math.abs(finalCents - expectedWithoutFee) > 2;
+    const instantRefundEnabled = discountData.instant_refund === true
+        || discountData.instant_refund === 'true'
+        || discountData.instant_refund_applied === true
+        || discountData.instant_refund_applied === 'true'
+        || (type === 'instantRefundToggleResponse' && feeCents > 0 && finalIncludesFee)
+        || finalIncludesFee;
+    const appliedFeeCents = instantRefundEnabled ? feeCents : 0;
+
+    // Discount-only: some payloads omit discount_amount_cents (final). Derive it.
+    if (finalCents <= 0 && originalCents > 0 && discountCents > 0) {
+        finalCents = Math.max(0, originalCents - discountCents + appliedFeeCents);
+    }
+
+    // Nothing useful to sync.
+    if (!hasDiscount && !instantRefundEnabled && finalCents <= 0) {
+        return;
+    }
+
+    // cardData while typing: only apply once for discount (same as before).
+    // Instant Refund toggle must still be allowed to update after discount.
+    if (type === "cardData" && !instantRefundEnabled) {
         if (window.paymobDiscountApplied) {
             console.log("Paymob discount already applied, skipping duplicate.");
             return;
         }
- 
-        if (discountData && discountData.discounted_amount_cents > 0) {
-            window.paymobDiscountApplied = true;
- 
-            // Convert from cents to EGP
-            const original = discountData.original_amount_cents / 100;
-            const finalTotal = discountData.discount_amount_cents / 100;
-            const discountValue = discountData.discounted_amount_cents / 100;
- 
-            // Send discount to backend
-            jQuery.ajax({
-                url: pxl_object.ajax_url,
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    action: 'paymob_apply_discount',
-                    security: pxl_object.update_checkout_nonce,
-                    discount: discountValue,
-                    original: original,
-                    final_total: finalTotal,
-                },
-                success: function (response) {
-                    if (response.success) {
-                        console.log("Discount applied:", response.data);
- 
-                        // Detect checkout type
-                        const isBlocksCheckout = document.querySelector(".wc-block-checkout") !== null;
- 
-                        // Trigger WooCommerce cart refresh
-                        // jQuery(document.body).trigger('update_checkout');
- 
-                        setTimeout(() => {
-                            if (isBlocksCheckout) {
-                                // --- BLOCKS CHECKOUT ---
-                                console.log("WooCommerce Blocks checkout detected");
- 
-                                // Find official discount block container
-                                const discountContainer = document.querySelector(".wp-block-woocommerce-checkout-order-summary-discount-block.wc-block-components-totals-wrapper");
- 
-                                if (discountContainer) {
-                                    // Create or update discount line
-                                    let line = document.querySelector(".paymob-discount-line");
-                                    if (!line) {
-                                        line = document.createElement("div");
-                                        line.className = "wc-block-components-totals-item paymob-discount-line";
-                                        discountContainer.appendChild(line);
-                                    }
- 
-                                    line.innerHTML = `
-                                        <span class="wc-block-components-totals-item__label">Discount</span>
-                                        <span class="wc-block-components-totals-item__value">-EGP ${discountValue.toFixed(2)}</span>
-                                    `;
-                                }
- 
-                                // Optionally update the total manually
-                                const totalEl = document.querySelector(".wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value");
-                                if (totalEl) {
-                                    totalEl.textContent = "EGP " + parseFloat(finalTotal).toFixed(2);
-                                }
- 
-                            } else {
-                                // --- CLASSIC CHECKOUT ---
-                                console.log("Classic checkout detected");
- 
-                                // Update total in classic layout
-                                const totalEl = document.querySelector("tr.order-total .woocommerce-Price-amount.amount bdi");
-                                if (totalEl) {
-                                    totalEl.innerHTML = `<span class="woocommerce-Price-currencySymbol">EGP</span>${finalTotal.toFixed(2)}`;
-                                }
- 
-                                // Add discount row after subtotal
-                                const subtotalRow = document.querySelector("tr.cart-subtotal");
-                                if (subtotalRow && !document.querySelector(".paymob-discount-row")) {
-                                    const row = document.createElement("tr");
-                                    row.className = "paymob-discount-row";
-                                    row.innerHTML = `
-                                        <th>Discount</th>
-                                        <td data-title="Discount">
-                                            <span class="woocommerce-Price-amount amount">
-                                                <bdi><span class="woocommerce-Price-currencySymbol">EGP</span>-${discountValue.toFixed(2)}</bdi>
-                                            </span>
-                                        </td>`;
-                                    subtotalRow.parentNode.insertBefore(row, subtotalRow.nextSibling);
-                                }
-                            }
-                        }, 500);
-                    } else {
-                        console.error("Failed to apply discount:", response);
-                    }
-                },
-                error: function (err) {
-                    console.error("AJAX error applying discount:", err);
-                }
-            });
+        if (!hasDiscount) {
+            return;
         }
     }
+
+    const original = originalCents / 100;
+    const discountValue = discountCents / 100;
+    const feeValue = appliedFeeCents / 100;
+    const finalTotal = finalCents / 100;
+    const signature = [discountCents, appliedFeeCents, finalCents, instantRefundEnabled ? 1 : 0].join(":");
+
+    if (window.paymobTotalsSignature === signature) {
+        return;
+    }
+    window.paymobTotalsSignature = signature;
+    if (hasDiscount) {
+        window.paymobDiscountApplied = true;
+    }
+
+    jQuery.ajax({
+        url: pxl_object.ajax_url,
+        type: "POST",
+        dataType: "json",
+        data: {
+            action: "paymob_apply_discount",
+            security: pxl_object.update_checkout_nonce,
+            discount: discountValue,
+            original: original,
+            final_total: finalTotal,
+            instant_refund_fee: feeValue,
+            instant_refund_enabled: instantRefundEnabled ? 1 : 0,
+            // Integer cents avoid float rounding (e.g. 0.5 → 1) in PHP/session.
+            discount_cents: discountCents,
+            original_cents: originalCents,
+            final_cents: finalCents,
+            instant_refund_fee_cents: appliedFeeCents,
+        },
+        success: function (response) {
+            if (!response.success) {
+                console.error("Failed to apply discount / instant refund:", response);
+                return;
+            }
+
+            console.log("Paymob totals applied:", response.data);
+            const isBlocksCheckout = document.querySelector(".wc-block-checkout") !== null;
+            const displayDiscount = (response.data && typeof response.data.discount !== 'undefined')
+                ? parseFloat(response.data.discount)
+                : discountValue;
+            const displayFee = (response.data && typeof response.data.instant_refund_fee !== 'undefined')
+                ? parseFloat(response.data.instant_refund_fee)
+                : feeValue;
+            const displayFinal = (response.data && typeof response.data.final !== 'undefined')
+                ? parseFloat(response.data.final)
+                : finalTotal;
+
+            // Store discounted final in Woo session only — do NOT PUT onto Pixel intention
+            // (that made Order amount = previous final and Paymob re-discounted it).
+            try {
+                const syncPayload = {
+                    action: "paymob_sync_pixel_intention",
+                    security: pxl_object.update_checkout_nonce,
+                    session_only: 1,
+                };
+                if (response.data && response.data.final_cents > 0) {
+                    syncPayload.final_cents = response.data.final_cents;
+                } else if (finalCents > 0) {
+                    syncPayload.final_cents = finalCents;
+                }
+                jQuery.ajax({
+                    url: pxl_object.ajax_url,
+                    type: "POST",
+                    dataType: "json",
+                    data: syncPayload,
+                    complete: function () {
+                        try {
+                            window.dispatchEvent(new Event("updateIntentionData"));
+                        } catch (err) {}
+                    },
+                });
+            } catch (err) {}
+
+            setTimeout(function () {
+                if (isBlocksCheckout) {
+                    const discountContainer = document.querySelector(
+                        ".wp-block-woocommerce-checkout-order-summary-discount-block.wc-block-components-totals-wrapper"
+                    );
+                    const totalsAnchor = document.querySelector(
+                        ".wc-block-components-totals-footer-item, .wp-block-woocommerce-checkout-order-summary-totals-block"
+                    );
+
+                    const upsertBlocksLine = function (className, label, amount, isNegative) {
+                        let line = document.querySelector("." + className);
+                        if (!(amount > 0)) {
+                            if (line && line.parentNode) {
+                                line.parentNode.removeChild(line);
+                            }
+                            return;
+                        }
+                        if (!line) {
+                            line = document.createElement("div");
+                            line.className = "wc-block-components-totals-item " + className;
+                            if (discountContainer) {
+                                discountContainer.appendChild(line);
+                            } else if (totalsAnchor && totalsAnchor.parentNode) {
+                                totalsAnchor.parentNode.insertBefore(line, totalsAnchor);
+                            } else {
+                                return;
+                            }
+                        }
+                        line.innerHTML =
+                            '<span class="wc-block-components-totals-item__label">' + label + "</span>" +
+                            '<span class="wc-block-components-totals-item__value">' +
+                            (isNegative ? "-" : "") + "EGP " + Number(amount).toFixed(2) +
+                            "</span>";
+                    };
+
+                    upsertBlocksLine("paymob-discount-line", "Discount", displayDiscount, true);
+                    upsertBlocksLine("paymob-instant-refund-line", "Instant Refund Fee (non-refundable)", displayFee, false);
+
+                    const totalEl = document.querySelector(
+                        ".wc-block-components-totals-footer-item .wc-block-components-totals-item__value, .wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value, .wc-block-components-totals-footer-item .wc-block-formatted-money-amount"
+                    );
+                    if (totalEl && displayFinal > 0) {
+                        totalEl.textContent = "EGP " + Number(displayFinal).toFixed(2);
+                    }
+                } else {
+                    const totalEl = document.querySelector(
+                        "tr.order-total .woocommerce-Price-amount.amount bdi, tr.order-total .woocommerce-Price-amount.amount"
+                    );
+                    if (totalEl && displayFinal > 0) {
+                        totalEl.innerHTML =
+                            '<span class="woocommerce-Price-currencySymbol">EGP</span>' + Number(displayFinal).toFixed(2);
+                    }
+
+                    const subtotalRow = document.querySelector("tr.cart-subtotal");
+                    if (subtotalRow && subtotalRow.parentNode) {
+                        const upsertClassicRow = function (className, label, amount, isNegative) {
+                            let row = document.querySelector("tr." + className);
+                            if (!(amount > 0)) {
+                                if (row && row.parentNode) {
+                                    row.parentNode.removeChild(row);
+                                }
+                                return;
+                            }
+                            if (!row) {
+                                row = document.createElement("tr");
+                                row.className = className;
+                                subtotalRow.parentNode.insertBefore(row, subtotalRow.nextSibling);
+                            }
+                            row.innerHTML =
+                                "<th>" + label + "</th>" +
+                                '<td data-title="' + label + '">' +
+                                '<span class="woocommerce-Price-amount amount"><bdi>' +
+                                '<span class="woocommerce-Price-currencySymbol">EGP</span>' +
+                                (isNegative ? "-" : "") + Number(amount).toFixed(2) +
+                                "</bdi></span></td>";
+                        };
+
+                        upsertClassicRow("paymob-discount-row", "Discount", displayDiscount, true);
+                        upsertClassicRow("paymob-instant-refund-row", "Instant Refund Fee (non-refundable)", displayFee, false);
+                    }
+                }
+            }, 500);
+        },
+        error: function (err) {
+            console.error("AJAX error applying discount / instant refund:", err);
+        },
+    });
 });
+
+function clearPaymobPixelCheckoutAdjustments() {
+    window.paymobDiscountApplied = false;
+    window.paymobTotalsSignature = null;
+
+    document.querySelectorAll(
+        '.paymob-discount-line, .paymob-instant-refund-line, .paymob-discount-row, .paymob-instant-refund-row'
+    ).forEach(function (el) {
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    });
+
+    function restoreOrderSummaryTotal(amount) {
+        var total = parseFloat(amount);
+        if (!(total >= 0) || isNaN(total)) {
+            return;
+        }
+        var formatted = 'EGP ' + total.toFixed(2);
+
+        // Blocks checkout Total row
+        document.querySelectorAll(
+            '.wc-block-components-totals-footer-item .wc-block-components-totals-item__value, .wc-block-components-totals-footer-item .wc-block-formatted-money-amount, .wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value'
+        ).forEach(function (el) {
+            el.textContent = formatted;
+        });
+
+        // Classic checkout Total row
+        document.querySelectorAll(
+            'tr.order-total .woocommerce-Price-amount.amount bdi, tr.order-total .woocommerce-Price-amount.amount'
+        ).forEach(function (el) {
+            el.innerHTML = '<span class="woocommerce-Price-currencySymbol">EGP</span>' + total.toFixed(2);
+        });
+    }
+
+    function refreshBlocksCartStore() {
+        try {
+            if (typeof wp === 'undefined' || !wp.data || !wp.data.dispatch) {
+                return;
+            }
+            var cartDispatch = wp.data.dispatch('wc/store/cart');
+            if (cartDispatch && typeof cartDispatch.invalidateResolution === 'function') {
+                cartDispatch.invalidateResolution('getCartData');
+                cartDispatch.invalidateResolution('getCartTotals');
+            }
+            if (wp.data.resolveSelect) {
+                var cartSelect = wp.data.resolveSelect('wc/store/cart');
+                if (cartSelect && typeof cartSelect.getCartData === 'function') {
+                    cartSelect.getCartData().then(function (cart) {
+                        if (cart && cart.totals && typeof cart.totals.total_price !== 'undefined') {
+                            var minor = parseInt(cart.totals.currency_minor_unit, 10) || 2;
+                            var total = parseInt(cart.totals.total_price, 10) / Math.pow(10, minor);
+                            restoreOrderSummaryTotal(total);
+                        }
+                    }).catch(function () {});
+                }
+            }
+        } catch (err) {}
+    }
+
+    // Prefer cart store total immediately if Blocks is available.
+    try {
+        if (typeof wp !== 'undefined' && wp.data && wp.data.select) {
+            var cartTotals = wp.data.select('wc/store/cart').getCartTotals();
+            if (cartTotals && typeof cartTotals.total_price !== 'undefined') {
+                var minorUnit = parseInt(cartTotals.currency_minor_unit, 10) || 2;
+                restoreOrderSummaryTotal(parseInt(cartTotals.total_price, 10) / Math.pow(10, minorUnit));
+            }
+        }
+    } catch (err) {}
+
+    if (typeof pxl_object === 'undefined' || !pxl_object || !pxl_object.ajax_url) {
+        refreshBlocksCartStore();
+        if (window.jQuery) {
+            window.jQuery(document.body).trigger('update_checkout');
+        }
+        return;
+    }
+
+    jQuery.post(pxl_object.ajax_url, {
+        action: 'paymob_clear_discount',
+        security: pxl_object.update_checkout_nonce,
+    }).done(function (response) {
+        if (response && response.success && response.data && typeof response.data.cart_total !== 'undefined') {
+            restoreOrderSummaryTotal(response.data.cart_total);
+        }
+        refreshBlocksCartStore();
+        if (window.jQuery) {
+            window.jQuery(document.body).trigger('update_checkout');
+        }
+    }).fail(function () {
+        refreshBlocksCartStore();
+        if (window.jQuery) {
+            window.jQuery(document.body).trigger('update_checkout');
+        }
+    });
+}

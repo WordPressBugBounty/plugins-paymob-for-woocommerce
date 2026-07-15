@@ -17,6 +17,9 @@ class Paymob_WooCommerce {
 		// filters
 		add_filter( 'plugin_action_links_' . PAYMOB_PLUGIN, array( $this, 'add_plugin_links' ) );
 		add_filter( 'woocommerce_payment_gateways', array( $this, 'register' ), 0 );
+		add_filter( 'woocommerce_get_order_item_totals', array( $this, 'paymob_add_fees_to_order_totals_display' ), 20, 2 );
+		add_action( 'woocommerce_admin_order_totals_after_discount', array( $this, 'paymob_admin_order_instant_refund_fee_row' ), 20 );
+		add_action( 'woocommerce_order_item_add_action_buttons', array( $this, 'paymob_admin_refund_non_refundable_notice' ), 20 );
 		add_action( 'woocommerce_api_paymob_callback', array( $this, 'callback' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_enqueue_scripts' ) );
 		add_action( 'admin_head', array( $this, 'hide_block_main_gateway' ) );
@@ -107,17 +110,29 @@ class Paymob_WooCommerce {
 			$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
 			$status = $order->get_status();
 
-			if ( 'pending' != $status && 'failed' != $status && 'on-hold' != $status ) {
-				die( esc_html( "can not change status of order: $orderId" ) );
-			}
-
 			$integrationId = $obj['integration_id'];
-			$type          = $obj['source_data']['type'];
-			$subType       = $obj['source_data']['sub_type'];
+			$type          = $obj['source_data']['type'] ?? '';
+			$subType       = $obj['source_data']['sub_type'] ?? '';
 			$transaction   = $obj['id'];
 			$paymobId      = $obj['order']['id'];
 
 			$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
+
+			// Instant Refund / refunds from Paymob dashboard arrive after the order is paid.
+			// Allow status updates for refund/void even when the Woo order is already processing/completed.
+			$is_refund_event = ( ! empty( $obj['is_refunded'] ) || ! empty( $obj['is_refund'] ) );
+			$is_void_event   = ( ! empty( $obj['is_voided'] ) || ! empty( $obj['is_void'] ) );
+			if ( ! $is_refund_event && ! $is_void_event && 'pending' != $status && 'failed' != $status && 'on-hold' != $status ) {
+				die( esc_html( "can not change status of order: $orderId" ) );
+			}
+
+			if ( $is_refund_event ) {
+				$this->mark_order_refunded_from_paymob( $order, $obj, $msg, $addlog );
+				$order->update_meta_data( 'PaymobTransactionId', $transaction );
+				$order->save();
+				die( esc_html( "Order refunded: $orderId" ) );
+			}
+
 			if (
 				true  === $obj['success'] &&
 				false === $obj['is_voided'] &&
@@ -139,6 +154,12 @@ class Paymob_WooCommerce {
 				$this->update_order_total_after_discount( $order, $obj );
 				$this->handle_caf_logic( $order, $json_data );
 				$this->handle_instant_refund_logic( $order, $obj);
+				$this->scrub_stale_pixel_adjustments_from_transaction( $order, $obj );
+				// Dashboard amount is the source of truth (avoids Woo 28 vs Paymob 29 mismatches).
+				if ( ! empty( $obj['amount_cents'] ) ) {
+					$country = Paymob::getCountryCode( $this->gateway->sec_key );
+					$this->sync_order_total_from_paymob_cents( $order, (int) $obj['amount_cents'], 'omn' === $country ? 1000 : 100 );
+				}
 				$order->payment_complete( $orderId );
 
 
@@ -214,16 +235,32 @@ class Paymob_WooCommerce {
 
 		$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
 		$status = $order->get_status();
+		$msg    = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
 
-		if ( 'pending' != $status && 'failed' != $status && 'on-hold' != $status ) {
-			die( esc_html( "can not change status of order: $orderId" ) );
-		}
-		$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
 		if ( ! empty( $json_data['transaction'] ) ) {
 			$trans         = $json_data['transaction'];
 			$integrationId = $json_data['transaction']['integration_id'];
 			$type          = $json_data['transaction']['source_data']['type'];
 			$subType       = $json_data['transaction']['source_data']['sub_type'];
+			$transaction   = $json_data['transaction']['id'] ?? null;
+
+			$is_refund_event = ( ! empty( $trans['is_refunded'] ) || ! empty( $trans['is_refund'] ) );
+			$is_void_event   = ( ! empty( $trans['is_voided'] ) || ! empty( $trans['is_void'] ) );
+
+			// Allow Instant Refund / refund webhooks after the order is already paid.
+			if ( ! $is_refund_event && ! $is_void_event && 'pending' != $status && 'failed' != $status && 'on-hold' != $status ) {
+				die( esc_html( "can not change status of order: $orderId" ) );
+			}
+
+			if ( $is_refund_event ) {
+				$this->mark_order_refunded_from_paymob( $order, $trans, $msg, $addlog );
+				if ( $transaction ) {
+					$order->update_meta_data( 'PaymobTransactionId', $transaction );
+				}
+				$order->save();
+				die( esc_html( "Order refunded: $orderId" ) );
+			}
+
 			if (
 				true === $trans['success'] &&
 				false === $trans['is_voided'] &&
@@ -242,8 +279,9 @@ class Paymob_WooCommerce {
 				$this->update_order_total_after_discount( $order, $json_data );
 				$this->handle_caf_logic( $order, $json_data);
 				$this->handle_instant_refund_logic( $order, $json_data);
-				
-
+				if ( ! empty( $trans['amount_cents'] ) ) {
+					$this->sync_order_total_from_paymob_cents( $order, (int) $trans['amount_cents'], $cents );
+				}
 
 				$order->payment_complete( $orderId );
 				$paymentMethod = $order->get_payment_method();
@@ -292,47 +330,96 @@ class Paymob_WooCommerce {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . 'paymob_cards_token';
-		$obj        = $json_data['obj'];
+		$obj        = isset( $json_data['obj'] ) && is_array( $json_data['obj'] ) ? $json_data['obj'] : array();
 		$addlog     = WC_LOG_DIR . 'paymob-auth.log';
-		Paymob::addLogs( $this->gateway->debug, $addlog, ' In save Card Token Webhook , for User -- ' . $obj['email'], wp_json_encode( $json_data ) );
-		$user = get_user_by( 'email', $obj['email'] );
-		if ( $user ) {
-			$token = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM {$wpdb->prefix}paymob_cards_token WHERE user_id = %d AND card_subtype = %s AND masked_pan = %s",
-					$user->ID,
-					$obj['card_subtype'],
-					$obj['masked_pan']
-				),
-				OBJECT
-			);
-			if ( ! $token ) {
-				$wpdb->insert(
-					$table_name,
-					array(
-						'user_id'      => $user->ID,
-						'token'        => $obj['token'],
-						'masked_pan'   => $obj['masked_pan'],
-						'card_subtype' => $obj['card_subtype'],
-					)
-				);
-			} else {
-				$wpdb->update(
-					$table_name,
-					array(
-						'token' => $obj['token'],
-					),
-					array(
-						'user_id'      => $user->ID,
-						'card_subtype' => $obj['card_subtype'],
-						'masked_pan'   => $obj['masked_pan'],
-					)
-				);
-			}
-			die( esc_html( "Token Saved: user id: $user->ID, user email: " . $obj['email'] ) );
-		} else {
-			die( esc_html( 'No User Found with this email: ' . $obj['email'] ) );
+		Paymob::addLogs( $this->gateway->debug, $addlog, ' In save Card Token Webhook', wp_json_encode( $json_data ) );
+
+		if ( empty( $obj['token'] ) || empty( $obj['masked_pan'] ) ) {
+			Paymob::addLogs( $this->gateway->debug, $addlog, 'Token webhook missing token/masked_pan' );
+			die( esc_html( 'Token payload incomplete' ) );
 		}
+
+		$email = '';
+		if ( ! empty( $obj['email'] ) ) {
+			$email = sanitize_email( $obj['email'] );
+		} elseif ( ! empty( $obj['order']['shipping_data']['email'] ) ) {
+			$email = sanitize_email( $obj['order']['shipping_data']['email'] );
+		} elseif ( ! empty( $json_data['email'] ) ) {
+			$email = sanitize_email( $json_data['email'] );
+		}
+
+		$user = $email ? get_user_by( 'email', $email ) : false;
+
+		// Fallback: resolve Woo user from merchant order / pixel intention.
+		if ( ! $user ) {
+			$merchant_order_id = $obj['order']['merchant_order_id']
+				?? ( $json_data['order']['merchant_order_id'] ?? '' );
+			if ( $merchant_order_id ) {
+				$order_id = Paymob::getIntentionId( $merchant_order_id );
+				if ( false !== strpos( (string) $order_id, 'pixel' ) ) {
+					$order_id = $wpdb->get_var(
+						$wpdb->prepare(
+							"SELECT merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier = %s",
+							$merchant_order_id
+						)
+					);
+				}
+				$order = $order_id ? wc_get_order( $order_id ) : false;
+				if ( $order ) {
+					$user_id = $order->get_user_id();
+					if ( $user_id ) {
+						$user = get_user_by( 'id', $user_id );
+					}
+					if ( ! $user && $order->get_billing_email() ) {
+						$user  = get_user_by( 'email', $order->get_billing_email() );
+						$email = $order->get_billing_email();
+					}
+				}
+			}
+		}
+
+		if ( ! $user ) {
+			Paymob::addLogs( $this->gateway->debug, $addlog, 'No User Found for token. email=' . $email );
+			die( esc_html( 'No User Found with this email: ' . $email ) );
+		}
+
+		$card_subtype = ! empty( $obj['card_subtype'] ) ? $obj['card_subtype'] : 'CARD';
+		$token        = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}paymob_cards_token WHERE user_id = %d AND card_subtype = %s AND masked_pan = %s",
+				$user->ID,
+				$card_subtype,
+				$obj['masked_pan']
+			),
+			OBJECT
+		);
+
+		if ( ! $token ) {
+			$wpdb->insert(
+				$table_name,
+				array(
+					'user_id'      => $user->ID,
+					'token'        => $obj['token'],
+					'masked_pan'   => $obj['masked_pan'],
+					'card_subtype' => $card_subtype,
+				)
+			);
+		} else {
+			$wpdb->update(
+				$table_name,
+				array(
+					'token' => $obj['token'],
+				),
+				array(
+					'user_id'      => $user->ID,
+					'card_subtype' => $card_subtype,
+					'masked_pan'   => $obj['masked_pan'],
+				)
+			);
+		}
+
+		Paymob::addLogs( $this->gateway->debug, $addlog, 'Token Saved for user id ' . $user->ID . ' email ' . $email );
+		die( esc_html( "Token Saved: user id: $user->ID, user email: " . $email ) );
 	}
 
 	public function subscriptionTransactionWebhook( $json_data, $url, $country ) {
@@ -723,13 +810,29 @@ class Paymob_WooCommerce {
 			exit();
 		}
 		$amount_cents = Paymob::filterVar('amount_cents');
-		$amount = $amount_cents / 100;
+		if ( $amount_cents && (float) $amount_cents > 0 ) {
+			$cents_meta = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+			$div        = max( 1, (int) $cents_meta['cents'] );
+			$prec       = (int) $cents_meta['precision'];
+			$amount     = function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( (int) $amount_cents, $div )
+				: round( ( (int) $amount_cents ) / $div, $prec );
 
-		if ( floatval( $order->get_total() ) == 0 && $amount > 0 ) {
-			$order->set_total( $amount );
-			$order->save();
+			// Always align Woo total to Paymob paid amount on success redirect (keeps 4.50 not 5).
+			if ( 'true' === Paymob::filterVar( 'success' ) || floatval( $order->get_total() ) == 0 ) {
+				if ( function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+					paymob_pixel_begin_precise_amounts( $prec );
+				}
+				$order->set_total( $amount );
+				$order->update_meta_data( '_paymob_paid_amount_cents', (int) $amount_cents );
+				$order->update_meta_data( '_paymob_pixel_total_synced', 1 );
+				$order->save();
+				if ( function_exists( 'paymob_pixel_end_precise_amounts' ) ) {
+					paymob_pixel_end_precise_amounts();
+				}
+			}
 		}
-		
+
 		if(Paymob::filterVar( 'errmsg' ) && Paymob::filterVar( 'errmsg' ) !=='undefined'){
 			$error = Paymob::filterVar( 'errmsg' );
 			$order->update_status( 'failed' );
@@ -741,6 +844,10 @@ class Paymob_WooCommerce {
 			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->save();
+			// Bug 1: reset Pixel discount + intention so retry starts from cart base (e.g. 30 not 27).
+			if ( function_exists( 'paymob_pixel_clear_discount_session' ) ) {
+				paymob_pixel_clear_discount_session( true );
+			}
 			wp_safe_redirect(wc_get_checkout_url().$err);
 			exit();
 		}
@@ -807,6 +914,10 @@ class Paymob_WooCommerce {
 			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->save();
+			// Bug 1: do not remount Pixel on already-discounted intention amount.
+			if ( function_exists( 'paymob_pixel_clear_discount_session' ) ) {
+				paymob_pixel_clear_discount_session( true );
+			}
 		}
 		$order->update_meta_data( 'PaymobTransactionId', $id ); 
 		$order->update_meta_data( 'PaymobMerchantOrderID',$merchant_order_id);
@@ -905,89 +1016,92 @@ class Paymob_WooCommerce {
 	}
 
 	private function handle_caf_logic( WC_Order $order, $json_data ) {
-
+		// Merchants only need Instant Refund details in Woo — skip noisy CAF notes/totals.
 		if ( $order->get_meta( '_paymob_caf_handled' ) ) {
 			return;
 		}
-
-		if ( empty( $json_data['caf'] ) ) {
-			// $order->add_order_note( 'Paymob CAF: Not applied' );
-			$order->update_meta_data( '_paymob_caf_handled', 1 );
-			$order->save();
-			return;
-		}
-
-		$caf = $json_data['caf'];
-
-		$note  = "<b>Paymob CAF Details</b><br/>";
-		$note .= "CAF Applied: " . ( $caf['convenience_fee_applied'] ? 'Yes' : 'No' ) . "<br/>";
-		$note .= "Initial Amount: " . wc_price( $caf['initial_order_amount'] / 100 ) . "<br/>";
-		$note .= "CAF Amount: " . wc_price( $caf['convenience_fee_amount'] / 100 ) . "<br/>";
-		$note .= "CAF Percentage: {$caf['convenience_fee_percentage']}%<br/>";
-		$note .= "Transaction Amount: " . wc_price( $caf['transaction_amount'] / 100 ) . "<br/>";
-		$note .= "Refund CAF Amount: " . ( $caf['refund_caf_amount'] ? 'Yes' : 'No' );
-
-		if ( true === $caf['refund_caf_amount'] ) {
-			$order->set_total( $caf['transaction_amount'] / 100 );
-			$order->add_order_note(
-				'Paymob CAF: Order total updated based on CAF refund logic.<br/>' . $note
-			);
-			$order->update_meta_data( 'paymob_caf_fee', $caf['convenience_fee_amount'] );
-		} else {
-			$order->add_order_note(
-				'Paymob CAF applied (no order total change).<br/>' . $note
-			);
-		}
-
-		$order->update_meta_data( 'paymob_caf_applied', $caf['convenience_fee_applied'] );
-		
 		$order->update_meta_data( '_paymob_caf_handled', 1 );
+		if ( ! empty( $json_data['caf'] ) ) {
+			$order->update_meta_data( 'paymob_caf_applied', ! empty( $json_data['caf']['convenience_fee_applied'] ) );
+		}
 		$order->save();
 	}
 
 	private function handle_instant_refund_logic( WC_Order $order, $json_data ) {
+		// Normalize Accept vs Flash webhook shapes.
+		$transaction = $json_data;
+		if ( isset( $json_data['transaction'] ) && is_array( $json_data['transaction'] ) ) {
+			$transaction = $json_data['transaction'];
+		}
 
-		// Guard: instant refund not enabled
-		if ( empty( $json_data['source_data']['instant_refund'] ) ) {
+		$source = $transaction['source_data'] ?? array();
+		if ( empty( $source['instant_refund'] ) ) {
 			return;
 		}
 
-		// Prevent duplicate notes (important for webhooks)
 		if ( $order->get_meta( '_paymob_instant_refund_handled' ) ) {
 			return;
 		}
 
-		$transaction = $json_data;
+		$extra = $transaction['payment_key_claims']['extra']
+			?? $json_data['payment_key_claims']['extra']
+			?? array();
 
-		// ✅ FIX: payment_key_claims is NOT inside transaction
-		$extra = $json_data['payment_key_claims']['extra'] ?? [];
-
-		$instant_refund         = (bool) $transaction['source_data']['instant_refund'];
-		$instant_refund_applied = (bool) ( $extra['instant_refund_applied'] ?? false );
+		$instant_refund_applied = ! empty( $extra['instant_refund_applied'] );
 		$instant_refund_fees    = (int) ( $extra['instant_refund_fees'] ?? 0 );
 		$original_amount_cents  = (int) ( $extra['original_amount_cents'] ?? 0 );
+
+		// Only keep checkout fee meta when Instant Refund was actually applied on the transaction.
+		if ( $instant_refund_fees <= 0 && $instant_refund_applied ) {
+			$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		}
+		if ( ! $instant_refund_applied && $instant_refund_fees <= 0 ) {
+			$order->delete_meta_data( '_paymob_instant_refund_fees' );
+			$order->delete_meta_data( '_paymob_instant_refund' );
+			$order->delete_meta_data( '_paymob_instant_refund_note_added' );
+			$order->update_meta_data( '_paymob_instant_refund_handled', 1 );
+			$order->save();
+			return;
+		}
+
+		$fee_major = $instant_refund_fees > 0
+			? ( function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( $instant_refund_fees )
+				: round( $instant_refund_fees / 100, 2 ) )
+			: 0;
 
 		$note  = '<b>Paymob Instant Refund</b><br/>';
 		$note .= 'Instant Refund: Yes<br/>';
 		$note .= 'Applied: ' . ( $instant_refund_applied ? 'Yes' : 'No' ) . '<br/>';
 
 		if ( $original_amount_cents > 0 ) {
-			$note .= 'Original Amount: ' . wc_price( $original_amount_cents / 100 ) . '<br/>';
+			$orig_major = function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( $original_amount_cents )
+				: round( $original_amount_cents / 100, 2 );
+			$note .= 'Original Amount: ' . (
+				function_exists( 'paymob_pixel_format_price' )
+					? paymob_pixel_format_price( $orig_major, $order->get_currency() )
+					: wc_price( $orig_major )
+			) . '<br/>';
 		}
 
 		if ( $instant_refund_fees > 0 ) {
-			$note .= 'Instant Refund Fees: ' . wc_price( $instant_refund_fees / 100 ) . '<br/>';
+			$note .= 'Instant Refund Fee: ' . (
+				function_exists( 'paymob_pixel_format_price' )
+					? paymob_pixel_format_price( $fee_major, $order->get_currency() )
+					: wc_price( $fee_major, array( 'decimals' => 2 ) )
+			) . ' <b>(non-refundable)</b><br/>';
 		}
 
 		$order->add_order_note( $note );
 
-		// Save meta
 		$order->update_meta_data( '_paymob_instant_refund', 1 );
-		$order->update_meta_data( '_paymob_instant_refund_applied', $instant_refund_applied );
-		$order->update_meta_data( '_paymob_instant_refund_fees', $instant_refund_fees );
+		$order->update_meta_data( '_paymob_instant_refund_applied', $instant_refund_applied ? 1 : 0 );
+		if ( $instant_refund_fees > 0 ) {
+			$order->update_meta_data( '_paymob_instant_refund_fees', $instant_refund_fees );
+		}
 		$order->update_meta_data( '_paymob_original_amount_cents', $original_amount_cents );
 		$order->update_meta_data( '_paymob_instant_refund_handled', 1 );
-
 		$order->save();
 	}
 
@@ -995,99 +1109,426 @@ class Paymob_WooCommerce {
 
 	
 
-	function paymob_add_fees_to_order_totals_display( $totals, $order ) {
+	/**
+	 * Show Instant Refund fee on thank-you, emails, and order view totals.
+	 *
+	 * @param array    $totals Order totals rows.
+	 * @param WC_Order $order  Order object.
+	 * @return array
+	 */
+	public function paymob_add_fees_to_order_totals_display( $totals, $order ) {
 
 		if ( ! $order instanceof WC_Order ) {
 			return $totals;
 		}
 
-		$caf_fee             = (int) $order->get_meta( 'paymob_caf_fee' );
-		$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
-		$discount_cents      = (int) $order->get_meta( '_paymob_discount_amount_cents' );
+		$meta = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$div  = max( 1, (int) $meta['cents'] );
+		$prec = (int) $meta['precision'];
+		$currency = $order->get_currency();
 
-		// Nothing to show
-		if ( $caf_fee <= 0 && $instant_refund_fees <= 0 && $discount_cents <= 0) {
+		$discount_cents = (int) $order->get_meta( '_paymob_discount_amount_cents' );
+		$paid_cents     = (int) $order->get_meta( '_paymob_paid_amount_cents' );
+		$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+
+		$needs_precise = ( $discount_cents > 0 || $paid_cents > 0 || $instant_refund_fees > 0 )
+			&& ( 'paymob-pixel' === $order->get_payment_method() || $order->get_meta( '_paymob_pixel_total_synced' ) );
+
+		// Rebuild Discount / Total from cents so shop "0 decimals" cannot show 0.50 as 1.
+		if ( $needs_precise ) {
+			if ( $discount_cents > 0 && ! empty( $totals['discount'] ) ) {
+				$discount_major = function_exists( 'paymob_pixel_cents_to_major' )
+					? paymob_pixel_cents_to_major( $discount_cents, $div )
+					: round( $discount_cents / $div, $prec );
+				$totals['discount']['value'] = '-' . (
+					function_exists( 'paymob_pixel_format_price' )
+						? paymob_pixel_format_price( $discount_major, $currency )
+						: wc_price( $discount_major, array( 'currency' => $currency, 'decimals' => $prec ) )
+				);
+			}
+			if ( $paid_cents > 0 && ! empty( $totals['order_total'] ) ) {
+				$paid_major = function_exists( 'paymob_pixel_cents_to_major' )
+					? paymob_pixel_cents_to_major( $paid_cents, $div )
+					: round( $paid_cents / $div, $prec );
+				$totals['order_total']['value'] = function_exists( 'paymob_pixel_format_price' )
+					? paymob_pixel_format_price( $paid_major, $currency )
+					: wc_price( $paid_major, array( 'currency' => $currency, 'decimals' => $prec ) );
+			}
+		}
+
+		if ( $instant_refund_fees <= 0 || ! empty( $totals['paymob_instant_refund_fee'] ) ) {
 			return $totals;
 		}
 
-		$new_totals = [];
+		$fee_major = function_exists( 'paymob_pixel_cents_to_major' )
+			? paymob_pixel_cents_to_major( $instant_refund_fees, $div )
+			: round( $instant_refund_fees / $div, $prec );
+
+		$extra = array(
+			'paymob_instant_refund_fee' => array(
+				'label' => __( 'Instant Refund Fee (non-refundable):', 'paymob-woocommerce' ),
+				'value' => function_exists( 'paymob_pixel_format_price' )
+					? paymob_pixel_format_price( $fee_major, $currency )
+					: wc_price( $fee_major, array( 'currency' => $currency, 'decimals' => $prec ) ),
+			),
+		);
+
+		$new_totals = array();
+		$inserted   = false;
 
 		foreach ( $totals as $key => $total ) {
-
+			if ( 'order_total' === $key && ! $inserted ) {
+				foreach ( $extra as $extra_key => $extra_row ) {
+					$new_totals[ $extra_key ] = $extra_row;
+				}
+				$inserted = true;
+			}
 			$new_totals[ $key ] = $total;
+		}
 
-			// Insert after shipping
-			// if ( 'shipping' === $key ) {
-
-				if ( $caf_fee > 0 ) {
-					$new_totals['paymob_caf_fee'] = [
-						'label' => __( 'Convenience Fee', 'paymob' ),
-						'value' => wc_price( $caf_fee / 100 ),
-					];
-				}
-
-				if ( $instant_refund_fees > 0 ) {
-					$new_totals['paymob_instant_refund_fee'] = [
-						'label' => __( 'Instant Refund Fee', 'paymob' ),
-						'value' => wc_price( $instant_refund_fees / 100 ),
-					];
-				}
-
-				if ( $discount_cents > 0 ) {
-					$new_totals['paymob_discount'] = [
-						'label' => __( 'Paymob Discount', 'paymob' ),
-						'value' => wc_price( - $discount_cents / 100 ), // negative value
-					];
-				}
-			// }
+		if ( ! $inserted ) {
+			$new_totals = array_merge( $new_totals, $extra );
 		}
 
 		return $new_totals;
 	}
 
+	/**
+	 * Show Instant Refund Fee row on the WooCommerce admin Edit Order screen.
+	 *
+	 * @param int $order_id Order ID.
+	 */
+	public function paymob_admin_order_instant_refund_fee_row( $order_id ) {
+		static $rendered = array();
+
+		$order_id = (int) $order_id;
+		if ( $order_id <= 0 || isset( $rendered[ $order_id ] ) ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		if ( $instant_refund_fees <= 0 ) {
+			return;
+		}
+
+		$rendered[ $order_id ] = true;
+		$meta     = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$fee_html = function_exists( 'paymob_pixel_format_price' )
+			? paymob_pixel_format_price(
+				function_exists( 'paymob_pixel_cents_to_major' )
+					? paymob_pixel_cents_to_major( $instant_refund_fees, $meta['cents'] )
+					: round( $instant_refund_fees / max( 1, (int) $meta['cents'] ), (int) $meta['precision'] ),
+				$order->get_currency()
+			)
+			: wc_price( $instant_refund_fees / 100, array( 'currency' => $order->get_currency(), 'decimals' => (int) $meta['precision'] ) );
+		?>
+		<tr>
+			<td class="label">
+				<?php esc_html_e( 'Instant Refund Fee:', 'paymob-woocommerce' ); ?>
+				<br/>
+				<small style="font-weight:400;color:#646970;">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %s: fee amount */
+							__( '%s is non-refundable', 'paymob-woocommerce' ),
+							wp_strip_all_tags( $fee_html )
+						)
+					);
+					?>
+				</small>
+			</td>
+			<td width="1%"></td>
+			<td class="total">
+				<?php echo wp_kses_post( $fee_html ); ?>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Notice above refund UI: Instant Refund fee cannot be refunded.
+	 *
+	 * @param WC_Order $order Order.
+	 */
+	public function paymob_admin_refund_non_refundable_notice( $order ) {
+		static $shown = false;
+		if ( $shown || ! $order instanceof WC_Order ) {
+			return;
+		}
+		$fee_cents = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		if ( $fee_cents <= 0 ) {
+			return;
+		}
+		$shown     = true;
+		$fee_major = $fee_cents / 100;
+		$max       = max( 0, (float) $order->get_total() - $fee_major );
+		echo '<div class="notice notice-warning inline" style="margin:8px 0;"><p><strong>'
+			. esc_html__( 'Paymob Instant Refund:', 'paymob-woocommerce' ) . '</strong> '
+			. esc_html(
+				sprintf(
+					/* translators: 1: fee, 2: max refundable */
+					__( '%1$s Instant Refund Fee is non-refundable. Max refundable from Woo: %2$s.', 'paymob-woocommerce' ),
+					wp_strip_all_tags( wc_price( $fee_major, array( 'currency' => $order->get_currency() ) ) ),
+					wp_strip_all_tags( wc_price( $max, array( 'currency' => $order->get_currency() ) ) )
+				)
+			)
+			. '</p></div>';
+	}
+
+	/**
+	 * Align Woo order total with Paymob transaction amount (dashboard source of truth).
+	 *
+	 * @param WC_Order $order        Order.
+	 * @param int      $amount_cents Amount in minor units.
+	 * @param int      $cents        Currency minor multiplier.
+	 */
+	private function sync_order_total_from_paymob_cents( WC_Order $order, $amount_cents, $cents = 100 ) {
+		$amount_cents = (int) $amount_cents;
+		$cents        = (int) $cents > 0 ? (int) $cents : 100;
+		if ( $amount_cents <= 0 ) {
+			return;
+		}
+
+		$precision = ( 1000 === $cents ) ? 3 : 2;
+		if ( function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+			paymob_pixel_begin_precise_amounts( $precision );
+		}
+		$total = function_exists( 'paymob_pixel_cents_to_major' )
+			? paymob_pixel_cents_to_major( $amount_cents, $cents )
+			: round( $amount_cents / $cents, $precision );
+		$order->set_total( $total );
+		$order->update_meta_data( '_paymob_paid_amount_cents', $amount_cents );
+		if ( function_exists( 'paymob_pixel_end_precise_amounts' ) ) {
+			paymob_pixel_end_precise_amounts();
+		}
+	}
+
+	/**
+	 * Mark WooCommerce order as refunded when Paymob Instant Refund / refund webhook arrives.
+	 *
+	 * @param WC_Order $order  Order.
+	 * @param array    $trans  Transaction payload.
+	 * @param string   $msg    Log prefix.
+	 * @param string   $addlog Log file path.
+	 */
+	private function mark_order_refunded_from_paymob( $order, $trans, $msg, $addlog ) {
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		$status = $order->get_status();
+		if ( in_array( $status, array( 'refunded', 'cancelled' ), true ) ) {
+			$order->add_order_note( __( 'Paymob: Refund webhook received (order already refunded).', 'paymob-woocommerce' ) );
+			return;
+		}
+
+		$country = Paymob::getCountryCode( $this->gateway->sec_key );
+		$cents   = ( 'omn' === $country ) ? 1000 : 100;
+		$refund_cents = 0;
+		if ( isset( $trans['amount_cents'] ) ) {
+			$refund_cents = abs( (int) $trans['amount_cents'] );
+		} elseif ( isset( $trans['refunded_amount_cents'] ) ) {
+			$refund_cents = abs( (int) $trans['refunded_amount_cents'] );
+		}
+
+		$refund_amount = $refund_cents > 0
+			? round( $refund_cents / $cents, ( 1000 === $cents ) ? 3 : 2 )
+			: (float) $order->get_remaining_refund_amount();
+
+		$trx_id = $trans['id'] ?? ( $trans['transaction_id'] ?? '' );
+		$note   = __( 'Paymob Webhook: Payment Refunded / Instant Refund', 'paymob-woocommerce' );
+		if ( $trx_id ) {
+			$note .= '<br/>Transaction ID: <b style="color:DodgerBlue;">' . esc_html( (string) $trx_id ) . '</b>';
+		}
+		if ( $refund_amount > 0 ) {
+			$note .= '<br/>Refunded amount: ' . wc_price( $refund_amount, array( 'currency' => $order->get_currency() ) );
+		}
+
+		// Create a Woo refund record when possible so admin status/totals stay aligned.
+		$remaining = (float) $order->get_remaining_refund_amount();
+		if ( $refund_amount > 0 && $remaining > 0 && function_exists( 'wc_create_refund' ) ) {
+			$create_amount = min( $refund_amount, $remaining );
+			try {
+				$refund = wc_create_refund(
+					array(
+						'amount'         => $create_amount,
+						'reason'         => 'Paymob Instant Refund / dashboard refund',
+						'order_id'       => $order->get_id(),
+						'refund_payment' => false,
+						'restock_items'  => false,
+					)
+				);
+				if ( is_wp_error( $refund ) ) {
+					Paymob::addLogs( $this->gateway->debug, $addlog, $msg . ' refund create failed: ' . $refund->get_error_message() );
+					$order->update_status( 'refunded', $note );
+				} else {
+					$order->add_order_note( $note );
+				}
+			} catch ( Exception $e ) {
+				Paymob::addLogs( $this->gateway->debug, $addlog, $msg . ' refund exception: ' . $e->getMessage() );
+				$order->update_status( 'refunded', $note );
+			}
+		} else {
+			$order->update_status( 'refunded', $note );
+		}
+
+		$order->update_meta_data( '_paymob_dashboard_refunded', 1 );
+		if ( $trx_id ) {
+			$order->update_meta_data( '_paymob_refund_transaction_id', $trx_id );
+		}
+		$order->save();
+
+		Paymob::addLogs( $this->gateway->debug, $addlog, $msg . ' ' . $note );
+	}
+
+	/**
+	 * Strip Instant Refund / Discount order meta when the paid transaction does not include them.
+	 * Prevents Test Mode / stale session values from sticking on the order page.
+	 *
+	 * @param WC_Order $order    Order.
+	 * @param array    $payload  Transaction / webhook payload.
+	 */
+	private function scrub_stale_pixel_adjustments_from_transaction( WC_Order $order, $payload ) {
+		$transaction = $payload;
+		if ( isset( $payload['transaction'] ) && is_array( $payload['transaction'] ) ) {
+			$transaction = $payload['transaction'];
+		}
+
+		$source  = $transaction['source_data'] ?? array();
+		$extra   = $transaction['payment_key_claims']['extra']
+			?? ( $payload['payment_key_claims']['extra'] ?? array() );
+		$has_ir  = ! empty( $source['instant_refund'] )
+			|| ! empty( $extra['instant_refund_applied'] )
+			|| ( ! empty( $extra['instant_refund_fees'] ) && (int) $extra['instant_refund_fees'] > 0 );
+
+		$discount_details = $payload['discount_details']
+			?? ( $transaction['discount_details'] ?? array() );
+		$has_discount     = ! empty( $discount_details );
+
+		if ( ! $has_ir ) {
+			$order->delete_meta_data( '_paymob_instant_refund_fees' );
+			$order->delete_meta_data( '_paymob_instant_refund' );
+			$order->delete_meta_data( '_paymob_instant_refund_applied' );
+			$order->delete_meta_data( '_paymob_instant_refund_note_added' );
+			$order->delete_meta_data( '_paymob_instant_refund_handled' );
+		}
+
+		if ( ! $has_discount && ! $order->get_meta( '_paymob_pixel_total_synced' ) ) {
+			$order->delete_meta_data( '_paymob_discount_amount_cents' );
+			$order->delete_meta_data( '_paymob_discount_applied' );
+		}
+
+		$order->save();
+	}
 
 	private function update_order_total_after_discount( WC_Order $order, $json_data ) {
 
-		// Prevent duplicate execution
-		if ( $order->get_meta( '_paymob_discount_applied' ) ) {
+		$discount_details = $json_data['discount_details']
+			?? ( $json_data['transaction']['discount_details'] ?? array() );
+
+		if ( empty( $discount_details ) || ! is_array( $discount_details ) ) {
 			return;
 		}
 
-		$discount_details = $json_data['discount_details'] ?? [];
+		$detail = $discount_details[0];
+		$meta   = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$div    = max( 1, (int) $meta['cents'] );
+		$prec   = (int) $meta['precision'];
 
-		if ( empty( $discount_details[0]['discount_amount_cents'] ) ) {
+		// Pixel / API: discounted_amount_cents = discount value; discount_amount_cents = final amount.
+		$discount_cents = 0;
+		if ( isset( $detail['discounted_amount_cents'] ) ) {
+			$discount_cents = (int) $detail['discounted_amount_cents'];
+		} elseif ( isset( $detail['discount_amount_cents'] ) ) {
+			// Legacy: some payloads only send discount_amount_cents as the discount value.
+			$candidate     = (int) $detail['discount_amount_cents'];
+			$current_cents = (int) round( (float) $order->get_total() * $div );
+			if ( $candidate > 0 && $candidate < $current_cents ) {
+				$discount_cents = $candidate;
+			}
+		}
+
+		if ( $discount_cents <= 0 ) {
 			return;
 		}
 
-		$discount_cents  = (int) $discount_details[0]['discount_amount_cents'];
-		$discount_amount = $discount_cents / 100;
+		// Keep fractional discounts (0.50) — never round(cents/100) without precision (=1).
+		$discount_amount = function_exists( 'paymob_pixel_cents_to_major' )
+			? paymob_pixel_cents_to_major( $discount_cents, $div )
+			: round( $discount_cents / $div, $prec );
 
-		if ( $discount_amount <= 0 ) {
-			return;
+		$final_cents = 0;
+		if ( isset( $detail['discount_amount_cents'] ) ) {
+			$maybe_final = (int) $detail['discount_amount_cents'];
+			if ( $maybe_final > 0 && $maybe_final !== $discount_cents ) {
+				$final_cents = $maybe_final;
+			}
 		}
 
-		// Current order total
-		$current_total = (float) $order->get_total();
+		$discount_already = (bool) $order->get_meta( '_paymob_discount_applied' );
+		$total_synced     = (bool) $order->get_meta( '_paymob_pixel_total_synced' );
 
-		// New total after discount
-		$new_total = max( 0, $current_total - $discount_amount );
+		if ( function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+			paymob_pixel_begin_precise_amounts( $prec );
+		}
 
-		// ✅ Update total (subtract discount, not override)
-		$order->set_total( $new_total );
-
-		// Store meta for reference
 		$order->update_meta_data( '_paymob_discount_amount_cents', $discount_cents );
 		$order->update_meta_data( '_paymob_discount_applied', 1 );
+		$order->set_discount_total( $discount_amount );
 
-		// Add order note (audit-safe)
+		$price = function ( $amount ) use ( $order, $prec ) {
+			return function_exists( 'paymob_pixel_format_price' )
+				? paymob_pixel_format_price( $amount, $order->get_currency() )
+				: wc_price( $amount, array( 'currency' => $order->get_currency(), 'decimals' => $prec ) );
+		};
+
+		// Discount line already recorded — only refresh precise discount_total, do not re-note / re-subtract.
+		if ( $discount_already || $total_synced ) {
+			if ( ! $discount_already ) {
+				$order->add_order_note(
+					sprintf(
+						'Paymob Discount: -%s (total already synced from Pixel)',
+						$price( $discount_amount )
+					)
+				);
+			}
+			if ( function_exists( 'paymob_pixel_end_precise_amounts' ) ) {
+				paymob_pixel_end_precise_amounts();
+			}
+			$order->save();
+			return;
+		}
+
+		$current_total = (float) $order->get_total();
+		if ( $final_cents > 0 ) {
+			$new_total = function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( $final_cents, $div )
+				: round( $final_cents / $div, $prec );
+			$order->update_meta_data( '_paymob_paid_amount_cents', $final_cents );
+		} else {
+			$new_total = max( 0, round( $current_total - $discount_amount, $prec ) );
+		}
+		$order->set_total( $new_total );
+		$order->update_meta_data( '_paymob_pixel_total_synced', 1 );
+
 		$order->add_order_note(
 			sprintf(
 				'Paymob Discount Applied: -%s (Old total: %s → New total: %s)',
-				wc_price( $discount_amount ),
-				wc_price( $current_total ),
-				wc_price( $new_total )
+				$price( $discount_amount ),
+				$price( $current_total ),
+				$price( $new_total )
 			)
 		);
+
+		if ( function_exists( 'paymob_pixel_end_precise_amounts' ) ) {
+			paymob_pixel_end_precise_amounts();
+		}
 
 		$order->save();
 	}

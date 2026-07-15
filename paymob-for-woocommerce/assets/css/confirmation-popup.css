@@ -151,24 +151,3 @@
 }
 
 
-
- /* Add "New" badge to tab links where href contains section=paymob_subscription */
-.paymob-admin-tab .tablinks[href*="section=paymob_subscription"]::after {
-    content: "New";
-    display: inline-block;
-    background-color: #e46d29;
-    color: white;
-    font-weight: bold;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    margin-left: 6px;
-    margin-top: 1px;
-    animation: pulse 1s infinite;
-}
-
-/* Optional: Adjust hover color of the badge */
-.paymob-admin-tab .tablinks[href*="section=paymob_subscription"]:hover::after {
-    background-color: #d05a1f;
-}

@@ -6,7 +6,48 @@ jQuery(document).ready(function($) {
     });
 });
 
+function paymobUnlockPixelSettingsForm() {
+    var form = document.getElementById('mainform');
+    if (!form) {
+        return;
+    }
+
+    form.setAttribute('novalidate', 'novalidate');
+
+    form.querySelectorAll(
+        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id'
+    ).forEach(function(field) {
+        field.removeAttribute('required');
+        field.setAttribute('aria-required', 'false');
+    });
+
+    form.querySelectorAll('.customization-settings-table .red-star').forEach(function(star) {
+        star.remove();
+    });
+}
+
 jQuery(document).ready(function ($) {
+    var isPixelSection = window.location.search.indexOf('section=paymob_pixel') !== -1;
+
+    if (isPixelSection) {
+        paymobUnlockPixelSettingsForm();
+        window.setTimeout(paymobUnlockPixelSettingsForm, 0);
+        window.setTimeout(paymobUnlockPixelSettingsForm, 250);
+        window.setTimeout(paymobUnlockPixelSettingsForm, 1000);
+
+        document.addEventListener('click', function (event) {
+            var target = event.target;
+            if (!target || !target.classList) {
+                return;
+            }
+            if (target.classList.contains('woocommerce-save-button')) {
+                paymobUnlockPixelSettingsForm();
+            }
+        }, true);
+
+        $('#mainform').on('submit', paymobUnlockPixelSettingsForm);
+    }
+
     // Initialize Select2 for the Cards Integration ID
     $('#cards_integration_id').select2({
         placeholder: 'Select Integration ID(s)',
@@ -14,6 +55,7 @@ jQuery(document).ready(function ($) {
         width: '100%', // Ensure full width
     });
 });
+
 document.addEventListener('DOMContentLoaded', function () {
     const resetButton = document.getElementById('reset-defaults');
 
@@ -139,32 +181,3 @@ document.addEventListener("DOMContentLoaded", function () {
         "#007bff"    // Border color (Blue)
     );
 });
-
-jQuery(document).ready(function($) {
-   
-    let shouldUncheck = valuWidgetData.shouldUncheck === 'true';
-    if (shouldUncheck) {
-        setTimeout(function() {
-            let darkModeCheckbox = $('input[name="dark_mode"]');
-            let enable_widget=$('input[name="enable"]');
-            let integrationSelect = $('select[name="integration_id"]');
-            if (darkModeCheckbox.length) {
-                darkModeCheckbox.prop('checked', false); // Force uncheck
-            }
-            if (enable_widget.length) {
-                enable_widget.prop('checked', false); // Force uncheck
-            }
-             // Ensure Integration ID dropdown has "Please Select" as default
-            if (integrationSelect.length) {
-                let integrationOptions = integrationSelect.find('option'); // Get all option elements
-                if (integrationOptions.length > 1) {
-                    integrationSelect.prepend('<option value="" selected>Please Select Enabled Valu integration</option>');
-                    integrationSelect.val(''); 
-                }
-            }
-        }, 500); // Delay to allow WooCommerce settings to load
-    }
-});
-
-
-

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.4
+ * Version: 4.1.6
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-woocommerce
@@ -11,8 +11,8 @@
  * Requires at least: 5.0
  * Requires Plugins: woocommerce
  * WC requires at least: 4.0
- * WC tested up to: 10.4
- * Tested up to: 6.9
+ * WC tested up to: 10.9
+ * Tested up to: 7.0
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * Copyright: © 2024 Paymob
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.4');
+	define( 'PAYMOB_VERSION', '4.1.6');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -46,8 +46,6 @@ class Init_Paymob {
 		// Set redirect flag upon activation of PayMob plugin
 		add_action( 'activated_plugin', array( $this, 'set_redirect_flag_on_activation' ) );
 		add_action( 'plugins_loaded', array( $this, 'load' ), 0 );
-		// add_action('wp_enqueue_scripts', array($this,'paymobValuWidget'));
-		// add_action('woocommerce_after_add_to_cart_button',array($this,'paymobValuWidget'));
 		$subscription_settings = get_option('woocommerce_paymob-subscription_settings', []);
 		$allow_cancel = (!empty($subscription_settings['allow_cancel']) && $subscription_settings['allow_cancel'] === 'yes');
 
@@ -114,11 +112,6 @@ class Init_Paymob {
 
 	public function load() {
 		return WC_Paymob_Loading::load();
-	}
-
-	public function paymobValuWidget()
-	{
-		return WC_Paymob_ValuWidget::AddValuWidget();
 	}
 }
 

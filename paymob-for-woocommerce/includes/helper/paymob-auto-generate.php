@@ -463,8 +463,20 @@ class PaymobAutoGenerate {
 				$debug   = 'yes' === $debug ? '1' : '0';
 				$sec_key = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
 				$add_log = WC_LOG_DIR . 'paymob-auth.log';
-				// Make sure all IDs are unique.
-				$unique_ids = array_unique( $ids );
+				// Re-index after array_unique so JSON encodes a list [], not a dict {}.
+				// Paymob rejects: Expected a list of items but got type "dict".
+				$unique_ids = array_values(
+					array_map(
+						'intval',
+						array_filter(
+							(array) $ids,
+							static function ( $id ) {
+								return '' !== $id && null !== $id;
+							}
+						)
+					)
+				);
+				$unique_ids = array_values( array_unique( $unique_ids ) );
 				$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
 				$data       = array(
 					'url'                   => get_site_url(),
@@ -472,7 +484,7 @@ class PaymobAutoGenerate {
 					'platform'              => 'WORDPRESS',
 					'platform_version'      => WC_VERSION,
 					'plugin_version'        => PAYMOB_VERSION,
-					'selected_integrations' => $unique_ids, // Use the unique IDs.
+					'selected_integrations' => $unique_ids, // JSON list of ints.
 					'info'                  => array(),
 				);
 				Paymob::addLogs( $debug, $add_log, 'Register Framework Request Data ', $data );

@@ -2,13 +2,40 @@ jQuery( document ).ready(
 	function () {
 		jQuery( ".loader_paymob" ).fadeOut( 1500 );
 		jQuery( 'textarea' ).removeClass( 'input-text wide-input ' );
-		jQuery( 'input:text,textarea,select' ).attr( 'required', 'required' ).filter( ':visible' ).each(
-			function (i, requiredField) {
-				if(jQuery('#manualsetupconfirmationModal').is(":visible") == false){
-					(jQuery( '#' + jQuery( requiredField ).attr( 'id' ) ).after( '<span class="red-star"> *</span>' ));
+		jQuery( 'input:text,textarea,select' )
+			.filter( ':visible' )
+			.filter( function () {
+				var $field = jQuery( this );
+				if ( $field.closest( '.paymob-aw-page' ).length ) {
+					return false;
 				}
-			}
-		);
+				if ( $field.hasClass( 'paymob-aw-select' ) ) {
+					return false;
+				}
+				if ( $field.closest( '.customization-settings-table' ).length ) {
+					return false;
+				}
+				if ( $field.is( '#apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id' ) ) {
+					return false;
+				}
+				var fieldName = $field.attr( 'name' ) || '';
+				if ( fieldName.indexOf( 'woocommerce_paymob_pixel_' ) === 0 ) {
+					return false;
+				}
+				return true;
+			} )
+			.attr( 'required', 'required' )
+			.each(
+				function ( i, requiredField ) {
+					var $field = jQuery( requiredField );
+					if ( $field.closest( '.paymob-aw-page' ).length ) {
+						return;
+					}
+					if ( jQuery( '#manualsetupconfirmationModal' ).is( ':visible' ) === false ) {
+						$field.after( '<span class="red-star"> *</span>' );
+					}
+				}
+			);
 	}
 );
 jQuery( '#cpicon' ).click(

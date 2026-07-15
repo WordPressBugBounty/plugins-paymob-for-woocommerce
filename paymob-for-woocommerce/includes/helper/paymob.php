@@ -35,13 +35,56 @@ class Paymob {
 		curl_setopt($curl, CURLOPT_USERAGENT, $agent);
 
 		$response = curl_exec( $curl );
+		$http_code = (int) curl_getinfo( $curl, CURLINFO_HTTP_CODE );
 
 		if ( false === $response ) {
-			throw new Exception( 'Curl error: ' . curl_error( $curl ) );
+			$curl_error = curl_error( $curl );
+			curl_close( $curl );
+			if ( class_exists( 'Paymob_Error_Logs' ) ) {
+				Paymob_Error_Logs::log_http_raw_response(
+					'cURL failed: ' . $curl_error,
+					(string) $apiPath,
+					(string) $method,
+					0,
+					''
+				);
+			}
+			throw new Exception( 'Curl error: ' . $curl_error );
 		}
+
 		curl_close( $curl );
 
-		return json_decode( $response, false );
+		$raw_body = (string) $response;
+
+		$decoded  = json_decode( $raw_body, false );
+		$json_err = json_last_error();
+
+		if ( JSON_ERROR_NONE !== $json_err ) {
+			if ( class_exists( 'Paymob_Error_Logs' ) ) {
+				Paymob_Error_Logs::log_http_raw_response(
+					'JSON decode failed: ' . json_last_error_msg() . ' — raw body stored below.',
+					(string) $apiPath,
+					(string) $method,
+					$http_code,
+					$raw_body
+				);
+			}
+			return null;
+		}
+
+		if ( $http_code >= 400 ) {
+			if ( class_exists( 'Paymob_Error_Logs' ) ) {
+				Paymob_Error_Logs::log_http_raw_response(
+					'HTTP ' . $http_code . ' — raw Paymob body stored below.',
+					(string) $apiPath,
+					(string) $method,
+					$http_code,
+					$raw_body
+				);
+			}
+		}
+
+		return $decoded;
 	}
 
 	public function authToken( $conf ) {
@@ -218,6 +261,81 @@ class Paymob {
 		return $this->extractGatewaysData( $gateways, $path );
 	}
 
+	private static function sanitize_gateway_code( $code ) {
+		$code = strtolower( (string) $code );
+		return preg_replace( '/[^a-z0-9_-]/', '', $code );
+	}
+
+	private static function is_allowed_paymob_logo_url( $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( empty( $host ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/(^|\.)paymob\.com$/', strtolower( $host ) );
+	}
+
+	private static function is_valid_logo_image( $data ) {
+		if ( empty( $data ) || ! function_exists( 'getimagesizefromstring' ) ) {
+			return false;
+		}
+
+		$info = @getimagesizefromstring( $data );
+		if ( false === $info ) {
+			return false;
+		}
+
+		return in_array( $info[2], array( IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF, IMAGETYPE_WEBP ), true );
+	}
+
+	private static function get_safe_gateway_logo_path( $assets_dir, $code ) {
+		$assets_dir = trailingslashit( wp_normalize_path( $assets_dir ) );
+		$logo_path  = wp_normalize_path( $assets_dir . $code . '.png' );
+
+		if ( 0 !== strpos( $logo_path, $assets_dir ) ) {
+			return '';
+		}
+
+		$real_assets = realpath( $assets_dir );
+		if ( false !== $real_assets ) {
+			$parent_dir = dirname( $logo_path );
+			if ( ! is_dir( $parent_dir ) ) {
+				wp_mkdir_p( $parent_dir );
+			}
+			$real_parent = realpath( $parent_dir );
+			if ( false === $real_parent || 0 !== strpos( wp_normalize_path( $real_parent ), wp_normalize_path( $real_assets ) ) ) {
+				return '';
+			}
+		}
+
+		return $logo_path;
+	}
+
+	private static function download_gateway_logo( $logo_url, $logo_path ) {
+		if ( empty( $logo_url ) || empty( $logo_path ) || file_exists( $logo_path ) ) {
+			return;
+		}
+
+		$response = wp_safe_remote_get(
+			$logo_url,
+			array(
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			return;
+		}
+
+		$data = wp_remote_retrieve_body( $response );
+		if ( ! self::is_valid_logo_image( $data ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing validated image bytes to plugin assets cache.
+		file_put_contents( $logo_path, $data );
+	}
+
 	public static function extractGatewaysData( $gateways, $path ) {
 		$gatewaysData = array();
 
@@ -227,118 +345,33 @@ class Paymob {
 		}
 
 		foreach ( $gateways as $gateway ) {
-			$gateway      = (array) $gateway;
-			$raw_code     = isset( $gateway['code'] ) ? (string) $gateway['code'] : '';
-			$gateway_key  = strtolower( $raw_code );
-
-			if ( ! empty( $gateway['logo'] ) && is_string( $gateway['logo'] ) ) {
-				self::maybeDownloadGatewayLogo( $raw_code, $gateway['logo'], $path );
-			}
-
-			if ( '' === $gateway_key ) {
+			$code = self::sanitize_gateway_code( isset( $gateway['code'] ) ? $gateway['code'] : '' );
+			if ( '' === $code ) {
 				continue;
 			}
 
-			$gatewaysData[ $gateway_key ] = array(
-				'title' => $gateway['label'],
-				'desc'  => $gateway['description'],
-				'logo'  => $gateway['logo'],
+			$logoPath = self::get_safe_gateway_logo_path( $path, $code );
+			$logo_url = '';
+
+			if ( ! empty( $gateway['logo'] ) ) {
+				$logo_url = esc_url_raw( $gateway['logo'], array( 'https' ) );
+				if ( $logo_url && self::is_allowed_paymob_logo_url( $logo_url ) ) {
+					self::download_gateway_logo( $logo_url, $logoPath );
+				} else {
+					$logoPath = '';
+				}
+			} else {
+				$logoPath = '';
+			}
+
+			$gatewaysData[ $code ] = array(
+				'title' => isset( $gateway['label'] ) ? $gateway['label'] : '',
+				'desc'  => isset( $gateway['description'] ) ? $gateway['description'] : '',
+				'logo'  => $logo_url ? $logo_url : ( isset( $gateway['logo'] ) ? $gateway['logo'] : '' ),
 			);
 		}
 
 		return $gatewaysData;
-	}
-
-	/**
-	 * Download and cache a gateway logo when the code, URL, and file contents are safe.
-	 *
-	 * @param string $raw_code Gateway code from the Paymob catalogue.
-	 * @param string $logo_url Remote logo URL from the Paymob catalogue.
-	 * @param string $path     Target assets directory.
-	 * @return bool
-	 */
-	public static function maybeDownloadGatewayLogo( $raw_code, $logo_url, $path ) {
-		$gateway_code = strtolower( basename( sanitize_file_name( (string) $raw_code ) ) );
-		if ( empty( $gateway_code ) || ! preg_match( '/^[a-z0-9_-]+$/', $gateway_code ) ) {
-			return false;
-		}
-
-		$assets_dir = realpath( $path );
-		if ( false === $assets_dir ) {
-			$assets_dir = wp_normalize_path( rtrim( $path, '/\\' ) );
-		} else {
-			$assets_dir = wp_normalize_path( $assets_dir );
-		}
-		$assets_dir = trailingslashit( $assets_dir );
-
-		$logo_path = wp_normalize_path( $assets_dir . $gateway_code . '.png' );
-		if ( 0 !== strpos( $logo_path, $assets_dir ) || file_exists( $logo_path ) ) {
-			return false;
-		}
-
-		if ( empty( $logo_url ) || ! is_string( $logo_url ) || ! self::isValidPaymobLogoUrl( $logo_url ) ) {
-			return false;
-		}
-
-		$logo_data = self::fetchPaymobLogo( $logo_url );
-		if ( false === $logo_data || ! self::isValidPngImage( $logo_data ) ) {
-			return false;
-		}
-
-		return false !== file_put_contents( $logo_path, $logo_data );
-	}
-
-	/**
-	 * Validate that a gateway logo URL points to an expected Paymob host.
-	 *
-	 * @param string $url Logo URL from the Paymob gateway catalogue.
-	 * @return bool
-	 */
-	private static function isValidPaymobLogoUrl( $url ) {
-		$parsed = wp_parse_url( $url );
-		if ( empty( $parsed['host'] ) || empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
-			return false;
-		}
-
-		return (bool) preg_match( '/^(.*\.)?paymob\.com$/i', $parsed['host'] );
-	}
-
-	/**
-	 * Fetch gateway logo bytes from Paymob.
-	 *
-	 * @param string $url Logo URL from the Paymob gateway catalogue.
-	 * @return string|false
-	 */
-	private static function fetchPaymobLogo( $url ) {
-		$response = wp_remote_get(
-			$url,
-			array(
-				'timeout'    => 30,
-				'user-agent' => self::filterVar( 'HTTP_USER_AGENT', 'SERVER' ),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return false;
-		}
-
-		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
-		if ( ! empty( $content_type ) && false === stripos( $content_type, 'image' ) ) {
-			return false;
-		}
-
-		$body = wp_remote_retrieve_body( $response );
-		return ( '' !== $body ) ? $body : false;
-	}
-
-	/**
-	 * Verify downloaded logo bytes are a PNG image.
-	 *
-	 * @param string $data Raw file contents.
-	 * @return bool
-	 */
-	private static function isValidPngImage( $data ) {
-		return is_string( $data ) && strlen( $data ) > 8 && 0 === strpos( $data, "\x89PNG\r\n\x1a\n" );
 	}
 	public function registerFramework( $secKey, $data ) {
 		$flash       = $this->getApiUrl( $this->getCountryCode( $secKey ) );
@@ -649,30 +682,6 @@ class Paymob {
 		
 	}
 
-	public function valuWidget( $secKey, $data) {
-
-		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
-		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
-		$apiUrl = $this->getApiUrl( $this->getCountryCode( $secKey ) );
-		// $widgets = $this->HttpRequest( $flash, 'POST', $header, $data );
-		$widgets = $this->HttpRequest( $apiUrl.'api/acceptance/valu_widget/inquire', 'POST', $header, $data );
-		$note_i    = 'ValuWidget response ';
-		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $widgets, 1 ) );
-		if ( empty( $widgets ) ) {
-			$this->addLogs( $this->debug_order, $this->file, $note_i, $widgets );
-		}
-		
-		if ( isset( $widgets ) ) {
-			$widgets = $widgets;
-		}
-		else {
-			$widgets = ( isset( $widgets ) ) ? $widgets : 'Something went wrong';
-		}
-		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $widgets ) );
-		return $widgets;
-	}
-
-	
 	public function createSubscriptionPlan($token,$secKey, $data)
 	{
 		$header = array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token );

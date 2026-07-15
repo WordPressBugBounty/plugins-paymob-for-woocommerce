@@ -66,7 +66,6 @@ class WC_Paymob_HandelUpdate {
 			$mainOptions    = get_option( 'woocommerce_paymob-main_settings' );
 			// unset($mainOptions['mode']);
 			// update_option( 'woocommerce_paymob-main_settings', $mainOptions);
-// echo 124; die;
 			$mode_= isset( $mainOptions['mode'] ) ? $mainOptions['mode'] : '';
 			// echo "<pre>";print_r($mode_);exit;
 			if ( empty( $mode_ ) ) {
@@ -116,7 +115,7 @@ class WC_Paymob_HandelUpdate {
 					PaymobAutoGenerate::register_framework( $ids );
 					$gatewayData = get_option( 'woocommerce_paymob_gateway_data' );
 					if ( empty( $gatewayData ) ) {
-						$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '' );
+						$gatewayData = $paymobReq->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/' , isset( $result['token'] ) ? $result['token'] : '');
 						update_option( 'woocommerce_paymob_gateway_data', $gatewayData );
 						delete_option( 'woocommerce_paymob_gateway_data_failure' );
 					}

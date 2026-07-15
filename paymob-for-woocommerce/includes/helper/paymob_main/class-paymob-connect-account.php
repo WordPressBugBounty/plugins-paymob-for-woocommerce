@@ -8,6 +8,13 @@ class Paymob_Main_Connect_Account {
 			wp_send_json_error(array('message' => 'Invalid nonce.'));
 			return;
 		}
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
+
+		Paymob_Main_Partner_Info::mark_partner_connect_started();
 		// Get country code
 		$base_country_code = get_option('woocommerce_default_country');
 		$base_country_code = explode(':', $base_country_code)[0];
@@ -29,8 +36,8 @@ class Paymob_Main_Connect_Account {
 		$paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
 		$response = $paymobReq->getOnboardingUrl('egy', $data);
 		// Check for errors in Paymob response
-		$currentURL = Paymob_Main_Partner_Info::get_onboarding_redirect_url();
-        $encoded_url=urlencode($currentURL);
+		$currentURL = Paymob_Main_Partner_Info::get_partner_redirect_url();
+		$encoded_url = urlencode( $currentURL );
 		$url='https://onboarding.paymob.com/auth/country-selection?partner=woocommerce&redirect_url='.$encoded_url;
 		if (isset($response->error) || isset($response->detail)) {
 			wp_send_json_error(array('url' => $url));

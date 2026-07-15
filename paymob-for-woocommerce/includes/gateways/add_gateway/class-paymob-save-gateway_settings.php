@@ -70,47 +70,141 @@ class Paymob_Save_Gateway_Settings {
 		}
 	}
 
-	public static function save_paymob_valu_widget_settings() {
-		global $current_section, $wpdb;
-	
-		if ('valu_widget' !== $current_section) {
+	/**
+	 * Intercepts the Affordability Widget POST submission before WooCommerce's own settings save flow
+	 * runs at `wp_loaded:10`. By short-circuiting here (with `exit;`) we guarantee that:
+	 *  - When validation fails, the option is NOT updated and WC's "Your settings have been saved."
+	 *    message never gets queued (because WC_Admin_Settings::save() is never called).
+	 *  - When validation passes, we persist the option ourselves and redirect back with a clean URL.
+	 */
+	public static function intercept_widget_save() {
+		if ( ! is_admin() ) {
 			return;
 		}
-	
-		// Get form data
-		$payment_enabled = Paymob::filterVar('enable', 'POST') ? 'yes' : 'no';
-		$integration_id  = Paymob::filterVar('integration_id', 'POST') ? sanitize_text_field(Paymob::filterVar('integration_id', 'POST')) : '';
-		$dark_mode       = Paymob::filterVar('dark_mode', 'POST') ? 'yes' : 'no';
-	
-		// Check if the ValU Widget is enabled
-		if ($payment_enabled !== 'yes') {
-			// Redirect back with an error message
-			wp_redirect(add_query_arg(array(
-				'page'              => 'wc-settings',
-				'tab'               => 'checkout',
-				'section'           => 'valu_widget',
-				'settings-error'    => 'valu_widget_disabled'
-			), admin_url('admin.php')));
+		if ( empty( $_POST['save'] ) ) {
+			return;
+		}
+		if ( empty( $_REQUEST['page'] ) || 'wc-settings' !== $_REQUEST['page'] ) {
+			return;
+		}
+		if ( empty( $_REQUEST['tab'] ) || 'checkout' !== $_REQUEST['tab'] ) {
+			return;
+		}
+		if ( empty( $_REQUEST['section'] ) || 'widget' !== sanitize_title( wp_unslash( $_REQUEST['section'] ) ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+		if ( empty( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) ), 'woocommerce-settings' ) ) {
+			return;
+		}
+
+		$enable_raw              = isset( $_POST['enable'] ) ? wp_unslash( $_POST['enable'] ) : '';
+		$payment_enabled         = ( '' !== (string) $enable_raw && 'no' !== $enable_raw ) ? 'yes' : 'no';
+
+		$integration_id = '';
+		if ( isset( $_POST['paymob_aw_integration_id'] ) ) {
+			$integration_id = sanitize_text_field( wp_unslash( $_POST['paymob_aw_integration_id'] ) );
+		} elseif ( isset( $_POST['integration_id'] ) ) {
+			$integration_id = sanitize_text_field( wp_unslash( $_POST['integration_id'] ) );
+		}
+		if ( class_exists( 'Paymob_Widget_Settings' ) ) {
+			$integration_id = Paymob_Widget_Settings::resolve_selected_integration_id( $integration_id );
+		}
+
+		$min_product_enabled_raw = isset( $_POST['min_product_enabled'] ) ? wp_unslash( $_POST['min_product_enabled'] ) : '';
+		$min_product_enabled     = ( '' !== (string) $min_product_enabled_raw && 'no' !== $min_product_enabled_raw ) ? 'yes' : 'no';
+		$min_product_amount      = isset( $_POST['min_product_amount'] ) ? sanitize_text_field( wp_unslash( $_POST['min_product_amount'] ) ) : '';
+
+		$min_cart_enabled_raw    = isset( $_POST['min_cart_enabled'] ) ? wp_unslash( $_POST['min_cart_enabled'] ) : '';
+		$min_cart_enabled        = ( '' !== (string) $min_cart_enabled_raw && 'no' !== $min_cart_enabled_raw ) ? 'yes' : 'no';
+		$min_cart_amount         = isset( $_POST['min_cart_amount'] ) ? sanitize_text_field( wp_unslash( $_POST['min_cart_amount'] ) ) : '';
+
+		$widget_theme            = isset( $_POST['widget_theme'] ) ? sanitize_key( wp_unslash( $_POST['widget_theme'] ) ) : 'primary';
+		if ( ! in_array( $widget_theme, array( 'primary', 'light', 'dark' ), true ) ) {
+			$widget_theme = 'primary';
+		}
+
+		$dark_mode = ( 'dark' === $widget_theme ) ? 'yes' : 'no';
+
+		$blocking_errors = array();
+		$field_warnings  = array();
+
+		if ( 'yes' === $payment_enabled && '' === $integration_id ) {
+			$blocking_errors[] = __( 'Please select an integration ID to enable the widget.', 'paymob-woocommerce' );
+			$payment_enabled   = 'no';
+		}
+
+		if ( 'yes' === $min_product_enabled ) {
+			$min_product_value = is_numeric( $min_product_amount ) ? (float) $min_product_amount : 0.0;
+			if ( $min_product_value <= 0 ) {
+				$field_warnings[]    = __( 'Please enter a minimum product amount.', 'paymob-woocommerce' );
+				$min_product_enabled = 'no';
+				$min_product_amount  = '';
+			}
+		} else {
+			$min_product_amount = '';
+		}
+
+		if ( 'yes' === $min_cart_enabled ) {
+			$min_cart_value = is_numeric( $min_cart_amount ) ? (float) $min_cart_amount : 0.0;
+			if ( $min_cart_value <= 0 ) {
+				$field_warnings[]  = __( 'Please enter a minimum cart amount.', 'paymob-woocommerce' );
+				$min_cart_enabled  = 'no';
+				$min_cart_amount   = '';
+			}
+		} else {
+			$min_cart_amount = '';
+		}
+
+		// Discard any buffered output so the redirect header can actually be sent.
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+		nocache_headers();
+
+		if ( ! empty( $blocking_errors ) ) {
+			set_transient( 'paymob_aw_flash_errors', $blocking_errors, 60 );
+			wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=widget' ) );
 			exit;
 		}
-	
-		// Save settings
-		$default_settings = array(
-			'enabled_widget'  => $payment_enabled,
-			'integration_id'  => $integration_id,
-			'dark_mode'       => $dark_mode
+
+		$widget_settings = array(
+			'enabled_widget'      => $payment_enabled,
+			'integration_id'      => $integration_id,
+			'min_product_enabled' => $min_product_enabled,
+			'min_product_amount'  => $min_product_amount,
+			'min_cart_enabled'    => $min_cart_enabled,
+			'min_cart_amount'     => $min_cart_amount,
+			'widget_theme'        => $widget_theme,
+			'dark_mode'           => $dark_mode,
 		);
-	
-		update_option('woocommerce_valu_widget_settings', $default_settings);
-	
-		// Redirect back with success message
-		wp_redirect(add_query_arg(array(
-			'page'              => 'wc-settings',
-			'tab'               => 'checkout',
-			'section'           => 'valu_widget',
-			'settings-updated'  => 'true'
-		), admin_url('admin.php')));
+
+		update_option( 'woocommerce_paymob_widget_settings', $widget_settings );
+
+		delete_transient( 'paymob_aw_flash_errors' );
+		delete_transient( 'paymob_aw_flash_success' );
+
+		if ( ! empty( $field_warnings ) ) {
+			set_transient( 'paymob_aw_flash_errors', $field_warnings, 60 );
+		}
+
+		set_transient( 'paymob_aw_flash_success', __( 'Your settings have been saved.', 'paymob-woocommerce' ), 60 );
+		wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=widget&settings-updated=true' ) );
 		exit;
+	}
+
+	/**
+	 * Legacy entry point still wired through `woocommerce_update_options_checkout`.
+	 *
+	 * The real save is performed earlier in {@see Paymob_Save_Gateway_Settings::intercept_widget_save()}
+	 * (hooked to `wp_loaded`). By the time WC's action chain runs, that handler has already
+	 * exited the request on the widget section, so this method is intentionally a no-op kept
+	 * for backwards compatibility with `add-paymob-gateway.php`.
+	 */
+	public static function save_paymob_widget_settings() {
+		// Intentionally empty — see intercept_widget_save().
 	}
 
 	public static function save_paymob_subscription_settings() {
@@ -184,85 +278,35 @@ class Paymob_Save_Gateway_Settings {
 	
 }
 
-// ✅ Move this outside the class!
+// Intercept the Affordability Widget save before WC's own settings save flow runs (wp_loaded:10),
+// so a failed validation never lets WC queue its "Your settings have been saved." message.
+add_action( 'wp_loaded', array( 'Paymob_Save_Gateway_Settings', 'intercept_widget_save' ), 5 );
+
 add_action('admin_notices', function () {
-    if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
-        echo '<div class="updated notice is-dismissible"><p>Your settings have been saved.</p></div>';
-    }
-    
-    if (isset($_GET['settings-error']) && $_GET['settings-error'] === 'valu_widget_disabled') {
-        echo '<div class="notice notice-error is-dismissible"><p>You must enable the ValU Widget before saving settings.</p></div>';
-    }
-});
+    $is_widget_page = isset( $_GET['page'], $_GET['tab'], $_GET['section'] )
+        && 'wc-settings' === $_GET['page']
+        && 'checkout' === $_GET['tab']
+        && 'widget' === $_GET['section'];
 
-
-add_action('admin_footer', function () {
-    // Show the message only on the ValU Widget settings page
-    if (isset($_GET['page']) && $_GET['page'] === 'wc-settings' && isset($_GET['tab']) && $_GET['tab'] === 'checkout' && isset($_GET['section']) && $_GET['section'] === 'valu_widget') {
-        $valu_integration_ids = PaymobAutoGenerate::get_valu_integration_ids();
-        if (empty($valu_integration_ids)) {
-            ?>
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    // Create the overlay background
-                    let overlay = document.createElement("div");
-                    overlay.className = "valu-overlay";
-                    overlay.style.position = "fixed";
-                    overlay.style.top = "0";
-                    overlay.style.left = "0";
-                    overlay.style.width = "100%";
-                    overlay.style.height = "100%";
-                    overlay.style.background = "rgba(0, 0, 0, 0.3)"; // Semi-transparent background
-                    overlay.style.zIndex = "999";
-
-                    // Create the warning box
-                    let warningBox = document.createElement("div");
-                    warningBox.className = "valu-warning-box";
-                    warningBox.innerHTML = `
-                        <span class="valu-close-btn">×</span>
-                        <strong>Please enable ValU Integration ID from the Payment Integrations section to use the ValU Widget!!</strong>
-                    `;
-
-                    // Style the warning box
-                    warningBox.style.position = "fixed";
-                    warningBox.style.top = "50%";
-                    warningBox.style.left = "50%";
-                    warningBox.style.transform = "translate(-50%, -50%)"; /* Centering */
-                    warningBox.style.width = "450px";
-                    warningBox.style.background = "#dff0d8"; /* Light green */
-                    warningBox.style.color = "#3c763d";
-                    warningBox.style.padding = "15px";
-                    warningBox.style.borderRadius = "8px";
-                    warningBox.style.border = "2px solid #3c763d"; /* Green border */
-                    warningBox.style.textAlign = "center";
-                    warningBox.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
-                    warningBox.style.zIndex = "1000";
-
-                    // Style the close button (X)
-                    let closeButton = warningBox.querySelector(".valu-close-btn");
-                    closeButton.style.position = "absolute";
-                    closeButton.style.top = "5px";
-                    closeButton.style.right = "10px";
-                    closeButton.style.background = "transparent";
-                    closeButton.style.color = "#3c763d"; /* Match border color */
-                    closeButton.style.border = "none"; /* Remove circle */
-                    closeButton.style.cursor = "pointer";
-                    closeButton.style.fontSize = "20px"; /* Bigger close button */
-                    closeButton.style.fontWeight = "bold";
-
-                    // Close box and redirect when clicking X
-                    closeButton.addEventListener("click", function () {
-                        document.body.removeChild(overlay); // Remove overlay
-                        window.location.href = "admin.php?page=wc-settings&tab=checkout&section=paymob_list_gateways"; // Redirect
-                    });
-
-                    // Append elements to the page
-                    overlay.appendChild(warningBox);
-                    document.body.appendChild(overlay);
-                });
-            </script>
-            <?php
+    if ( $is_widget_page ) {
+        $flash_errors = get_transient( 'paymob_aw_flash_errors' );
+        if ( ! empty( $flash_errors ) && is_array( $flash_errors ) ) {
+            foreach ( $flash_errors as $err ) {
+                echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( $err ) . '</p></div>';
+            }
+            delete_transient( 'paymob_aw_flash_errors' );
         }
+
+        $flash_success = get_transient( 'paymob_aw_flash_success' );
+        if ( ! empty( $flash_success ) ) {
+            echo '<div class="updated notice is-dismissible"><p>' . esc_html( $flash_success ) . '</p></div>';
+            delete_transient( 'paymob_aw_flash_success' );
+            return;
+        }
+    }
+
+    if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
+        echo '<div class="updated notice is-dismissible"><p>' . esc_html__( 'Your settings have been saved.', 'paymob-woocommerce' ) . '</p></div>';
     }
 });
 
