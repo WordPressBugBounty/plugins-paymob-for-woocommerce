@@ -248,6 +248,7 @@ function enqueue_paymob_list_gateways_styles() {
 
 add_action( 'admin_enqueue_scripts', 'enqueue_paymob_admin_scripts' );
 add_action( 'admin_enqueue_scripts', array( 'Paymob_Style', 'maybe_enqueue_checkout_tabs_styles' ), 20 );
+add_action( 'admin_enqueue_scripts', array( 'Paymob_Style', 'maybe_enqueue_order_admin_styles' ), 20 );
 /**
  * Enqueue JavaScript to handle AJAX for gateway deletion and enabling/disabling.
  */

@@ -1483,6 +1483,13 @@ function ajaxCall(billingData, totalAmount, forcereload = false, options = {}) {
     }
 
     const opts = options || {};
+    // After successful pay → thank-you, next checkout must POST a fresh intention.
+    try {
+        if (sessionStorage.getItem('paymob_pixel_force_new') === '1') {
+            opts.forceNew = true;
+            sessionStorage.removeItem('paymob_pixel_force_new');
+        }
+    } catch (e) {}
     const resetDiscount = !!opts.resetDiscount;
     const forceNew = !!opts.forceNew;
 
@@ -1660,6 +1667,14 @@ function callbackAjaxCall(data, url = null) {
         success: function (response) {
             if (response.success) {
                 console.log('callbackAjaxCall success')
+                // Paid intention must not stay mounted for the next checkout / Place Order.
+                window.paymobActiveClientSecret = null;
+                window.paymobDiscountApplied = false;
+                window.paymobTotalsSignature = null;
+                window.paymobCreateOrderInFlight = false;
+                try {
+                    sessionStorage.setItem('paymob_pixel_force_new', '1');
+                } catch (e) {}
                 window.location.href = response.data.url;
             }
         }

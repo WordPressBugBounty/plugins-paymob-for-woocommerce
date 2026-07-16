@@ -18,8 +18,11 @@ class Paymob_WooCommerce {
 		add_filter( 'plugin_action_links_' . PAYMOB_PLUGIN, array( $this, 'add_plugin_links' ) );
 		add_filter( 'woocommerce_payment_gateways', array( $this, 'register' ), 0 );
 		add_filter( 'woocommerce_get_order_item_totals', array( $this, 'paymob_add_fees_to_order_totals_display' ), 20, 2 );
+		add_filter( 'woocommerce_get_formatted_order_total', array( $this, 'paymob_formatted_order_total' ), 20, 4 );
+		add_filter( 'wc_price_args', array( $this, 'paymob_wc_price_args_force_decimals' ), 20 );
 		add_action( 'woocommerce_admin_order_totals_after_discount', array( $this, 'paymob_admin_order_instant_refund_fee_row' ), 20 );
 		add_action( 'woocommerce_order_item_add_action_buttons', array( $this, 'paymob_admin_refund_non_refundable_notice' ), 20 );
+		add_action( 'woocommerce_admin_order_data_after_order_details', array( $this, 'paymob_admin_force_precise_discount_display' ), 5 );
 		add_action( 'woocommerce_api_paymob_callback', array( $this, 'callback' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_enqueue_scripts' ) );
 		add_action( 'admin_head', array( $this, 'hide_block_main_gateway' ) );
@@ -883,6 +886,10 @@ class Paymob_WooCommerce {
 		) {
 			$status = $order->get_status();
 			if ( 'pending' !== $status && 'failed' !== $status && 'on-hold' !== $status ) {
+				// Already paid — clear session so next checkout does not reuse this CS.
+				if ( function_exists( 'paymob_pixel_clear_session_after_payment' ) ) {
+					paymob_pixel_clear_session_after_payment();
+				}
 				$received_url=$order->get_checkout_order_received_url();
 				if(Paymob::filterVar( 'afterpayment' )){
 					wp_send_json_success(array('url' => $received_url));
@@ -902,6 +909,10 @@ class Paymob_WooCommerce {
 			$paymentMethodTitle = 'Paymob - ' . ucwords( $type );
 			$order->set_payment_method_title( $paymentMethodTitle );
 			$redirect_url = $order->get_checkout_order_received_url();
+			// Drop paid intention from session (fixes next Place Order seeing "already paid").
+			if ( function_exists( 'paymob_pixel_clear_session_after_payment' ) ) {
+				paymob_pixel_clear_session_after_payment();
+			}
 		} else {
 			$redirect_url = wc_get_checkout_url();
 			$gatewayError = Paymob::filterVar( 'data_message' );
@@ -934,8 +945,13 @@ class Paymob_WooCommerce {
         WC()->session->set( 'chosen_payment_method', '' );
 	    WC()->session->set( 'order_awaiting_payment', null );
 
+		// Ensure paid Pixel CS is never left for the next checkout (afterpayment path).
+		if ( empty( $err ) && function_exists( 'paymob_pixel_clear_session_after_payment' ) ) {
+			paymob_pixel_clear_session_after_payment();
+		}
+
 		if(Paymob::filterVar( 'afterpayment' )){
-			$session = WC()->session;     // Unset the order 
+			$session = WC()->session;
 			$session->__unset('order_id');
    			wp_send_json_success(array('url' => $redirect_url.$err));
 		}else{
@@ -1110,6 +1126,128 @@ class Paymob_WooCommerce {
 	
 
 	/**
+	 * Force 2dp on Paymob Pixel order price formatting (admin Discount 1.50 not 2).
+	 *
+	 * @param array $args wc_price args.
+	 * @return array
+	 */
+	public function paymob_wc_price_args_force_decimals( $args ) {
+		if ( empty( $GLOBALS['paymob_pixel_force_decimals'] ) ) {
+			return $args;
+		}
+		$args['decimals'] = max(
+			isset( $args['decimals'] ) ? (int) $args['decimals'] : 0,
+			(int) $GLOBALS['paymob_pixel_force_decimals']
+		);
+		return $args;
+	}
+
+	/**
+	 * On Edit Order: keep Pixel discount/totals at Paymob precision (e.g. 1.50 not rounded to 2).
+	 *
+	 * @param WC_Order $order Order.
+	 */
+	public function paymob_admin_force_precise_discount_display( $order ) {
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		$discount_cents = (int) $order->get_meta( '_paymob_discount_amount_cents' );
+		$paid_cents     = (int) $order->get_meta( '_paymob_paid_amount_cents' );
+		$fee_cents      = (int) $order->get_meta( '_paymob_instant_refund_fees' );
+		if ( $discount_cents <= 0 && $paid_cents <= 0 && $fee_cents <= 0 ) {
+			return;
+		}
+
+		$meta = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$div  = max( 1, (int) $meta['cents'] );
+		$prec = (int) $meta['precision'];
+
+		if ( function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+			paymob_pixel_begin_precise_amounts( $prec );
+		}
+
+		$changed = false;
+		if ( $discount_cents > 0 ) {
+			$exact = function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( $discount_cents, $div )
+				: round( $discount_cents / $div, $prec );
+			if ( abs( (float) $order->get_discount_total() - $exact ) > 0.001 ) {
+				$order->set_discount_total( $exact );
+				$changed = true;
+			}
+		}
+		if ( $paid_cents > 0 ) {
+			$exact_total = function_exists( 'paymob_pixel_cents_to_major' )
+				? paymob_pixel_cents_to_major( $paid_cents, $div )
+				: round( $paid_cents / $div, $prec );
+			if ( abs( (float) $order->get_total() - $exact_total ) > 0.001 ) {
+				$order->set_total( $exact_total );
+				$changed = true;
+			}
+		}
+		if ( $changed ) {
+			$order->save();
+		}
+	}
+
+	/**
+	 * Order overview Total (thank-you header) uses get_formatted_order_total().
+	 * Align it with Paymob paid cents so it matches the Order details Total row (e.g. 4.50 not 5).
+	 *
+	 * @param string   $formatted_total Formatted total HTML.
+	 * @param WC_Order $order           Order.
+	 * @param string   $tax_display     Tax display mode.
+	 * @param bool     $display_refunded Whether refunded totals are shown.
+	 * @return string
+	 */
+	public function paymob_formatted_order_total( $formatted_total, $order, $tax_display = '', $display_refunded = true ) {
+		if ( ! $order instanceof WC_Order ) {
+			return $formatted_total;
+		}
+
+		$paid_cents = (int) $order->get_meta( '_paymob_paid_amount_cents' );
+		if ( $paid_cents <= 0 ) {
+			return $formatted_total;
+		}
+
+		$is_paymob = ( 'paymob-pixel' === $order->get_payment_method() )
+			|| (bool) $order->get_meta( '_paymob_pixel_total_synced' )
+			|| (bool) $order->get_meta( '_paymob_discount_applied' );
+		if ( ! $is_paymob ) {
+			return $formatted_total;
+		}
+
+		$meta     = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$div      = max( 1, (int) $meta['cents'] );
+		$prec     = (int) $meta['precision'];
+		$currency = $order->get_currency();
+		$paid     = function_exists( 'paymob_pixel_cents_to_major' )
+			? paymob_pixel_cents_to_major( $paid_cents, $div )
+			: round( $paid_cents / $div, $prec );
+
+		// Persist once per request so thank-you overview and future views stay aligned.
+		static $fixed_totals = array();
+		$oid = $order->get_id();
+		$current = (float) $order->get_total();
+		if ( $oid && empty( $fixed_totals[ $oid ] ) && abs( $current - $paid ) > 0.001 ) {
+			if ( function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+				paymob_pixel_begin_precise_amounts( $prec );
+			}
+			$order->set_total( $paid );
+			$order->save();
+			if ( function_exists( 'paymob_pixel_end_precise_amounts' ) ) {
+				paymob_pixel_end_precise_amounts();
+			}
+			$fixed_totals[ $oid ] = true;
+		}
+
+		return function_exists( 'paymob_pixel_format_price' )
+			? paymob_pixel_format_price( $paid, $currency )
+			: wc_price( $paid, array( 'currency' => $currency, 'decimals' => $prec ) );
+	}
+
+	/**
 	 * Show Instant Refund fee on thank-you, emails, and order view totals.
 	 *
 	 * @param array    $totals Order totals rows.
@@ -1132,9 +1270,19 @@ class Paymob_WooCommerce {
 		$instant_refund_fees = (int) $order->get_meta( '_paymob_instant_refund_fees' );
 
 		$needs_precise = ( $discount_cents > 0 || $paid_cents > 0 || $instant_refund_fees > 0 )
-			&& ( 'paymob-pixel' === $order->get_payment_method() || $order->get_meta( '_paymob_pixel_total_synced' ) );
+			&& (
+				'paymob-pixel' === $order->get_payment_method()
+				|| $order->get_meta( '_paymob_pixel_total_synced' )
+				|| $order->get_meta( '_paymob_discount_applied' )
+				|| $order->get_meta( '_paymob_instant_refund' )
+			);
 
-		// Rebuild Discount / Total from cents so shop "0 decimals" cannot show 0.50 as 1.
+		// Always force Paymob precision while printing these rows (Discount 1.50 not 2).
+		if ( $needs_precise && function_exists( 'paymob_pixel_begin_precise_amounts' ) ) {
+			paymob_pixel_begin_precise_amounts( $prec );
+		}
+
+		// Rebuild Discount / Total from cents so shop "0 decimals" cannot show 0.50/1.50 as 1/2.
 		if ( $needs_precise ) {
 			if ( $discount_cents > 0 && ! empty( $totals['discount'] ) ) {
 				$discount_major = function_exists( 'paymob_pixel_cents_to_major' )
@@ -1265,20 +1413,45 @@ class Paymob_WooCommerce {
 		if ( $fee_cents <= 0 ) {
 			return;
 		}
-		$shown     = true;
-		$fee_major = $fee_cents / 100;
-		$max       = max( 0, (float) $order->get_total() - $fee_major );
-		echo '<div class="notice notice-warning inline" style="margin:8px 0;"><p><strong>'
-			. esc_html__( 'Paymob Instant Refund:', 'paymob-woocommerce' ) . '</strong> '
-			. esc_html(
-				sprintf(
-					/* translators: 1: fee, 2: max refundable */
-					__( '%1$s Instant Refund Fee is non-refundable. Max refundable from Woo: %2$s.', 'paymob-woocommerce' ),
-					wp_strip_all_tags( wc_price( $fee_major, array( 'currency' => $order->get_currency() ) ) ),
-					wp_strip_all_tags( wc_price( $max, array( 'currency' => $order->get_currency() ) ) )
-				)
-			)
-			. '</p></div>';
+		$shown = true;
+
+		$meta      = function_exists( 'paymob_pixel_cents_meta' ) ? paymob_pixel_cents_meta() : array( 'cents' => 100, 'precision' => 2 );
+		$div       = max( 1, (int) $meta['cents'] );
+		$prec      = (int) $meta['precision'];
+		$currency  = $order->get_currency();
+		$fee_major = function_exists( 'paymob_pixel_cents_to_major' )
+			? paymob_pixel_cents_to_major( $fee_cents, $div )
+			: round( $fee_cents / $div, $prec );
+		$max = max( 0, round( (float) $order->get_total() - $fee_major, $prec ) );
+
+		$fee_label = function_exists( 'paymob_pixel_format_price' )
+			? paymob_pixel_format_price( $fee_major, $currency )
+			: wc_price( $fee_major, array( 'currency' => $currency, 'decimals' => $prec ) );
+		$max_label = function_exists( 'paymob_pixel_format_price' )
+			? paymob_pixel_format_price( $max, $currency )
+			: wc_price( $max, array( 'currency' => $currency, 'decimals' => $prec ) );
+		?>
+		<div class="paymob-ir-refund-notice" role="note">
+			<div class="paymob-ir-refund-notice__inner">
+				<span class="paymob-ir-refund-notice__badge" aria-hidden="true">!</span>
+				<div class="paymob-ir-refund-notice__body">
+					<p class="paymob-ir-refund-notice__title">
+						<?php esc_html_e( 'Paymob Instant Refund', 'paymob-woocommerce' ); ?>
+					</p>
+					<ul class="paymob-ir-refund-notice__list">
+						<li>
+							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Instant Refund Fee (non-refundable)', 'paymob-woocommerce' ); ?></span>
+							<strong class="paymob-ir-refund-notice__value"><?php echo wp_kses_post( $fee_label ); ?></strong>
+						</li>
+						<li>
+							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Max refundable from Woo', 'paymob-woocommerce' ); ?></span>
+							<strong class="paymob-ir-refund-notice__value"><?php echo wp_kses_post( $max_label ); ?></strong>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**

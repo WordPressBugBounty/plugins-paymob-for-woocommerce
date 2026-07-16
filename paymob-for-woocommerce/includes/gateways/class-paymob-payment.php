@@ -304,13 +304,25 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$amount = round( (float) $amount, $round );
 
 		if ( $ir_fee_major > 0 && $amount > $refundable ) {
+			$currency = $order->get_currency();
+			// Plain text only — WooCommerce refund UI shows WP_Error via browser alert() (no HTML).
+			$fee_label = html_entity_decode(
+				wp_strip_all_tags( wc_price( $ir_fee_major, array( 'currency' => $currency ) ) ),
+				ENT_QUOTES,
+				'UTF-8'
+			);
+			$max_label = html_entity_decode(
+				wp_strip_all_tags( wc_price( $refundable, array( 'currency' => $currency ) ) ),
+				ENT_QUOTES,
+				'UTF-8'
+			);
 			return new WP_Error(
 				'paymob_ir_non_refundable',
 				sprintf(
 					/* translators: 1: non-refundable fee, 2: max refundable */
 					__( 'Instant Refund Fee %1$s is non-refundable. Maximum refundable amount is %2$s.', 'paymob-woocommerce' ),
-					wc_price( $ir_fee_major, array( 'currency' => $order->get_currency() ) ),
-					wc_price( $refundable, array( 'currency' => $order->get_currency() ) )
+					$fee_label,
+					$max_label
 				)
 			);
 		}

@@ -75,6 +75,20 @@ class Paymob_Update_Pixel_Data {
 		$existing_amount    = WC()->session ? (int) WC()->session->get( 'PaymobCentsAmount' ) : 0;
 		$intention_order_id = WC()->session ? WC()->session->get( 'intention_order_id' ) : '';
 		$session_final      = WC()->session ? (int) WC()->session->get( 'paymob_final_cents' ) : 0;
+		$pixel_identifier   = WC()->session ? (string) WC()->session->get( 'pixel_identifier' ) : '';
+
+		// Never reuse a CS already linked to a paid/completed Woo order (Place Order → "already paid").
+		if ( ! $force_new && '' !== $existing_cs && self::session_intention_already_paid( $pixel_identifier ) ) {
+			$force_new = true;
+			if ( function_exists( 'paymob_pixel_clear_discount_session' ) ) {
+				paymob_pixel_clear_discount_session( true );
+			}
+			$existing_cs        = '';
+			$existing_amount    = 0;
+			$intention_order_id = '';
+			$session_final      = 0;
+			$pixel_identifier   = '';
+		}
 
 		// Intention was left at a previous discounted amount → reset to cart + clear discount.
 		$was_discounted_base = ( $session_final > 0 && $existing_amount > 0 && $existing_amount === $session_final && abs( $existing_amount - $cart_cents ) > 1 )
@@ -176,6 +190,39 @@ class Paymob_Update_Pixel_Data {
 		}
 		$val = strtolower( (string) wp_unslash( $_POST[ $key ] ) );
 		return ( '1' === $val || 'true' === $val || 'yes' === $val );
+	}
+
+	/**
+	 * True when session pixel_identifier is mapped to a Woo order that is already paid.
+	 *
+	 * @param string $pixel_identifier Session merchant intention id.
+	 * @return bool
+	 */
+	private static function session_intention_already_paid( $pixel_identifier ) {
+		$pixel_identifier = (string) $pixel_identifier;
+		if ( '' === $pixel_identifier ) {
+			return false;
+		}
+
+		global $wpdb;
+		$woo_order_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier = %s ORDER BY id DESC LIMIT 1",
+				$pixel_identifier
+			)
+		);
+		if ( $woo_order_id <= 0 ) {
+			return false;
+		}
+
+		$order = wc_get_order( $woo_order_id );
+		if ( ! $order ) {
+			return false;
+		}
+
+		$status = $order->get_status();
+		// Reusable only while still open for payment.
+		return ! in_array( $status, array( 'pending', 'pending-payment', 'failed', 'on-hold', 'checkout-draft' ), true );
 	}
 
 	public static function getIntegrationIds() {

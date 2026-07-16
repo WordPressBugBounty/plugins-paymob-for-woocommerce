@@ -48,6 +48,26 @@ class Paymob_Style {
 		}
 	}
 
+	/**
+	 * Load admin.css on Edit Order screens for Instant Refund notice styling.
+	 */
+	public static function maybe_enqueue_order_admin_styles() {
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && in_array( $screen->id, array( 'shop_order', 'woocommerce_page_wc-orders' ), true ) ) {
+			self::paymob_admin();
+			return;
+		}
+
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		if ( 'wc-orders' === $page ) {
+			self::paymob_admin();
+		}
+	}
+
 	public static function paymob_list_gateways() {
 		wp_enqueue_style( 'paymob_list_gateways', plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/css/paymob_list_gateways.css', array(), PAYMOB_VERSION );
 	}

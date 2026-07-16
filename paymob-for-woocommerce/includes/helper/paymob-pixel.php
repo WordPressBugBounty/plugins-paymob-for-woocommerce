@@ -537,7 +537,38 @@ function paymob_pixel_clear_discount_session( $invalidate_intention = false ) {
 		WC()->session->__unset( 'pixel_identifier' );
 		WC()->session->__unset( 'PaymobIntentionId' );
 		WC()->session->__unset( 'PaymobCentsAmount' );
+		WC()->session->__unset( 'intention_order_id' );
+		WC()->session->__unset( 'order_id' );
 	}
+}
+
+/**
+ * After a successful Pixel payment, drop intention + discount session so the next
+ * checkout cannot reuse a paid client secret ("already paid" on Place Order).
+ */
+function paymob_pixel_clear_session_after_payment() {
+	if ( function_exists( 'paymob_pixel_clear_discount_session' ) ) {
+		paymob_pixel_clear_discount_session( true );
+	}
+}
+
+/**
+ * Belt-and-suspenders: clear paid Pixel CS when the customer lands on thank-you.
+ */
+add_action( 'woocommerce_thankyou', 'paymob_pixel_thankyou_clear_session', 5 );
+function paymob_pixel_thankyou_clear_session( $order_id ) {
+	if ( ! $order_id ) {
+		return;
+	}
+	$order = wc_get_order( $order_id );
+	if ( ! $order ) {
+		return;
+	}
+	$method = $order->get_payment_method();
+	if ( 'paymob-pixel' !== $method && false === strpos( (string) $method, 'paymob' ) ) {
+		return;
+	}
+	paymob_pixel_clear_session_after_payment();
 }
 
 /**

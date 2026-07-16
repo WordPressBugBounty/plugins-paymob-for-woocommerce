@@ -3,6 +3,11 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+2026-07-15 - version 4.1.6
+- handle instant refund on pixel
+- add error tool to record any error in understandable way
+
+
 2026-07-15 - version 4.1.5
 - add widget feature  .
  
