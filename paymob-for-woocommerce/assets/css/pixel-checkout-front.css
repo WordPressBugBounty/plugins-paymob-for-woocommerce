@@ -122,3 +122,23 @@ body.paymob-aw-show-place-order .wp-block-woocommerce-checkout-actions-block {
 	max-width: 100%;
 	box-sizing: border-box;
 }
+
+/* Paymob Pixel OTP / 3DS must stay above Woo processing overlay */
+body.paymob-otp-active #paymob-loading-indicator {
+	display: none !important;
+}
+
+body > [role="dialog"],
+body > [aria-modal="true"],
+body > div[class*="modal"],
+body > div[class*="Modal"],
+body > div[class*="overlay"]:not(#paymob-loading-indicator),
+#paymob-elements [role="dialog"],
+#paymob-elements [aria-modal="true"] {
+	z-index: 10050 !important;
+}
+
+#paymob-loading-indicator {
+	z-index: 9990 !important;
+	pointer-events: none;
+}

@@ -78,6 +78,12 @@
         jQuery('#place_order').on('click', function (event) { 
             event.preventDefault(); // Prevent default form submission
             const triggerPay = function () {
+                if (typeof hideLoadingIndicator === 'function') {
+                    hideLoadingIndicator();
+                }
+                if (typeof startPaymobOtpOverlayGuard === 'function') {
+                    startPaymobOtpOverlayGuard();
+                }
                 const payFromOutside = new Event('payFromOutside');
                 window.dispatchEvent(payFromOutside);
                 const updateIntentionData = new Event('updateIntentionData');

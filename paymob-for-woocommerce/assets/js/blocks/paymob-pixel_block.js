@@ -234,12 +234,15 @@ if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && type
                         placeOrderButton.classList.add('is-disabled', 'paymob-processing');
                         placeOrderButton.style.opacity = '0.55';
                         placeOrderButton.style.pointerEvents = 'none';
-                        if (typeof showLoadingIndicator === 'function') {
-                            showLoadingIndicator('Processing payment, please wait...');
-                        }
+                        // Do not show full-screen overlay here — it covers Paymob OTP / 3DS modals.
+                        hideLoadingIndicator();
 
                         // Sync intention amount (discount / IR) before Pixel confirmation / pay.
                         const triggerPay = function () {
+                            hideLoadingIndicator();
+                            if (typeof startPaymobOtpOverlayGuard === 'function') {
+                                startPaymobOtpOverlayGuard();
+                            }
                             const payFromOutside = new Event('payFromOutside');
                             window.dispatchEvent(payFromOutside);
                             window.dispatchEvent(new Event('updateIntentionData'));
@@ -444,6 +447,7 @@ function initializePaymobElement(key, cs) {
     }
     
     hideLoadingIndicator();
+    startPaymobOtpOverlayGuard();
     // Clear placeholder before Pixel mounts into #paymob-elements.
     jQuery('#paymob-elements').empty();
     new Pixel({
@@ -458,6 +462,9 @@ function initializePaymobElement(key, cs) {
         beforePaymentComplete: async (paymentmethod) => {
             console.log('Before Payment Complete');
             console.log('Payment Method '+ paymentmethod);
+            // OTP / 3DS must sit above any Woo overlay — hide before Paymob opens the challenge.
+            hideLoadingIndicator();
+            startPaymobOtpOverlayGuard();
 
             if(paymentmethod== 'google-pay' || paymentmethod== 'apple-pay')
             {
@@ -585,6 +592,7 @@ function initializePaymobElement(key, cs) {
             hideLoadingIndicator();
         },
         afterPaymentComplete: async (response) => {
+             stopPaymobOtpOverlayGuard();
              hideLoadingIndicator();
             console.info(response);
                 
@@ -700,6 +708,8 @@ function initializePaymobElement(key, cs) {
         },
         
         onPaymentCancel: (response) => {
+            stopPaymobOtpOverlayGuard();
+            hideLoadingIndicator();
             console.log('Payment has been canceled');
             if (typeof resetPaymobPixelAfterPaymentFailure === 'function') {
                 resetPaymobPixelAfterPaymentFailure();
@@ -1428,6 +1438,8 @@ window.startBlocksPlaceOrderGuard = startBlocksPlaceOrderGuard;
 window.enableBlocksPlaceOrderButton = enableBlocksPlaceOrderButton;
 window.bindBlocksPlaceOrderClickFallback = bindBlocksPlaceOrderClickFallback;
 window.hideLoadingIndicator = hideLoadingIndicator;
+window.startPaymobOtpOverlayGuard = startPaymobOtpOverlayGuard;
+window.stopPaymobOtpOverlayGuard = stopPaymobOtpOverlayGuard;
 window.releaseWidgetPreselectForPixelSelection = releaseWidgetPreselectForPixelSelection;
 window.shouldPreserveBankInstallmentSelection = shouldPreserveBankInstallmentSelection;
 window.ensureBlocksPixelPanelOpen = ensureBlocksPixelPanelOpen;
@@ -1807,6 +1819,12 @@ function showLoadingIndicator(message = "Processing, please wait...") {
         return;
     }
 
+    // Never cover an active OTP / 3DS challenge.
+    if (isPaymobOtpChallengeVisible()) {
+        hideLoadingIndicator();
+        return;
+    }
+
     hideLoadingIndicator();
 
     const loadingContainer = document.createElement('div');
@@ -1821,7 +1839,9 @@ function showLoadingIndicator(message = "Processing, please wait...") {
     loadingContainer.style.flexDirection = 'column';
     loadingContainer.style.justifyContent = 'center';
     loadingContainer.style.alignItems = 'center';
-    loadingContainer.style.zIndex = '10000';
+    // Keep below Paymob Pixel OTP / 3DS modals (they typically use 10000+).
+    loadingContainer.style.zIndex = '9990';
+    loadingContainer.style.pointerEvents = 'none';
 
     loadingContainer.innerHTML = `
         <div style="
@@ -1877,6 +1897,86 @@ function hideLoadingIndicator() {
     const loadingContainer = document.getElementById('paymob-loading-indicator');
     if (loadingContainer) {
         loadingContainer.remove();
+    }
+}
+
+/**
+ * Detect Paymob Pixel OTP / 3DS UI so we never stack our overlay on top of it.
+ *
+ * @return {boolean}
+ */
+function isPaymobOtpChallengeVisible() {
+    const otpPattern = /4-digit code|enter the code we've sent|enter the code|one-time password|verification code/i;
+    const modalSelectors = [
+        '[role="dialog"]',
+        '[aria-modal="true"]',
+        '[class*="modal"]',
+        '[class*="Modal"]',
+        '[id*="paymob"]',
+        '[class*="paymob"]',
+    ];
+
+    for (let i = 0; i < modalSelectors.length; i++) {
+        const nodes = document.querySelectorAll(modalSelectors[i]);
+        for (let j = 0; j < nodes.length; j++) {
+            const node = nodes[j];
+            if (!node || node.id === 'paymob-loading-indicator') {
+                continue;
+            }
+            const text = (node.textContent || '').trim();
+            if (!text || !otpPattern.test(text)) {
+                continue;
+            }
+            const rect = node.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * While payment is in progress, hide our overlay whenever OTP / 3DS appears.
+ */
+function startPaymobOtpOverlayGuard() {
+    if (window.paymobOtpOverlayGuardStarted) {
+        return;
+    }
+    window.paymobOtpOverlayGuardStarted = true;
+
+    const guard = function () {
+        if (isPaymobOtpChallengeVisible()) {
+            hideLoadingIndicator();
+            document.body.classList.add('paymob-otp-active');
+        }
+    };
+
+    guard();
+    window.paymobOtpOverlayGuardInterval = window.setInterval(guard, 250);
+
+    if (typeof MutationObserver !== 'undefined') {
+        window.paymobOtpOverlayObserver = new MutationObserver(guard);
+        window.paymobOtpOverlayObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true,
+        });
+    }
+}
+
+function stopPaymobOtpOverlayGuard() {
+    window.paymobOtpOverlayGuardStarted = false;
+    document.body.classList.remove('paymob-otp-active');
+    if (window.paymobOtpOverlayGuardInterval) {
+        window.clearInterval(window.paymobOtpOverlayGuardInterval);
+        window.paymobOtpOverlayGuardInterval = null;
+    }
+    if (window.paymobOtpOverlayObserver) {
+        window.paymobOtpOverlayObserver.disconnect();
+        window.paymobOtpOverlayObserver = null;
     }
 }
 
