@@ -3,6 +3,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Read a boolean-like flag from $_POST.
+ *
+ * @param string $key POST key.
+ * @return bool
+ */
+function paymob_pixel_post_flag( $key ) {
+	if ( ! isset( $_POST[ $key ] ) ) {
+		return false;
+	}
+	$val = strtolower( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) );
+	return ( '' !== $val && '0' !== $val && 'false' !== $val && 'no' !== $val );
+}
+
 add_filter('woocommerce_get_settings_checkout', 'paymob_pixel_settings_option', 10, 2);
 function paymob_pixel_settings_option($settings, $current_section)
 {
@@ -449,9 +463,7 @@ function paymob_apply_discount() {
     $discount = $discount_cents > 0 ? paymob_pixel_cents_to_major( $discount_cents, $div ) : floatval( $_POST['discount'] ?? 0 );
     $final    = $final_cents > 0 ? paymob_pixel_cents_to_major( $final_cents, $div ) : floatval( $_POST['final_total'] ?? 0 );
     $instant_refund_fee = $fee_cents > 0 ? paymob_pixel_cents_to_major( $fee_cents, $div ) : floatval( $_POST['instant_refund_fee'] ?? 0 );
-    $instant_refund_enabled = ! empty( $_POST['instant_refund_enabled'] )
-        && '0' !== (string) $_POST['instant_refund_enabled']
-        && 'false' !== strtolower( (string) $_POST['instant_refund_enabled'] );
+    $instant_refund_enabled = paymob_pixel_post_flag( 'instant_refund_enabled' );
 
     if ( ! $instant_refund_enabled ) {
         $instant_refund_fee = 0;
@@ -581,9 +593,7 @@ function paymob_pixel_thankyou_clear_session( $order_id ) {
 function paymob_clear_pixel_checkout_adjustments() {
 	check_ajax_referer( 'update_checkout', 'security' );
 
-	$invalidate = ! empty( $_POST['invalidate_intention'] )
-		&& '0' !== (string) $_POST['invalidate_intention']
-		&& 'false' !== strtolower( (string) $_POST['invalidate_intention'] );
+	$invalidate = paymob_pixel_post_flag( 'invalidate_intention' );
 
 	paymob_pixel_clear_discount_session( $invalidate );
 
@@ -699,9 +709,7 @@ function paymob_sync_pixel_intention() {
 	}
 
 	// Session-only by default. Charge amount is PUTted in Paymob_Pixel_Update_Intention at create_order.
-	$do_put = ! empty( $_POST['put_intention'] )
-		&& '0' !== (string) $_POST['put_intention']
-		&& 'false' !== strtolower( (string) $_POST['put_intention'] );
+	$do_put = paymob_pixel_post_flag( 'put_intention' );
 
 	if ( ! $do_put ) {
 		wp_send_json_success(

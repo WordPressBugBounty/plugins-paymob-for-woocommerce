@@ -1309,7 +1309,7 @@ class Paymob_Affordability_Widget {
 		}
 
 		if ( ! empty( $_REQUEST['post_data'] ) ) {
-			$post_data = wp_unslash( $_REQUEST['post_data'] );
+			$post_data = sanitize_text_field( wp_unslash( $_REQUEST['post_data'] ) );
 			if ( is_string( $post_data ) && false !== strpos( $post_data, 'paymob_aw_preselect=1' ) ) {
 				return true;
 			}

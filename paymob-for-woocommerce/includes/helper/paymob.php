@@ -626,11 +626,18 @@ class Paymob {
 	}
 
 	public static function addLogs( $debug, $file, $note, $data = false ) {
-		if ( is_bool( $data ) ) {
-			( '1' === $debug ) ? error_log( PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note, 3, $file ) : false;
-		} else {
-			( '1' === $debug ) ? error_log( PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note . ' -- ' . json_encode( $data ), 3, $file ) : false;
+		if ( '1' !== (string) $debug ) {
+			return;
 		}
+
+		if ( is_bool( $data ) ) {
+			$line = PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note;
+		} else {
+			$line = PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note . ' -- ' . wp_json_encode( $data );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- intentional plugin log file append.
+		file_put_contents( $file, $line, FILE_APPEND | LOCK_EX );
 	}
 
 	public function getIntegrationID( $conf,$IntegrationID ) {

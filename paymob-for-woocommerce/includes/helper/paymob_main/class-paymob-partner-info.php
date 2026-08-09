@@ -27,18 +27,37 @@ class Paymob_Main_Partner_Info
 			return false;
 		}
 
-		$nonce = Paymob::filterVar( 'paymob_partner_nonce', 'GET' );
-		if ( $nonce && wp_verify_nonce( $nonce, self::PARTNER_CONNECT_NONCE_ACTION ) ) {
-			return true;
+		$nonce = isset( $_GET['paymob_partner_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['paymob_partner_nonce'] ) ) : '';
+		if ( ! $nonce || ! wp_verify_nonce( $nonce, self::PARTNER_CONNECT_NONCE_ACTION ) ) {
+			$transient_key = 'paymob_partner_connect_' . $user_id;
+			if ( get_transient( $transient_key ) ) {
+				delete_transient( $transient_key );
+				return true;
+			}
+			return false;
 		}
 
-		$transient_key = 'paymob_partner_connect_' . $user_id;
-		if ( get_transient( $transient_key ) ) {
-			delete_transient( $transient_key );
-			return true;
-		}
+		return true;
+	}
 
-		return false;
+	/**
+	 * Allow Paymob onboarding hosts for wp_safe_redirect().
+	 *
+	 * @param string $url Redirect URL.
+	 */
+	public static function safe_redirect( $url ) {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( $host ) {
+			add_filter(
+				'allowed_redirect_hosts',
+				static function ( $hosts ) use ( $host ) {
+					$hosts[] = $host;
+					return array_unique( $hosts );
+				}
+			);
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 	public static function partner_info()
@@ -86,8 +105,7 @@ class Paymob_Main_Partner_Info
 					$encoded_url = urlencode( $currentURL );
 					// Replace with your desired custom URL
 					if (isset($status['error']) || isset($status['detail'])) {
-						wp_redirect('https://onboarding.paymob.com/auth/country-selection?partner=woocommerce&redirect_url=' . $encoded_url);
-						exit;
+						self::safe_redirect('https://onboarding.paymob.com/auth/country-selection?partner=woocommerce&redirect_url=' . $encoded_url);
 					}
 
 					$conf['apiKey'] = $main_settings['api_key'] = $status['api_key'];
@@ -172,8 +190,7 @@ class Paymob_Main_Partner_Info
 				} else {
 					// Redirect with error message
 					$currentURL = self_admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob-main&error-msg=an error has been occured, please try again');
-					wp_redirect($currentURL);
-					exit; // Always call exit after wp_redirect
+					self::safe_redirect($currentURL);
 
 				}
 

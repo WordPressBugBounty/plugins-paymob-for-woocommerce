@@ -37,8 +37,7 @@ class Checkout_Blocks {
 				);
 			}
 		} else {
-			// Debugging output
-			error_log( 'WooCommerce Blocks classes not found.' );
+			// WooCommerce Blocks payment classes are unavailable; skip block registration.
 		}
 	}
 }

@@ -188,7 +188,7 @@ class Paymob_Update_Pixel_Data {
 		if ( ! isset( $_POST[ $key ] ) ) {
 			return false;
 		}
-		$val = strtolower( (string) wp_unslash( $_POST[ $key ] ) );
+		$val = strtolower( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) );
 		return ( '1' === $val || 'true' === $val || 'yes' === $val );
 	}
 

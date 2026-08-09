@@ -66,8 +66,10 @@ class Paymob_Change_Mode_Save {
             delete_option('woocommerce_paymob_widget_settings');
             // wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-for-woocommerce'),
             // 'redirect_url'=>admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob-main')]);
+          
+            $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
             wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-for-woocommerce'),
-            'redirect_url' => home_url( $_SERVER['REQUEST_URI'] )]);
+            'redirect_url' => home_url( $request_uri )]);
             
 
         } catch ( \Exception $e ) {

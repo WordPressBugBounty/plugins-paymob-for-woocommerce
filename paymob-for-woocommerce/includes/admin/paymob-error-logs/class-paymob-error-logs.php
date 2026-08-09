@@ -206,8 +206,8 @@ class Paymob_Error_Logs {
 			wp_send_json_error( array( 'message' => 'missing message' ) );
 		}
 
-		$message = wp_unslash( $_POST['message'] );
-		$context = isset( $_POST['context'] ) ? wp_unslash( $_POST['context'] ) : 'frontend';
+		$message = sanitize_text_field( wp_unslash( $_POST['message'] ) );
+		$context = isset( $_POST['context'] ) ? sanitize_text_field( wp_unslash( $_POST['context'] ) ) : 'frontend';
 		self::add( $message, $context, 'frontend' );
 		wp_send_json_success();
 	}

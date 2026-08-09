@@ -177,7 +177,6 @@ class Paymob_Manual_Setup_Save {
 			$google_pay_ids = array_merge($googlePay, $googlePay2);
 			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids);
 			$all_ids = array_filter($all_ids);
-                        error_log(print_r($all_ids, 1));
 
 			$integration_ids = implode(',', $all_ids);
             $card_integrations = array_keys(PaymobAutoGenerate::get_pixel_integration_ids('Card'));
@@ -238,21 +237,15 @@ class Paymob_Manual_Setup_Save {
                             ),
                             array( 'integration_id' => $value['id'] )
                         );
-                        // error_log(print_r($all_ids, 1)); 
 		        foreach($card_ids as $id){
-                        // error_log(print_r($id, 1)); 
                             $gateway_option = get_option( 'woocommerce_' . $payment_integrations_type . '_settings' );
                             if($value['id']== $id && $gateway_option['enabled'] == 'yes'){
                                     $cardEnabledIntegrations[]= $id;
                                     $gateway_option['enabled']='no';
                                     update_option( 'woocommerce_' . $payment_integrations_type. '_settings' , $gateway_option);
-                                 error_log(9999);   
-                                error_log(print_r($cardEnabledIntegrations,1));
                             }
                         }
                         $pixel_settings['cards_integration_id'] = array_map('strval',$cardEnabledIntegrations);
-                        error_log(8888);   
-                         error_log(print_r($pixel_settings,1));   
 
                         update_option('woocommerce_paymob-pixel_settings', $pixel_settings);  
                     }
@@ -303,7 +296,6 @@ class Paymob_Manual_Setup_Save {
                 $payment_integrations_type = $value['id'] . ' ' . $title . ' ' . $value['gateway_type'] . ' ' . $value['currency'];
                 $payment_integrations_type = 'paymob-' . preg_replace( '/[^a-zA-Z0-9]+/', '-', strtolower( $payment_integrations_type ) );
                 foreach($all_ids as $id){
-                // error_log(print_r($id, 1)); 
                     if($value['id']== $id){
 
                         $gateway_option = get_option( 'woocommerce_' . $payment_integrations_type . '_settings' );

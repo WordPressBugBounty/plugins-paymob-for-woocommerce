@@ -4,7 +4,8 @@ class Paymob_Main_Connect_Account {
 
 	public static function connect_paymob_account_handler() {
 		 // Verify nonce for security
-		 if ( !isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'connect_paymob') ) {
+		 $security = isset( $_POST['security'] ) ? sanitize_text_field( wp_unslash( $_POST['security'] ) ) : '';
+		 if ( ! $security || ! wp_verify_nonce( $security, 'connect_paymob' ) ) {
 			wp_send_json_error(array('message' => 'Invalid nonce.'));
 			return;
 		}

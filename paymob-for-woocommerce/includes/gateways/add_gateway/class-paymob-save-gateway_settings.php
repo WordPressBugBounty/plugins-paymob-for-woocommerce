@@ -103,7 +103,7 @@ class Paymob_Save_Gateway_Settings {
 			return;
 		}
 
-		$enable_raw              = isset( $_POST['enable'] ) ? wp_unslash( $_POST['enable'] ) : '';
+		$enable_raw              = isset( $_POST['enable'] ) ? sanitize_text_field( wp_unslash( $_POST['enable'] ) ) : '';
 		$payment_enabled         = ( '' !== (string) $enable_raw && 'no' !== $enable_raw ) ? 'yes' : 'no';
 
 		$integration_id = '';
@@ -116,11 +116,11 @@ class Paymob_Save_Gateway_Settings {
 			$integration_id = Paymob_Widget_Settings::resolve_selected_integration_id( $integration_id );
 		}
 
-		$min_product_enabled_raw = isset( $_POST['min_product_enabled'] ) ? wp_unslash( $_POST['min_product_enabled'] ) : '';
+		$min_product_enabled_raw = isset( $_POST['min_product_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['min_product_enabled'] ) ) : '';
 		$min_product_enabled     = ( '' !== (string) $min_product_enabled_raw && 'no' !== $min_product_enabled_raw ) ? 'yes' : 'no';
 		$min_product_amount      = isset( $_POST['min_product_amount'] ) ? sanitize_text_field( wp_unslash( $_POST['min_product_amount'] ) ) : '';
 
-		$min_cart_enabled_raw    = isset( $_POST['min_cart_enabled'] ) ? wp_unslash( $_POST['min_cart_enabled'] ) : '';
+		$min_cart_enabled_raw    = isset( $_POST['min_cart_enabled'] ) ? sanitize_text_field( wp_unslash( $_POST['min_cart_enabled'] ) ) : '';
 		$min_cart_enabled        = ( '' !== (string) $min_cart_enabled_raw && 'no' !== $min_cart_enabled_raw ) ? 'yes' : 'no';
 		$min_cart_amount         = isset( $_POST['min_cart_amount'] ) ? sanitize_text_field( wp_unslash( $_POST['min_cart_amount'] ) ) : '';
 
