@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 add_action('wp_ajax_connect_paymob_account', 'connect_paymob_account_handler');
 function connect_paymob_account_handler() {

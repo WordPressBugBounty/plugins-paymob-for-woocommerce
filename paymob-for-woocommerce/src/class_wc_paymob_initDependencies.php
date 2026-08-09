@@ -1,5 +1,13 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 // add  init paymob Dependencies
+
+if ( ! class_exists( 'Paymob_Context' ) ) {
+	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/class-paymob-context.php';
+}
 
 if ( ! class_exists( 'PaymobAutoGenerate' ) ) {
 	include_once PAYMOB_PLUGIN_PATH . '/includes/helper/paymob-auto-generate.php';

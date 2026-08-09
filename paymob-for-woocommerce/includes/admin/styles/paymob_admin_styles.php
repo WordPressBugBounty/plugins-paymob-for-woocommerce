@@ -99,8 +99,6 @@ class Paymob_Style {
 	}
 
 	public static function paymob_pixel_styles() {
-		wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
-
 		wp_enqueue_style( 'paymob-pixel-css', plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/css/pixel.css', array(), PAYMOB_VERSION );
 	}
 }

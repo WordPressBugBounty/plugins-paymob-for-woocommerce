@@ -4,6 +4,24 @@
  */
 class WC_Paymob_Tables {
 
+	const TABLES_VERIFIED_TRANSIENT = 'paymob_tables_verified';
+
+	public static function maybe_ensure_tables() {
+		if ( get_transient( self::TABLES_VERIFIED_TRANSIENT ) ) {
+			return;
+		}
+
+		self::create_paymob_gateways_table();
+		self::update_paymob_gateways_table();
+		self::create_paymob_pixel_table();
+
+		set_transient( self::TABLES_VERIFIED_TRANSIENT, 1, DAY_IN_SECONDS );
+	}
+
+	public static function flush_tables_verified_cache() {
+		delete_transient( self::TABLES_VERIFIED_TRANSIENT );
+	}
+
 	public static function create_paymob_gateways_table() {
 		global $wpdb;
 
@@ -43,10 +61,10 @@ class WC_Paymob_Tables {
 		// Check if the column exists
 		$column_exists = $wpdb->get_var("SHOW COLUMNS FROM `{$wpdb->prefix}paymob_gateways` LIKE 'mode'");
 		
-		if (empty($column_exists)) {
-			// Add the column if it does not exist
-			$sql = "ALTER TABLE `{$wpdb->prefix}paymob_gateways` ADD `mode` VARCHAR(10) NOT NULL DEFAULT 'test'";
-			$wpdb->query($sql); // Use query directly for ALTER TABLE
+		if ( empty( $column_exists ) ) {
+			// Add the column if it does not exist.
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- DDL migration; table name uses trusted $wpdb->prefix.
+			$wpdb->query( "ALTER TABLE `{$wpdb->prefix}paymob_gateways` ADD `mode` VARCHAR(10) NOT NULL DEFAULT 'test'" );
 		}
 	}
 

@@ -15,9 +15,11 @@ class WC_Paymob_Install {
 		}
 		// Require parent plugin
 		if ( ! in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) && ! array_key_exists( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_site_option( 'active_sitewide_plugins' ) ) ) ) {
-			wp_die( esc_html__( 'Sorry, PayMob plugin requires WooCommerce to be installed and active.', 'paymob-woocommerce' ) );
+			wp_die( esc_html__( 'Sorry, PayMob plugin requires WooCommerce to be installed and active.', 'paymob-for-woocommerce' ) );
 		}
 		WC_Paymob_Tables::create_paymob_gateways_table();
+		WC_Paymob_Tables::update_paymob_gateways_table();
 		WC_Paymob_Tables::create_paymob_pixel_table();
+		WC_Paymob_Tables::flush_tables_verified_cache();
 	}
 }

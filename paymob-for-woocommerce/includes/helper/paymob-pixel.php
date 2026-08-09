@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 add_filter('woocommerce_get_settings_checkout', 'paymob_pixel_settings_option', 10, 2);
 function paymob_pixel_settings_option($settings, $current_section)

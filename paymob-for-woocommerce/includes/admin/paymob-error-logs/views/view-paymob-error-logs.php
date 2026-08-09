@@ -12,23 +12,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="wrap paymob-error-logs-page">
 	<div class="paymob-log-hero">
 		<div>
-			<h1><?php echo esc_html__( 'Paymob Error Logs', 'paymob-woocommerce' ); ?></h1>
-			<p><?php echo esc_html__( 'Checkout, gateway, and Paymob API errors captured from live payment flows.', 'paymob-woocommerce' ); ?></p>
+			<h1><?php echo esc_html__( 'Paymob Error Logs', 'paymob-for-woocommerce' ); ?></h1>
+			<p><?php echo esc_html__( 'Checkout, gateway, and Paymob API errors captured from live payment flows.', 'paymob-for-woocommerce' ); ?></p>
 		</div>
-		<span class="paymob-log-total"><?php printf( esc_html__( '%d result(s)', 'paymob-woocommerce' ), count( $logs ) ); ?></span>
+		<span class="paymob-log-total"><?php
+		/* translators: %d: number of filtered log entries */
+		printf( esc_html__( '%d result(s)', 'paymob-for-woocommerce' ), count( $logs ) );
+		?></span>
 	</div>
 
 	<?php if ( isset( $_GET['cleared'] ) ) : ?>
-		<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'All Paymob error logs were cleared.', 'paymob-woocommerce' ); ?></p></div>
+		<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'All Paymob error logs were cleared.', 'paymob-for-woocommerce' ); ?></p></div>
 	<?php endif; ?>
 
 	<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="paymob-log-filters">
 		<input type="hidden" name="page" value="<?php echo esc_attr( Paymob_Error_Logs::MENU_SLUG ); ?>" />
 
 		<label class="paymob-log-filter">
-			<span><?php echo esc_html__( 'Source', 'paymob-woocommerce' ); ?></span>
+			<span><?php echo esc_html__( 'Source', 'paymob-for-woocommerce' ); ?></span>
 			<select name="source">
-				<option value=""><?php echo esc_html__( 'All sources', 'paymob-woocommerce' ); ?></option>
+				<option value=""><?php echo esc_html__( 'All sources', 'paymob-for-woocommerce' ); ?></option>
 				<?php foreach ( $sources as $source ) : ?>
 					<option value="<?php echo esc_attr( $source ); ?>" <?php selected( $filters['source'], $source ); ?>><?php echo esc_html( $source ); ?></option>
 				<?php endforeach; ?>
@@ -36,9 +39,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</label>
 
 		<label class="paymob-log-filter">
-			<span><?php echo esc_html__( 'Context', 'paymob-woocommerce' ); ?></span>
+			<span><?php echo esc_html__( 'Context', 'paymob-for-woocommerce' ); ?></span>
 			<select name="context">
-				<option value=""><?php echo esc_html__( 'All contexts', 'paymob-woocommerce' ); ?></option>
+				<option value=""><?php echo esc_html__( 'All contexts', 'paymob-for-woocommerce' ); ?></option>
 				<?php foreach ( $contexts as $context ) : ?>
 					<option value="<?php echo esc_attr( $context ); ?>" <?php selected( $filters['context'], $context ); ?>><?php echo esc_html( $context ); ?></option>
 				<?php endforeach; ?>
@@ -46,33 +49,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</label>
 
 		<label class="paymob-log-filter paymob-log-filter--small">
-			<span><?php echo esc_html__( 'HTTP Code', 'paymob-woocommerce' ); ?></span>
+			<span><?php echo esc_html__( 'HTTP Code', 'paymob-for-woocommerce' ); ?></span>
 			<input type="text" name="http_code" value="<?php echo esc_attr( $filters['http_code'] ); ?>" placeholder="401" />
 		</label>
 
 		<label class="paymob-log-filter">
-			<span><?php echo esc_html__( 'From', 'paymob-woocommerce' ); ?></span>
+			<span><?php echo esc_html__( 'From', 'paymob-for-woocommerce' ); ?></span>
 			<input type="date" name="date_from" value="<?php echo esc_attr( $filters['date_from'] ); ?>" />
 		</label>
 
 		<label class="paymob-log-filter">
-			<span><?php echo esc_html__( 'To', 'paymob-woocommerce' ); ?></span>
+			<span><?php echo esc_html__( 'To', 'paymob-for-woocommerce' ); ?></span>
 			<input type="date" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ); ?>" />
 		</label>
 
 		<label class="paymob-log-filter paymob-log-filter--search">
-			<span><?php echo esc_html__( 'Search', 'paymob-woocommerce' ); ?></span>
-			<input type="search" name="search" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php echo esc_attr__( 'Message, URL, raw response...', 'paymob-woocommerce' ); ?>" />
+			<span><?php echo esc_html__( 'Search', 'paymob-for-woocommerce' ); ?></span>
+			<input type="search" name="search" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php echo esc_attr__( 'Message, URL, raw response...', 'paymob-for-woocommerce' ); ?>" />
 		</label>
 
 		<div class="paymob-log-filter-actions">
-			<button type="submit" class="button button-primary"><?php echo esc_html__( 'Apply Filter', 'paymob-woocommerce' ); ?></button>
-			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . Paymob_Error_Logs::MENU_SLUG ) ); ?>"><?php echo esc_html__( 'Reset', 'paymob-woocommerce' ); ?></a>
+			<button type="submit" class="button button-primary"><?php echo esc_html__( 'Apply Filter', 'paymob-for-woocommerce' ); ?></button>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . Paymob_Error_Logs::MENU_SLUG ) ); ?>"><?php echo esc_html__( 'Reset', 'paymob-for-woocommerce' ); ?></a>
 		</div>
 	</form>
 
 	<div class="paymob-log-toolbar">
-		<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' ) ); ?>"><?php echo esc_html__( 'Back to Paymob Settings', 'paymob-woocommerce' ); ?></a>
+		<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' ) ); ?>"><?php echo esc_html__( 'Back to Paymob Settings', 'paymob-for-woocommerce' ); ?></a>
 
 		<div class="paymob-log-toolbar__actions">
 			<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -84,20 +87,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<input type="hidden" name="date_from" value="<?php echo esc_attr( $filters['date_from'] ); ?>" />
 				<input type="hidden" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ); ?>" />
 				<input type="hidden" name="search" value="<?php echo esc_attr( $filters['search'] ); ?>" />
-				<button type="submit" class="button button-secondary"><?php echo esc_html__( 'Export CSV', 'paymob-woocommerce' ); ?></button>
+				<button type="submit" class="button button-secondary"><?php echo esc_html__( 'Export CSV', 'paymob-for-woocommerce' ); ?></button>
 			</form>
 
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Are you sure you want to clear all logs?', 'paymob-woocommerce' ) ); ?>');">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Are you sure you want to clear all logs?', 'paymob-for-woocommerce' ) ); ?>');">
 				<input type="hidden" name="action" value="paymob_clear_error_logs" />
 				<?php wp_nonce_field( 'paymob_clear_error_logs' ); ?>
-				<button type="submit" class="button button-link-delete"><?php echo esc_html__( 'Clear Logs', 'paymob-woocommerce' ); ?></button>
+				<button type="submit" class="button button-link-delete"><?php echo esc_html__( 'Clear Logs', 'paymob-for-woocommerce' ); ?></button>
 			</form>
 		</div>
 	</div>
 
 	<div class="paymob-log-grid">
 		<?php if ( empty( $logs ) ) : ?>
-			<div class="paymob-log-empty"><?php echo esc_html__( 'No errors found for the current filters.', 'paymob-woocommerce' ); ?></div>
+			<div class="paymob-log-empty"><?php echo esc_html__( 'No errors found for the current filters.', 'paymob-for-woocommerce' ); ?></div>
 		<?php else : ?>
 			<?php foreach ( $logs as $log ) : ?>
 				<?php
@@ -118,14 +121,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</div>
 					<p class="paymob-log-card__message"><?php echo esc_html( $message ); ?></p>
 					<div class="paymob-log-card__meta">
-						<span><?php echo esc_html__( 'Context:', 'paymob-woocommerce' ); ?> <?php echo esc_html( $context ); ?></span>
+						<span><?php echo esc_html__( 'Context:', 'paymob-for-woocommerce' ); ?> <?php echo esc_html( $context ); ?></span>
 						<?php if ( '' !== $method || '' !== $http_code ) : ?>
 							<div class="paymob-log-meta-line">
 								<?php if ( '' !== $method ) : ?>
 									<code><?php echo esc_html( $method ); ?></code>
 								<?php endif; ?>
 								<?php if ( '' !== $http_code ) : ?>
-									<strong><?php echo esc_html__( 'HTTP', 'paymob-woocommerce' ); ?></strong>
+									<strong><?php echo esc_html__( 'HTTP', 'paymob-for-woocommerce' ); ?></strong>
 									<?php echo esc_html( $http_code ); ?>
 								<?php endif; ?>
 							</div>
@@ -135,13 +138,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<?php endif; ?>
 						<?php if ( '' !== $raw ) : ?>
 							<details class="paymob-log-details" open>
-								<summary><?php echo esc_html__( 'Raw HTTP body (before JSON decode)', 'paymob-woocommerce' ); ?></summary>
+								<summary><?php echo esc_html__( 'Raw HTTP body (before JSON decode)', 'paymob-for-woocommerce' ); ?></summary>
 								<pre class="paymob-log-response-raw"><?php echo esc_html( $raw ); ?></pre>
 							</details>
 						<?php elseif ( '' !== $method || '' !== $http_code || '' !== $url ) : ?>
 							<details class="paymob-log-details">
-								<summary><?php echo esc_html__( 'Raw HTTP body (before JSON decode)', 'paymob-woocommerce' ); ?></summary>
-								<pre class="paymob-log-response-raw paymob-log-response-raw--empty"><?php echo esc_html__( 'No response body was returned by Paymob.', 'paymob-woocommerce' ); ?></pre>
+								<summary><?php echo esc_html__( 'Raw HTTP body (before JSON decode)', 'paymob-for-woocommerce' ); ?></summary>
+								<pre class="paymob-log-response-raw paymob-log-response-raw--empty"><?php echo esc_html__( 'No response body was returned by Paymob.', 'paymob-for-woocommerce' ); ?></pre>
 							</details>
 						<?php endif; ?>
 						<?php if ( ! empty( $meta ) ) : ?>

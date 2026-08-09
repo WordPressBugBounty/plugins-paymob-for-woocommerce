@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	array(
 		'type' => 'title',
-		'name' => __( 'List of Payment Method Integrations', 'paymob-woocommerce' ),
+		'name' => __( 'List of Payment Method Integrations', 'paymob-for-woocommerce' ),
 	),
 	array(
 		'type' => 'table',

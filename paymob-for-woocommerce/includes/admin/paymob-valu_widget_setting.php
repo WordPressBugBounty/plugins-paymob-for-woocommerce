@@ -18,20 +18,20 @@ $settings = array(
         'desc' => $tabs,
     ),
     'section_title' => array(
-        'title' => __( 'ValU Widget Settings', 'paymob-woocommerce' ),
+        'title' => __( 'ValU Widget Settings', 'paymob-for-woocommerce' ),
         'type'  => 'title',
         'id'    => 'valu_widget_section_title',
     ),
     'enable_widget' => array(
-        'title'       => __( 'Enable ValU Widget', 'paymob-woocommerce' ),
+        'title'       => __( 'Enable ValU Widget', 'paymob-for-woocommerce' ),
         'type'        => 'checkbox',
         'id'          => 'enable',  // ✅ Added ID
         'default'     => 'no',
         'label'       => ' ',
-        'description' => __( 'Enable or disable the ValU widget.', 'paymob-woocommerce' ),
+        'description' => __( 'Enable or disable the ValU widget.', 'paymob-for-woocommerce' ),
     ),
     'integration_id' => array(
-        'title'       => __( 'Select Integration ID for ValU Widget', 'paymob-woocommerce' ),
+        'title'       => __( 'Select Integration ID for ValU Widget', 'paymob-for-woocommerce' ),
         'type'        => 'select',
         'id'          => 'integration_id',  // ✅ Added ID
         'options'     => $valu_integration_ids,
@@ -47,12 +47,12 @@ $settings = array(
         
     ),
     'dark_mode' => array(
-        'title'       => __( 'Enable Dark Mode', 'paymob-woocommerce' ),
+        'title'       => __( 'Enable Dark Mode', 'paymob-for-woocommerce' ),
         'type'        => 'checkbox',
         'id'          => 'dark_mode',  // ✅ Added ID
         'default'     => 'no',
         'label'       => ' ',
-        'description' => __( 'This controls the style mode for ValuWidget.', 'paymob-woocommerce' ),
+        'description' => __( 'This controls the style mode for ValuWidget.', 'paymob-for-woocommerce' ),
     ),
     'section_end' => array(
         'type' => 'sectionend',

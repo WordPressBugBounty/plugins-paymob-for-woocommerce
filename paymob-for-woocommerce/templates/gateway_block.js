@@ -2,7 +2,7 @@ jQuery(function ($) {
     //check_a_pay
     if (typeof window.wc !== 'undefined' && typeof window.wp !== 'undefined' && typeof window.wc.wcSettings !== 'undefined' && typeof window.wc.wcBlocksRegistry !== 'undefined') {
         const settings = window.wc.wcSettings.getSetting('gateway_id_data', {});
-        const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('checkout_title', 'paymob-woocommerce');
+        const label = window.wp.htmlEntities.decodeEntities(settings.title) || window.wp.i18n.__('checkout_title', 'paymob-for-woocommerce');
 
         const Icon = () => {
             return settings.icon

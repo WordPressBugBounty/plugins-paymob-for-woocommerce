@@ -3,6 +3,10 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+
+2026-07-20 - version 4.1.8
+- handle otp modal style 
+
 2026-07-15 - version 4.1.7
 - handle instant refund on pixel conflict
 

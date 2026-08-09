@@ -1,4 +1,8 @@
-<?php 
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 return '<div class="paymob-connect-div">
         <img style="width:10%; float: left;" src="' . plugins_url( PAYMOB_PLUGIN_NAME )  . '/assets/img/paymob.png" alt="Image" class="paymob-img">
         <div >

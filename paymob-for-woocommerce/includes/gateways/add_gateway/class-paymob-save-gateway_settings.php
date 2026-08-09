@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 class Paymob_Save_Gateway_Settings {
 	public static function save_paymob_add_gateway_settings() {
@@ -17,7 +20,7 @@ class Paymob_Save_Gateway_Settings {
 		$api_key = isset( $paymob_options['api_key'] ) ? $paymob_options['api_key'] : '';
 
 		if ( empty( $pub_key ) || empty( $sec_key ) || empty( $api_key ) ) {
-			WC_Admin_Settings::add_error( __( 'Please ensure you are entering API, public and secret keys in the main Paymob configuration.', 'paymob-woocommerce' ) );
+			WC_Admin_Settings::add_error( __( 'Please ensure you are entering API, public and secret keys in the main Paymob configuration.', 'paymob-for-woocommerce' ) );
 		} else {
 			$integration_id = Paymob::filterVar( 'integration_id', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) ) : '';
 			$payment_enabled = Paymob::filterVar( 'payment_enabled', 'POST' ) ? 'yes' : 'no';
@@ -62,10 +65,10 @@ class Paymob_Save_Gateway_Settings {
 					wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob_list_gateways' ) );
 					exit;
 				} else {
-					WC_Admin_Settings::add_error( __( 'Failed to insert gateway into database.', 'paymob-woocommerce' ) );
+					WC_Admin_Settings::add_error( __( 'Failed to insert gateway into database.', 'paymob-for-woocommerce' ) );
 				}
 			} else {
-				WC_Admin_Settings::add_error( __( 'Gateway Already Exists.', 'paymob-woocommerce' ) );
+				WC_Admin_Settings::add_error( __( 'Gateway Already Exists.', 'paymob-for-woocommerce' ) );
 			}
 		}
 	}
@@ -132,14 +135,14 @@ class Paymob_Save_Gateway_Settings {
 		$field_warnings  = array();
 
 		if ( 'yes' === $payment_enabled && '' === $integration_id ) {
-			$blocking_errors[] = __( 'Please select an integration ID to enable the widget.', 'paymob-woocommerce' );
+			$blocking_errors[] = __( 'Please select an integration ID to enable the widget.', 'paymob-for-woocommerce' );
 			$payment_enabled   = 'no';
 		}
 
 		if ( 'yes' === $min_product_enabled ) {
 			$min_product_value = is_numeric( $min_product_amount ) ? (float) $min_product_amount : 0.0;
 			if ( $min_product_value <= 0 ) {
-				$field_warnings[]    = __( 'Please enter a minimum product amount.', 'paymob-woocommerce' );
+				$field_warnings[]    = __( 'Please enter a minimum product amount.', 'paymob-for-woocommerce' );
 				$min_product_enabled = 'no';
 				$min_product_amount  = '';
 			}
@@ -150,7 +153,7 @@ class Paymob_Save_Gateway_Settings {
 		if ( 'yes' === $min_cart_enabled ) {
 			$min_cart_value = is_numeric( $min_cart_amount ) ? (float) $min_cart_amount : 0.0;
 			if ( $min_cart_value <= 0 ) {
-				$field_warnings[]  = __( 'Please enter a minimum cart amount.', 'paymob-woocommerce' );
+				$field_warnings[]  = __( 'Please enter a minimum cart amount.', 'paymob-for-woocommerce' );
 				$min_cart_enabled  = 'no';
 				$min_cart_amount   = '';
 			}
@@ -190,7 +193,7 @@ class Paymob_Save_Gateway_Settings {
 			set_transient( 'paymob_aw_flash_errors', $field_warnings, 60 );
 		}
 
-		set_transient( 'paymob_aw_flash_success', __( 'Your settings have been saved.', 'paymob-woocommerce' ), 60 );
+		set_transient( 'paymob_aw_flash_success', __( 'Your settings have been saved.', 'paymob-for-woocommerce' ), 60 );
 		wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=widget&settings-updated=true' ) );
 		exit;
 	}
@@ -229,7 +232,7 @@ class Paymob_Save_Gateway_Settings {
 		: 'no';
 
 		if (empty($moto_id) || empty($threeds_ids)) {
-			WC_Admin_Settings::add_error(__('Please select both MOTO and 3DS Integration IDs.', 'paymob-woocommerce'));
+			WC_Admin_Settings::add_error(__('Please select both MOTO and 3DS Integration IDs.', 'paymob-for-woocommerce'));
 			return;
 		}
 
@@ -306,7 +309,7 @@ add_action('admin_notices', function () {
     }
 
     if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
-        echo '<div class="updated notice is-dismissible"><p>' . esc_html__( 'Your settings have been saved.', 'paymob-woocommerce' ) . '</p></div>';
+        echo '<div class="updated notice is-dismissible"><p>' . esc_html__( 'Your settings have been saved.', 'paymob-for-woocommerce' ) . '</p></div>';
     }
 });
 

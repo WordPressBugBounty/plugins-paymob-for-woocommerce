@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 if ( ! class_exists( 'WC_class_name_Blocks' ) ) {
 	require_once plugin_dir_path( __FILE__ ) . 'gateway-blocks.php';
 

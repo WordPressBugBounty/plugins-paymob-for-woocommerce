@@ -2,16 +2,16 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.8
+ * Version: 4.1.9
  * Author: Paymob
  * Author URI: https://paymob.com
- * Text Domain: paymob-woocommerce
+ * Text Domain: paymob-for-woocommerce
  * Domain Path: /i18n/languages
  * Requires PHP: 7.0
  * Requires at least: 5.0
  * Requires Plugins: woocommerce
  * WC requires at least: 4.0
- * WC tested up to: 10.9
+ * WC tested up to: 11.0
  * Tested up to: 7.0
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.8');
+	define( 'PAYMOB_VERSION', '4.1.9');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -45,7 +45,7 @@ class Init_Paymob {
 		add_action( 'activate_' . PAYMOB_PLUGIN, array( $this, 'install' ), 0 );
 		// Set redirect flag upon activation of PayMob plugin
 		add_action( 'activated_plugin', array( $this, 'set_redirect_flag_on_activation' ) );
-		add_action( 'plugins_loaded', array( $this, 'load' ), 0 );
+		add_action( 'plugins_loaded', array( $this, 'load' ), 20 );
 		$subscription_settings = get_option('woocommerce_paymob-subscription_settings', []);
 		$allow_cancel = (!empty($subscription_settings['allow_cancel']) && $subscription_settings['allow_cancel'] === 'yes');
 
@@ -121,8 +121,8 @@ add_filter('manage_edit-shop_order_columns','paymob_order_list_columns');
 add_filter('manage_woocommerce_page_wc-orders_columns', 'paymob_order_list_columns');
 
 function paymob_order_list_columns($columns) {
-    $columns["paymob_merchant_order_id"] = __("Paymob Merchant Order ID", "paymob_woocommerce");
-    $columns["paymob_transaction_id"] = __("Paymob Transaction ID", "paymob_woocommerce");
+    $columns["paymob_merchant_order_id"] = __( 'Paymob Merchant Order ID', 'paymob-for-woocommerce' );
+    $columns["paymob_transaction_id"] = __( 'Paymob Transaction ID', 'paymob-for-woocommerce' );
     return $columns;
 }
 
@@ -162,7 +162,7 @@ function prevent_multiple_subscription_products( $passed, $product_id, $quantity
 	if ( class_exists( 'WC_Subscriptions_Product' ) && WC_Subscriptions_Product::is_subscription( $product_id ) ) {
 		foreach ( WC()->cart->get_cart() as $cart_item ) {
 			if ( WC_Subscriptions_Product::is_subscription( $cart_item['product_id'] ) && $cart_item['product_id'] != $product_id ) {
-				wc_add_notice( __( 'You cannot add multiple subscription products to the cart.', 'woocommerce-subscriptions' ), 'error' );
+				wc_add_notice( __( 'You cannot add multiple subscription products to the cart.', 'paymob-for-woocommerce' ), 'error' );
 				return false;
 			}
 		}
@@ -205,14 +205,14 @@ function prevent_mixed_subscription_checkout( $passed, $product_id, $quantity ) 
 			$cart_has_variable_sub    = $cart_product_obj && $cart_product_obj->is_type( 'variable-subscription' );
 
 			if ( $is_variable_subscription || $cart_has_variable_sub ) {
-				wc_add_notice( __( 'You can only have one variable subscription product in the cart at a time.', 'woocommerce-subscriptions' ), 'error' );
+				wc_add_notice( __( 'You can only have one variable subscription product in the cart at a time.', 'paymob-for-woocommerce' ), 'error' );
 				return false;
 			}
 		}
 
 		// If one is subscription and the other is not, block
 		if ( $is_cart_item_subscription !== $is_subscription_product ) {
-			wc_add_notice( __( 'You can either add a subscription product or a non-subscription product to the cart — not both.', 'woocommerce-subscriptions' ), 'error' );
+			wc_add_notice( __( 'You can either add a subscription product or a non-subscription product to the cart — not both.', 'paymob-for-woocommerce' ), 'error' );
 			return false;
 		}
 	}

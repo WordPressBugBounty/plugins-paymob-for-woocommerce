@@ -50,8 +50,8 @@ class Paymob_WooCommerce {
 	 * @return array
 	 */
 	public function add_plugin_links( $links ) {
-		$paymobSetting = '<a href="' . admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' ) . '">' . __( 'PayMob Settings', 'paymob-woocommerce' ) . '</a>';
-		$plugin_links  = array( __( 'Paymob Settings', 'paymob-woocommerce' ) => $paymobSetting );
+		$paymobSetting = '<a href="' . admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' ) . '">' . __( 'PayMob Settings', 'paymob-for-woocommerce' ) . '</a>';
+		$plugin_links  = array( __( 'Paymob Settings', 'paymob-for-woocommerce' ) => $paymobSetting );
 		return ( array_merge( $links, $plugin_links ) );
 	}
 
@@ -95,13 +95,15 @@ class Paymob_WooCommerce {
 		$obj     = $json_data['obj'];
 		$type    = $json_data['type'];
 		$orderId = substr( $obj['order']['merchant_order_id'], 0, -11 );
-		$merchant_order_id= $obj['order']['merchant_order_id'];
-		if(strpos($orderId,'pixel') !== false){
+		$merchant_order_id = sanitize_text_field( (string) $obj['order']['merchant_order_id'] );
+		if ( strpos( $orderId, 'pixel' ) !== false ) {
 			global $wpdb;
 			$orderId = $wpdb->get_var(
-				
-				"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
-		    );
+				$wpdb->prepare(
+					"SELECT merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier = %s",
+					$merchant_order_id
+				)
+			);
 
 		}
 		if ( Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, Paymob::filterVar( 'hmac', 'REQUEST' ) ) ) {
@@ -119,7 +121,7 @@ class Paymob_WooCommerce {
 			$transaction   = $obj['id'];
 			$paymobId      = $obj['order']['id'];
 
-			$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
+			$msg = __( 'Paymob  Webhook for Order #', 'paymob-for-woocommerce' ) . $orderId;
 
 			// Instant Refund / refunds from Paymob dashboard arrive after the order is paid.
 			// Allow status updates for refund/void even when the Woo order is already processing/completed.
@@ -145,13 +147,13 @@ class Paymob_WooCommerce {
 				false === $obj['is_refund'] &&
 				false === $obj['error_occured']
 			) {
-				$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-woocommerce' );
+				$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-for-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				Paymob::addLogs( $this->gateway->debug, $addlog, 'aml fares accept ');
 				$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
-				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
 				// Handle CAF logic
 				$this->update_order_total_after_discount( $order, $obj );
@@ -171,12 +173,12 @@ class Paymob_WooCommerce {
 				$order->set_payment_method_title( $paymentMethodTitle );
 			} else {
 				$order->update_status( 'failed' );
-				$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-woocommerce' );
+				$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-for-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
-				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
@@ -193,13 +195,15 @@ class Paymob_WooCommerce {
 
 	public function flashWebhook( $json_data, $url, $country ) {
 		$orderId          = Paymob::getIntentionId( $json_data['intention']['extras']['creation_extras']['merchant_intention_id'] );
-		$merchant_order_id=$json_data['intention']['extras']['creation_extras']['merchant_intention_id'];
-		if(strpos($orderId,'pixel') !== false){
+		$merchant_order_id = sanitize_text_field( (string) $json_data['intention']['extras']['creation_extras']['merchant_intention_id'] );
+		if ( strpos( $orderId, 'pixel' ) !== false ) {
 			global $wpdb;
 			$orderId = $wpdb->get_var(
-				
-				"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
-		   );
+				$wpdb->prepare(
+					"SELECT merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier = %s",
+					$merchant_order_id
+				)
+			);
 
 		}
 		$order            = wc_get_order( $orderId );
@@ -238,7 +242,7 @@ class Paymob_WooCommerce {
 
 		$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
 		$status = $order->get_status();
-		$msg    = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
+		$msg    = __( 'Paymob  Webhook for Order #', 'paymob-for-woocommerce' ) . $orderId;
 
 		if ( ! empty( $json_data['transaction'] ) ) {
 			$trans         = $json_data['transaction'];
@@ -270,14 +274,14 @@ class Paymob_WooCommerce {
 				false === $trans['is_refunded'] &&
 				false === $trans['is_capture']
 			) {
-				$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-woocommerce' );
+				$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-for-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$transaction = $json_data['transaction']['id'];
 				$paymobId    = $json_data['transaction']['order']['id'];
 				$note       .= "<br/>Payment Method IDs: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
-				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
 				$this->update_order_total_after_discount( $order, $json_data );
 				$this->handle_caf_logic( $order, $json_data);
@@ -299,7 +303,7 @@ class Paymob_WooCommerce {
 				false === $trans['is_capture']
 			) {
 				$order->update_status( 'refunded' );
-				$note = __( 'Paymob  Webhook: Payment Refunded', 'paymob-woocommerce' );
+				$note = __( 'Paymob  Webhook: Payment Refunded', 'paymob-for-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$order->add_order_note( $note );
@@ -310,14 +314,14 @@ class Paymob_WooCommerce {
 				false === $trans['is_capture']
 			) {
 				$order->update_status( 'failed' );
-				$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-woocommerce' );
+				$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-for-woocommerce' );
 				$msg  = $msg . ' ' . $note;
 				Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 				$transaction = $json_data['transaction']['id'];
 				$paymobId    = $json_data['transaction']['order']['id'];
 				$note       .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 				$order->add_order_note( $note );
-				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+				$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 				$order->add_order_note( $note2);
 			}
 			$order->update_meta_data( 'PaymobTransactionId', $transaction );
@@ -460,7 +464,7 @@ class Paymob_WooCommerce {
 		$transaction   = $obj['id'];
 		$paymobId      = $obj['order']['id'];
 
-		$msg = __( 'Paymob  Webhook for Order #', 'paymob-woocommerce' ) . $orderId;
+		$msg = __( 'Paymob  Webhook for Order #', 'paymob-for-woocommerce' ) . $orderId;
 		if (
 			true ===  $obj['success'] &&
 			false === $obj['is_voided'] &&
@@ -470,12 +474,12 @@ class Paymob_WooCommerce {
 			false === $obj['is_refund'] &&
 			false === $obj['error_occured']
 		) {
-			$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-woocommerce' );
+			$note = __( 'Paymob  Webhook: Transaction Approved', 'paymob-for-woocommerce' );
 			$msg  = $msg . ' ' . $note;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 			$order->add_order_note( $note );
-			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->payment_complete( $orderId );
 			$paymentMethod      = $order->get_payment_method();
@@ -483,12 +487,12 @@ class Paymob_WooCommerce {
 			$order->set_payment_method_title( $paymentMethodTitle );
 		} else {
 			$order->update_status( 'failed' );
-			$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-woocommerce' );
+			$note = __( 'Paymob Webhook: Payment is not completed ', 'paymob-for-woocommerce' );
 			$msg  = $msg . ' ' . $note;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$note .= "<br/>Payment Method ID: { $integrationId } <br/>Transaction done by: { $type } / { $subType }</br> Transaction ID:  <b style='color:DodgerBlue;'>{ $transaction }</b></br> Order ID: <b style='color:DodgerBlue;'>{ $paymobId }</b> </br> <a href=' {$url} portal2/en/transactions' target='_blank'>Visit Paymob Dashboard</a>";
 			$order->add_order_note( $note );
-			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 		}
 		$order->update_meta_data( 'PaymobTransactionId', $transaction );
@@ -512,20 +516,20 @@ class Paymob_WooCommerce {
 		$is_success = ( $normalized === 'successful transaction' ||
 		                $normalized ==="resumed"||
 						$normalized ==="updated"||
-						str_contains( $normalized, 'successful' ));
+						false !== strpos( $normalized, 'successful' ) );
 
 		$is_failed  = ( $normalized === 'failed transaction' ||
 						$normalized === 'failed overdue transaction' ||
 						$normalized === 'suspended' ||
 						$normalized === 'canceled'||
-					    str_contains( $normalized, 'failed' ) );
+					    false !== strpos( $normalized, 'failed' ) );
 
 		$is_failed_payment = $is_failed;
 
 		
 		$next_billing_str = $subscription_data['next_billing'] ?? null;
 		$next_billing     = $next_billing_str ? strtotime( $next_billing_str ) : 0;
-		$today            = strtotime( date( 'Y-m-d' ) );
+		$today            = strtotime( gmdate( 'Y-m-d' ) );
 
 		// ===== LOG FILE =====
 		$addlog = WC_LOG_DIR . 'paymob-subscription.log';
@@ -791,14 +795,16 @@ class Paymob_WooCommerce {
 		
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
 		
-		$merchant_order_id=Paymob::filterVar( 'merchant_order_id' );
+		$merchant_order_id = sanitize_text_field( (string) Paymob::filterVar( 'merchant_order_id' ) );
 		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
-		if(strpos($orderId,'pixel') !== false){
+		if ( strpos( $orderId, 'pixel' ) !== false ) {
 			global $wpdb;
 			$orderId = $wpdb->get_var(
-				
-					"SELECT  merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier ='" .$merchant_order_id."'"
-		     );
+				$wpdb->prepare(
+					"SELECT merchant_order_id FROM {$wpdb->prefix}paymob_pixel_intentions WHERE pixel_identifier = %s",
+					$merchant_order_id
+				)
+			);
 			
 		}
 		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- order id'.$orderId );
@@ -809,7 +815,7 @@ class Paymob_WooCommerce {
 		$order           = wc_get_order( $orderId );
 		
 		if(!$order ){
-			wp_safe_redirect(wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, no order found. Please try again.', 'paymob-woocommerce' ));
+			wp_safe_redirect(wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, no order found. Please try again.', 'paymob-for-woocommerce' ));
 			exit();
 		}
 		$amount_cents = Paymob::filterVar('amount_cents');
@@ -844,7 +850,7 @@ class Paymob_WooCommerce {
 			update_post_meta( $orderId, 'PaymobMerchantOrderID', $merchant_order_id );
 
 			$err = '?gatewayerror='.$error ;
-			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->save();
 			// Bug 1: reset Pixel discount + intention so retry starts from cart base (e.g. 30 not 27).
@@ -858,7 +864,7 @@ class Paymob_WooCommerce {
 		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
 
 		if ( ! Paymob::verifyHmac( $this->hmac_hidden, Paymob::sanitizeVar() ) ) {
-			$checkout_url = wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, you are accessing wrong data due to mismatch verification.', 'paymob-woocommerce' );
+			$checkout_url = wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, you are accessing wrong data due to mismatch verification.', 'paymob-for-woocommerce' );
 			if(Paymob::filterVar( 'afterpayment' )){
 				wp_send_json_success(array('url' => $checkout_url));
 			}
@@ -898,11 +904,11 @@ class Paymob_WooCommerce {
 				}
 				exit();
 			}
-			$note = __( 'Paymob : Transaction ', 'paymob-woocommerce' ) . Paymob::filterVar( 'data_message' );
-			$msg  = __( 'In callback action, for order #', 'paymob-woocommerce' ) . ' ' . $orderId . ' ' . $note;
+			$note = __( 'Paymob : Transaction ', 'paymob-for-woocommerce' ) . Paymob::filterVar( 'data_message' );
+			$msg  = __( 'In callback action, for order #', 'paymob-for-woocommerce' ) . ' ' . $orderId . ' ' . $note;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$order->add_order_note( $note . $info );
-			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->payment_complete( $orderId );
 			$paymentMethod      = $order->get_payment_method();
@@ -916,13 +922,13 @@ class Paymob_WooCommerce {
 		} else {
 			$redirect_url = wc_get_checkout_url();
 			$gatewayError = Paymob::filterVar( 'data_message' );
-			$error        = __( 'Payment is not completed due to ', 'paymob-woocommerce' ) . $gatewayError;
-			$msg          = __( 'In callback action, for order #', 'paymob-woocommerce' ) . ' ' . $orderId . ' ' . $error;
+			$error        = __( 'Payment is not completed due to ', 'paymob-for-woocommerce' ) . $gatewayError;
+			$msg          = __( 'In callback action, for order #', 'paymob-for-woocommerce' ) . ' ' . $orderId . ' ' . $error;
 			Paymob::addLogs( $this->gateway->debug, $addlog, $msg );
 			$order->update_status( 'failed' );
 			$order->add_order_note( 'Paymob :' . $error . $info );
 			$err = '?gatewayerror='.$error ;
-			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-woocommerce' ) . $merchant_order_id; 
+			$note2= __( 'Paymob : Merchant Order ID Is ', 'paymob-for-woocommerce' ) . $merchant_order_id; 
 			$order->add_order_note( $note2);
 			$order->save();
 			// Bug 1: do not remount Pixel on already-discounted intention amount.
@@ -961,6 +967,9 @@ class Paymob_WooCommerce {
 		exit();
 	}
 	public function add_enqueue_scripts() {
+		if ( ! Paymob_Context::should_enqueue_frontend_assets() ) {
+			return;
+		}
 
 		Paymob_Style::paymob_enqueue();
 	}
@@ -1314,7 +1323,7 @@ class Paymob_WooCommerce {
 
 		$extra = array(
 			'paymob_instant_refund_fee' => array(
-				'label' => __( 'Instant Refund Fee (non-refundable):', 'paymob-woocommerce' ),
+				'label' => __( 'Instant Refund Fee (non-refundable):', 'paymob-for-woocommerce' ),
 				'value' => function_exists( 'paymob_pixel_format_price' )
 					? paymob_pixel_format_price( $fee_major, $currency )
 					: wc_price( $fee_major, array( 'currency' => $currency, 'decimals' => $prec ) ),
@@ -1377,14 +1386,14 @@ class Paymob_WooCommerce {
 		?>
 		<tr>
 			<td class="label">
-				<?php esc_html_e( 'Instant Refund Fee:', 'paymob-woocommerce' ); ?>
+				<?php esc_html_e( 'Instant Refund Fee:', 'paymob-for-woocommerce' ); ?>
 				<br/>
 				<small style="font-weight:400;color:#646970;">
 					<?php
 					echo esc_html(
 						sprintf(
 							/* translators: %s: fee amount */
-							__( '%s is non-refundable', 'paymob-woocommerce' ),
+							__( '%s is non-refundable', 'paymob-for-woocommerce' ),
 							wp_strip_all_tags( $fee_html )
 						)
 					);
@@ -1436,15 +1445,15 @@ class Paymob_WooCommerce {
 				<span class="paymob-ir-refund-notice__badge" aria-hidden="true">!</span>
 				<div class="paymob-ir-refund-notice__body">
 					<p class="paymob-ir-refund-notice__title">
-						<?php esc_html_e( 'Paymob Instant Refund', 'paymob-woocommerce' ); ?>
+						<?php esc_html_e( 'Paymob Instant Refund', 'paymob-for-woocommerce' ); ?>
 					</p>
 					<ul class="paymob-ir-refund-notice__list">
 						<li>
-							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Instant Refund Fee (non-refundable)', 'paymob-woocommerce' ); ?></span>
+							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Instant Refund Fee (non-refundable)', 'paymob-for-woocommerce' ); ?></span>
 							<strong class="paymob-ir-refund-notice__value"><?php echo wp_kses_post( $fee_label ); ?></strong>
 						</li>
 						<li>
-							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Max refundable from Woo', 'paymob-woocommerce' ); ?></span>
+							<span class="paymob-ir-refund-notice__label"><?php esc_html_e( 'Max refundable from Woo', 'paymob-for-woocommerce' ); ?></span>
 							<strong class="paymob-ir-refund-notice__value"><?php echo wp_kses_post( $max_label ); ?></strong>
 						</li>
 					</ul>
@@ -1497,7 +1506,7 @@ class Paymob_WooCommerce {
 
 		$status = $order->get_status();
 		if ( in_array( $status, array( 'refunded', 'cancelled' ), true ) ) {
-			$order->add_order_note( __( 'Paymob: Refund webhook received (order already refunded).', 'paymob-woocommerce' ) );
+			$order->add_order_note( __( 'Paymob: Refund webhook received (order already refunded).', 'paymob-for-woocommerce' ) );
 			return;
 		}
 
@@ -1515,7 +1524,7 @@ class Paymob_WooCommerce {
 			: (float) $order->get_remaining_refund_amount();
 
 		$trx_id = $trans['id'] ?? ( $trans['transaction_id'] ?? '' );
-		$note   = __( 'Paymob Webhook: Payment Refunded / Instant Refund', 'paymob-woocommerce' );
+		$note   = __( 'Paymob Webhook: Payment Refunded / Instant Refund', 'paymob-for-woocommerce' );
 		if ( $trx_id ) {
 			$note .= '<br/>Transaction ID: <b style="color:DodgerBlue;">' . esc_html( (string) $trx_id ) . '</b>';
 		}

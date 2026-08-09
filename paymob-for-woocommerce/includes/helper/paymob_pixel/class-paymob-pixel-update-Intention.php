@@ -102,7 +102,7 @@ class Paymob_Pixel_Update_Intention {
                     $order->add_order_note(
                         sprintf(
                             /* translators: %s: formatted fee amount */
-                            __( 'Paymob Instant Refund Fee: %s (non-refundable)', 'paymob-woocommerce' ),
+                            __( 'Paymob Instant Refund Fee: %s (non-refundable)', 'paymob-for-woocommerce' ),
                             $fee_html
                         )
                     );

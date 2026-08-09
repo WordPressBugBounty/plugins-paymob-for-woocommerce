@@ -7,8 +7,8 @@ class Paymob_Gateway extends Paymob_Payment {
 	public $has_fields;
 	public function __construct() {
 		$this->id                 = 'paymob';
-		$this->method_title       = $this->title = __( 'Pay with Paymob', 'paymob-woocommerce' );
-		$this->method_description = $this->description = __( 'Pay with Paymob', 'paymob-woocommerce' );
+		$this->method_title       = $this->title = __( 'Pay with Paymob', 'paymob-for-woocommerce' );
+		$this->method_description = $this->description = __( 'Pay with Paymob', 'paymob-for-woocommerce' );
 		parent::__construct();
 		// config
 		$this->init_settings();

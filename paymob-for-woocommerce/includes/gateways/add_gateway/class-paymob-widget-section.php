@@ -60,7 +60,7 @@ class Paymob_Widget_Settings {
 		$selected_integration   = self::resolve_selected_integration_id( $stored_integration );
 		$integration_id_count   = count( $bank_installment_ids );
 		$has_integration_ids    = ! empty( $bank_installment_ids );
-		$integration_hint_text  = __( 'If you have a single Bank Installment Integration ID, it will be pre-selected automatically. For multiple IDs, select the one to use for the widget.', 'paymob-woocommerce' );
+		$integration_hint_text  = __( 'If you have a single Bank Installment Integration ID, it will be pre-selected automatically. For multiple IDs, select the one to use for the widget.', 'paymob-for-woocommerce' );
 
 		if ( ! $has_integration_ids ) {
 			$selected_integration = '';
@@ -120,7 +120,7 @@ class Paymob_Widget_Settings {
 				opacity: 0.82;
 			}
 		</style>
-		<div class="<?php echo esc_attr( implode( ' ', $page_classes ) ); ?>" data-active-theme="<?php echo esc_attr( $widget_theme ); ?>" data-has-integration-ids="<?php echo $has_integration_ids ? '1' : '0'; ?>">
+		<div class="<?php echo esc_attr( implode( ' ', $page_classes ) ); ?>" data-active-theme="<?php echo esc_attr( $widget_theme ); ?>" data-has-integration-ids="<?php echo esc_attr( $has_integration_ids ? '1' : '0' ); ?>">
 			<div class="paymob-aw-card paymob-aw-header">
 				<div class="paymob-aw-header__icon" aria-hidden="true">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -129,19 +129,19 @@ class Paymob_Widget_Settings {
 				</div>
 				<div class="paymob-aw-header__content">
 					<div class="paymob-aw-header__title">
-						<h2><?php echo esc_html__( 'Affordability Widget', 'paymob-woocommerce' ); ?></h2>
-						<span class="paymob-aw-badge paymob-aw-badge--new"><?php echo esc_html__( 'New', 'paymob-woocommerce' ); ?></span>
+						<h2><?php echo esc_html__( 'Affordability Widget', 'paymob-for-woocommerce' ); ?></h2>
+						<span class="paymob-aw-badge paymob-aw-badge--new"><?php echo esc_html__( 'New', 'paymob-for-woocommerce' ); ?></span>
 					</div>
 					<p class="paymob-aw-header__desc">
-						<?php echo esc_html__( "Display Bank Installment Plans on your product and cart pages. Shoppers can select a plan upfront — and it carries through automatically to Paymob's checkout, so they don't have to choose again.", 'paymob-woocommerce' ); ?>
+						<?php echo esc_html__( "Display Bank Installment Plans on your product and cart pages. Shoppers can select a plan upfront — and it carries through automatically to Paymob's checkout, so they don't have to choose again.", 'paymob-for-woocommerce' ); ?>
 					</p>
 					<p class="paymob-aw-header__availability">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 22s-7-7.58-7-12a7 7 0 1 1 14 0c0 4.42-7 12-7 12Z" stroke="#475467" stroke-width="1.5"/><circle cx="12" cy="10" r="2.5" stroke="#475467" stroke-width="1.5"/></svg>
 						<?php
 						printf(
 							/* translators: %s: Country name */
-							esc_html__( 'Currently available for %s only.', 'paymob-woocommerce' ),
-							'<strong>' . esc_html__( 'Egypt', 'paymob-woocommerce' ) . '</strong>'
+							esc_html__( 'Currently available for %s only.', 'paymob-for-woocommerce' ),
+							'<strong>' . esc_html__( 'Egypt', 'paymob-for-woocommerce' ) . '</strong>'
 						);
 						?>
 					</p>
@@ -150,8 +150,8 @@ class Paymob_Widget_Settings {
 
 			<div class="paymob-aw-card paymob-aw-row">
 				<div class="paymob-aw-row__text">
-					<h3><?php echo esc_html__( 'Enable widget', 'paymob-woocommerce' ); ?></h3>
-					<p><?php echo esc_html__( 'Determines whether the Affordability Widget is displayed on product and cart pages.', 'paymob-woocommerce' ); ?></p>
+					<h3><?php echo esc_html__( 'Enable widget', 'paymob-for-woocommerce' ); ?></h3>
+					<p><?php echo esc_html__( 'Determines whether the Affordability Widget is displayed on product and cart pages.', 'paymob-for-woocommerce' ); ?></p>
 				</div>
 				<div class="paymob-aw-row__action">
 					<label class="paymob-aw-toggle">
@@ -168,12 +168,12 @@ class Paymob_Widget_Settings {
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="#b54708" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</div>
 					<div class="paymob-aw-notice__body">
-						<strong><?php echo esc_html__( 'No Bank Installment Integration ID found', 'paymob-woocommerce' ); ?></strong>
+						<strong><?php echo esc_html__( 'No Bank Installment Integration ID found', 'paymob-for-woocommerce' ); ?></strong>
 						<p>
 							<?php
 							printf(
 								/* translators: %s: Support email */
-								esc_html__( 'Please reach out to your account manager or contact us at %s to enable Bank Installment Plans on your account.', 'paymob-woocommerce' ),
+								esc_html__( 'Please reach out to your account manager or contact us at %s to enable Bank Installment Plans on your account.', 'paymob-for-woocommerce' ),
 								'<a href="mailto:support@paymob.com">support@paymob.com</a>'
 							);
 							?>
@@ -187,21 +187,21 @@ class Paymob_Widget_Settings {
 					<span class="paymob-aw-section__icon">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" stroke="#344054" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</span>
-					<h3><?php echo esc_html__( 'Bank installment configuration', 'paymob-woocommerce' ); ?></h3>
+					<h3><?php echo esc_html__( 'Bank installment configuration', 'paymob-for-woocommerce' ); ?></h3>
 				</div>
 				<div class="paymob-aw-field paymob-aw-field--integration">
 					<label for="paymob_aw_integration_id" class="paymob-aw-field__label">
-						<span class="paymob-aw-field__label-text"><?php echo esc_html__( 'Bank installment integration ID', 'paymob-woocommerce' ); ?></span>
-						<span class="paymob-aw-req" title="<?php echo esc_attr__( 'Required', 'paymob-woocommerce' ); ?>">*</span>
+						<span class="paymob-aw-field__label-text"><?php echo esc_html__( 'Bank installment integration ID', 'paymob-for-woocommerce' ); ?></span>
+						<span class="paymob-aw-req" title="<?php echo esc_attr__( 'Required', 'paymob-for-woocommerce' ); ?>">*</span>
 					</label>
 					<div class="paymob-aw-integration-control">
 						<div class="<?php echo esc_attr( $integration_select_wrap_class ); ?>">
 							<?php if ( 1 === $integration_id_count && '' !== $selected_integration ) : ?>
 								<input type="hidden" name="paymob_aw_integration_id" value="<?php echo esc_attr( $selected_integration ); ?>" />
 							<?php endif; ?>
-							<select id="paymob_aw_integration_id" name="<?php echo ( 1 === $integration_id_count ) ? '' : 'paymob_aw_integration_id'; ?>" class="paymob-aw-select" <?php echo empty( $bank_installment_ids ) ? 'disabled' : ''; ?> <?php echo ( 1 === $integration_id_count ) ? 'data-paymob-aw-single-id="1"' : ''; ?>>
+							<select id="paymob_aw_integration_id" name="<?php echo esc_attr( 1 === $integration_id_count ? '' : 'paymob_aw_integration_id' ); ?>" class="paymob-aw-select" <?php disabled( empty( $bank_installment_ids ) ); ?><?php if ( 1 === $integration_id_count ) : ?> data-paymob-aw-single-id="1"<?php endif; ?>>
 								<?php if ( 1 !== $integration_id_count ) : ?>
-									<option value="" <?php selected( $selected_integration, '' ); ?>><?php echo esc_html__( 'Select integration ID', 'paymob-woocommerce' ); ?></option>
+									<option value="" <?php selected( $selected_integration, '' ); ?>><?php echo esc_html__( 'Select integration ID', 'paymob-for-woocommerce' ); ?></option>
 								<?php endif; ?>
 								<?php foreach ( $bank_installment_ids as $id => $label ) : ?>
 									<option value="<?php echo esc_attr( $id ); ?>" <?php selected( $selected_integration, (string) $id ); ?>><?php echo esc_html( $label ); ?></option>
@@ -226,12 +226,12 @@ class Paymob_Widget_Settings {
 					<span class="paymob-aw-section__icon">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 12 3 3 8.5M21 8.5 12 14 3 8.5M21 8.5v7L12 21l-9-5.5v-7" stroke="#344054" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</span>
-					<h3><?php echo esc_html__( 'Minimum product amount', 'paymob-woocommerce' ); ?></h3>
+					<h3><?php echo esc_html__( 'Minimum product amount', 'paymob-for-woocommerce' ); ?></h3>
 				</div>
 				<div class="paymob-aw-row paymob-aw-row--inline">
 					<div class="paymob-aw-row__text">
-						<h4><?php echo esc_html__( 'Set a minimum product price', 'paymob-woocommerce' ); ?></h4>
-						<p><?php echo esc_html__( 'Hide the widget when the product price is below this amount.', 'paymob-woocommerce' ); ?></p>
+						<h4><?php echo esc_html__( 'Set a minimum product price', 'paymob-for-woocommerce' ); ?></h4>
+						<p><?php echo esc_html__( 'Hide the widget when the product price is below this amount.', 'paymob-for-woocommerce' ); ?></p>
 					</div>
 					<div class="paymob-aw-row__action">
 						<label class="paymob-aw-toggle">
@@ -241,8 +241,8 @@ class Paymob_Widget_Settings {
 						</label>
 					</div>
 				</div>
-				<div class="paymob-aw-field paymob-aw-field--conditional" id="paymob-aw-min-product" <?php echo $min_product_enabled ? '' : 'hidden'; ?>>
-					<label for="paymob_aw_min_product_amount"><?php echo esc_html__( 'Amount (EGP)', 'paymob-woocommerce' ); ?></label>
+				<div class="paymob-aw-field paymob-aw-field--conditional" id="paymob-aw-min-product"<?php if ( ! $min_product_enabled ) : ?> hidden<?php endif; ?>>
+					<label for="paymob_aw_min_product_amount"><?php echo esc_html__( 'Amount (EGP)', 'paymob-for-woocommerce' ); ?></label>
 					<input type="number" min="0" step="0.01" id="paymob_aw_min_product_amount" name="min_product_amount" value="<?php echo esc_attr( $min_product_amount ); ?>" class="paymob-aw-input" placeholder="0.00" />
 				</div>
 			</div>
@@ -252,12 +252,12 @@ class Paymob_Widget_Settings {
 					<span class="paymob-aw-section__icon">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="20" r="1.5" stroke="#344054" stroke-width="1.6"/><circle cx="17" cy="20" r="1.5" stroke="#344054" stroke-width="1.6"/><path d="M3 4h2l2.5 12h12L22 7H6" stroke="#344054" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</span>
-					<h3><?php echo esc_html__( 'Minimum cart amount', 'paymob-woocommerce' ); ?></h3>
+					<h3><?php echo esc_html__( 'Minimum cart amount', 'paymob-for-woocommerce' ); ?></h3>
 				</div>
 				<div class="paymob-aw-row paymob-aw-row--inline">
 					<div class="paymob-aw-row__text">
-						<h4><?php echo esc_html__( 'Set a minimum cart subtotal', 'paymob-woocommerce' ); ?></h4>
-						<p><?php echo esc_html__( 'Hide the widget when the cart subtotal is below this amount.', 'paymob-woocommerce' ); ?></p>
+						<h4><?php echo esc_html__( 'Set a minimum cart subtotal', 'paymob-for-woocommerce' ); ?></h4>
+						<p><?php echo esc_html__( 'Hide the widget when the cart subtotal is below this amount.', 'paymob-for-woocommerce' ); ?></p>
 					</div>
 					<div class="paymob-aw-row__action">
 						<label class="paymob-aw-toggle">
@@ -267,8 +267,8 @@ class Paymob_Widget_Settings {
 						</label>
 					</div>
 				</div>
-				<div class="paymob-aw-field paymob-aw-field--conditional" id="paymob-aw-min-cart" <?php echo $min_cart_enabled ? '' : 'hidden'; ?>>
-					<label for="paymob_aw_min_cart_amount"><?php echo esc_html__( 'Amount (EGP)', 'paymob-woocommerce' ); ?></label>
+				<div class="paymob-aw-field paymob-aw-field--conditional" id="paymob-aw-min-cart"<?php if ( ! $min_cart_enabled ) : ?> hidden<?php endif; ?>>
+					<label for="paymob_aw_min_cart_amount"><?php echo esc_html__( 'Amount (EGP)', 'paymob-for-woocommerce' ); ?></label>
 					<input type="number" min="0" step="0.01" id="paymob_aw_min_cart_amount" name="min_cart_amount" value="<?php echo esc_attr( $min_cart_amount ); ?>" class="paymob-aw-input" placeholder="0.00" />
 				</div>
 			</div>
@@ -278,16 +278,16 @@ class Paymob_Widget_Settings {
 					<span class="paymob-aw-section__icon">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#344054" stroke-width="1.6"/><circle cx="8" cy="10" r="1" fill="#344054"/><circle cx="12" cy="7" r="1" fill="#344054"/><circle cx="16" cy="10" r="1" fill="#344054"/><circle cx="14" cy="15" r="1" fill="#344054"/></svg>
 					</span>
-					<h3><?php echo esc_html__( 'Widget theme', 'paymob-woocommerce' ); ?></h3>
+					<h3><?php echo esc_html__( 'Widget theme', 'paymob-for-woocommerce' ); ?></h3>
 				</div>
 				<div class="paymob-aw-field">
-					<label class="paymob-aw-field__label"><?php echo esc_html__( 'Select theme', 'paymob-woocommerce' ); ?></label>
+					<label class="paymob-aw-field__label"><?php echo esc_html__( 'Select theme', 'paymob-for-woocommerce' ); ?></label>
 					<div class="paymob-aw-themes" role="radiogroup">
 						<?php
 						$themes = array(
-							'primary' => array( __( 'Primary', 'paymob-woocommerce' ), __( 'Branded, prominent', 'paymob-woocommerce' ) ),
-							'light'   => array( __( 'Light', 'paymob-woocommerce' ), __( 'Subtle, neutral', 'paymob-woocommerce' ) ),
-							'dark'    => array( __( 'Dark', 'paymob-woocommerce' ), __( 'Dark-mode storefronts', 'paymob-woocommerce' ) ),
+							'primary' => array( __( 'Primary', 'paymob-for-woocommerce' ), __( 'Branded, prominent', 'paymob-for-woocommerce' ) ),
+							'light'   => array( __( 'Light', 'paymob-for-woocommerce' ), __( 'Subtle, neutral', 'paymob-for-woocommerce' ) ),
+							'dark'    => array( __( 'Dark', 'paymob-for-woocommerce' ), __( 'Dark-mode storefronts', 'paymob-for-woocommerce' ) ),
 						);
 						foreach ( $themes as $theme_key => $theme_data ) :
 							?>
@@ -306,16 +306,16 @@ class Paymob_Widget_Settings {
 					</div>
 
 					<div class="paymob-aw-preview-wrap">
-						<span class="paymob-aw-preview-label"><?php echo esc_html__( 'PREVIEW', 'paymob-woocommerce' ); ?></span>
+						<span class="paymob-aw-preview-label"><?php echo esc_html__( 'PREVIEW', 'paymob-for-woocommerce' ); ?></span>
 						<div class="paymob-aw-preview paymob-aw-preview--<?php echo esc_attr( $widget_theme ); ?>" data-paymob-aw-preview>
 							<div class="paymob-aw-preview__shell">
 								<div class="paymob-aw-preview__top">
-									<p class="paymob-aw-preview__pill"><?php echo esc_html__( '0% Interest Plans', 'paymob-woocommerce' ); ?></p>
+									<p class="paymob-aw-preview__pill"><?php echo esc_html__( '0% Interest Plans', 'paymob-for-woocommerce' ); ?></p>
 									<div class="paymob-aw-preview__powered">
-										<span><?php echo esc_html__( 'Powered by', 'paymob-woocommerce' ); ?></span>
+										<span><?php echo esc_html__( 'Powered by', 'paymob-for-woocommerce' ); ?></span>
 										<img
 											src="<?php echo esc_url( plugins_url( PAYMOB_PLUGIN_NAME . '/assets/img/paymob.png' ) ); ?>"
-											alt="<?php echo esc_attr__( 'paymob', 'paymob-woocommerce' ); ?>"
+											alt="<?php echo esc_attr__( 'paymob', 'paymob-for-woocommerce' ); ?>"
 											class="paymob-aw-preview__logo"
 										/>
 									</div>
@@ -324,13 +324,13 @@ class Paymob_Widget_Settings {
 									<div class="paymob-aw-preview__body">
 										<div class="paymob-aw-preview__content">
 											<div class="paymob-aw-preview__copy">
-												<p class="paymob-aw-preview__title"><?php echo esc_html__( 'Affordable installment plans', 'paymob-woocommerce' ); ?></p>
+												<p class="paymob-aw-preview__title"><?php echo esc_html__( 'Affordable installment plans', 'paymob-for-woocommerce' ); ?></p>
 												<p class="paymob-aw-preview__subtitle">
-													<span><?php echo esc_html__( 'starting from', 'paymob-woocommerce' ); ?></span>
-													<strong><?php echo esc_html__( 'EGP 300', 'paymob-woocommerce' ); ?> / <?php echo esc_html__( 'month', 'paymob-woocommerce' ); ?></strong>
+													<span><?php echo esc_html__( 'starting from', 'paymob-for-woocommerce' ); ?></span>
+													<strong><?php echo esc_html__( 'EGP 300', 'paymob-for-woocommerce' ); ?> / <?php echo esc_html__( 'month', 'paymob-for-woocommerce' ); ?></strong>
 												</p>
 											</div>
-											<button type="button" class="paymob-aw-preview__cta"><?php echo esc_html__( 'View all plans', 'paymob-woocommerce' ); ?> ›</button>
+											<button type="button" class="paymob-aw-preview__cta"><?php echo esc_html__( 'View all plans', 'paymob-for-woocommerce' ); ?> ›</button>
 										</div>
 										<div class="paymob-aw-preview__visual" aria-hidden="true">
 											<img
@@ -351,7 +351,7 @@ class Paymob_Widget_Settings {
 
 					<p class="paymob-aw-help paymob-aw-help--center">
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#98a2b3" stroke-width="1.5"/><path d="M12 8v.01M11 12h1v4h1" stroke="#98a2b3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<?php echo esc_html__( 'The theme controls how the widget appears to shoppers on your storefront.', 'paymob-woocommerce' ); ?>
+						<?php echo esc_html__( 'The theme controls how the widget appears to shoppers on your storefront.', 'paymob-for-woocommerce' ); ?>
 					</p>
 				</div>
 			</div>
@@ -640,7 +640,7 @@ class Paymob_Widget_Settings {
 				continue;
 			}
 
-			$label = ! empty( $gateway->checkout_title ) ? (string) $gateway->checkout_title : __( 'Bank Installments', 'paymob-woocommerce' );
+			$label = ! empty( $gateway->checkout_title ) ? (string) $gateway->checkout_title : __( 'Bank Installments', 'paymob-for-woocommerce' );
 			$ids[ $integration_id ] = $integration_id . ' — ' . $label;
 		}
 
@@ -693,7 +693,7 @@ class Paymob_Widget_Settings {
 				continue;
 			}
 
-			$label      = __( 'Bank Installments', 'paymob-woocommerce' ) . ' (' . __( 'Pay with Paymob', 'paymob-woocommerce' ) . ')';
+			$label      = __( 'Bank Installments', 'paymob-for-woocommerce' ) . ' (' . __( 'Pay with Paymob', 'paymob-for-woocommerce' ) . ')';
 			$ids[ $id ] = $id . ' — ' . $label;
 		}
 

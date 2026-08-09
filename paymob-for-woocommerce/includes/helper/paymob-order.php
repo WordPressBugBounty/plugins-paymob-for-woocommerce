@@ -49,7 +49,7 @@ class PaymobOrder {
 
 	public function processOrder() {
 		global $woocommerce;
-		$this->order->add_order_note( __( 'Paymob : Awaiting Payment', 'paymob-woocommerce' ) );
+		$this->order->add_order_note( __( 'Paymob : Awaiting Payment', 'paymob-for-woocommerce' ) );
 		$this->order->save();
 		if ( 'yes' == $this->config->empty_cart ) {
 			$woocommerce->cart->empty_cart();
@@ -63,7 +63,7 @@ class PaymobOrder {
 		if ( Paymob::filterVar( 'pay_for_order', 'REQUEST' ) ) {
 			wc_add_notice( $error, 'error' );
 		} else {
-			throw new Exception( $error );
+			throw new Exception( esc_html( $error ) );
 		}
 	}
 
@@ -79,9 +79,9 @@ class PaymobOrder {
 		{
 			if (sizeof(Paymob_Saved_Cards_Tokens::getUserTokens()) > 3) {
 				$url = wc_get_endpoint_url('saved-cards', '', get_permalink(wc_get_page_id('myaccount')));
-				$url = '<a href="' . $url . '">'.esc_html( __( 'Paymob Saved Cards', 'paymob-woocommerce' ) ).'</a>';
-				$url = esc_html( __( 'Please remove your cards from', 'paymob-woocommerce' ) ).' ' . $url . ' '.esc_html( __( 'to complete your purchase', 'paymob-woocommerce' ) );
-				$msg = esc_html( __( 'Ops,Max number of card tokens is 3.', 'paymob-woocommerce' ) ).'<br>'.$url;
+				$url = '<a href="' . $url . '">'.esc_html( __( 'Paymob Saved Cards', 'paymob-for-woocommerce' ) ).'</a>';
+				$url = esc_html( __( 'Please remove your cards from', 'paymob-for-woocommerce' ) ).' ' . $url . ' '.esc_html( __( 'to complete your purchase', 'paymob-for-woocommerce' ) );
+				$msg = esc_html( __( 'Ops,Max number of card tokens is 3.', 'paymob-for-woocommerce' ) ).'<br>'.$url;
 				return [ 'message' => $msg ];
 			} else {
 			
@@ -193,8 +193,9 @@ class PaymobOrder {
 			$itemSubtotalPrice = $this->order->get_line_subtotal( $item, false );
 
 			if ( ! is_numeric( $itemSubtotalPrice ) ) {
-				$errMsg = sprintf( __( 'The "%s" Item has a non-numeric unit price.', 'woocommerce' ), $itemName );
-				throw new Exception( $errMsg );
+				/* translators: %s: product item name */
+				$errMsg = sprintf( __( 'The "%s" Item has a non-numeric unit price.', 'paymob-for-woocommerce' ), $itemName );
+				throw new Exception( esc_html( $errMsg ) );
 			}
 
 			$itemPrice = round( $itemSubtotalPrice / $item->get_quantity(), $round );
@@ -223,7 +224,7 @@ class PaymobOrder {
 		if ( $discount ) {
 			$amount -= round( $discount * $cents, $round );
 			$Items[] = array(
-				'name'     => __( 'Discount', 'woocommerce' ),
+				'name'     => __( 'Discount', 'paymob-for-woocommerce' ),
 				'quantity' => '1',
 				'amount'   => round( -$discount * $cents, $round ),  // Ensure it's an integer
 			);
@@ -246,7 +247,7 @@ class PaymobOrder {
 			$giftAmount = round( -$gifPrice * $cents, $round );
 			$amount    -= $giftAmount;
 			$Items[]    = array(
-				'name'     => __( 'Gift Card', 'woocommerce' ),
+				'name'     => __( 'Gift Card', 'paymob-for-woocommerce' ),
 				'quantity' => '1',
 				'amount'   => $giftAmount,  // Ensure it's an integer
 			);
@@ -256,7 +257,7 @@ class PaymobOrder {
 		if ( $tax ) {
 			$amount += round( $tax * $cents, $round );
 			$Items[] = array(
-				'name'     => __( 'Remaining Cart Items Amount', 'woocommerce' ),
+				'name'     => __( 'Remaining Cart Items Amount', 'paymob-for-woocommerce' ),
 				'quantity' => '1',
 				'amount'   => round( $tax * $cents, $round ),  // Ensure it's an integer
 			);
@@ -288,7 +289,7 @@ class PaymobOrder {
 
 	public static function validateOrderInfo( $orderId, $PaymentId ) {
 		if ( empty( $orderId ) || is_null( $orderId ) || false === $orderId || '' === $orderId ) {
-			wp_die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-woocommerce' ) ) );
+			wp_die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-for-woocommerce' ) ) );
 		}
 		$order = self::getOrder( $orderId );
 
@@ -300,7 +301,7 @@ class PaymobOrder {
 			return $order;
 		}
 		if ( $PaymentId != $paymentMethod ) {
-			die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-woocommerce' ) ) );
+			die( esc_html( __( 'Ops. you are accessing wrong order.', 'paymob-for-woocommerce' ) ) );
 		}
 		return $order;
 	}
@@ -351,10 +352,10 @@ class PaymobOrder {
 
 				$subscription_price_cents = round($subscription_price, $round) * $cents;
 				$start_date_raw = $subscription->get_date('trial_end') ?: $subscription->get_date('start');
-				$start_date = date('Y-m-d', strtotime($start_date_raw));
+				$start_date = gmdate( 'Y-m-d', strtotime( $start_date_raw ) );
 				$use_transaction_amount=false;
 				// Set to null if the date is today
-				if ($start_date === date('Y-m-d')) {
+				if ( $start_date === gmdate( 'Y-m-d' ) ) {
 					$use_transaction_amount=true;
 					$start_date = null; // fallback in case next_payment is also unavailable	
 				}

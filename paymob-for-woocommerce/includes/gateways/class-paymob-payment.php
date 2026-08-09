@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+#[\AllowDynamicProperties]
 class Paymob_Payment extends WC_Payment_Gateway {
 
 
@@ -223,9 +224,9 @@ class Paymob_Payment extends WC_Payment_Gateway {
 							}
 						}
 					}
-					$errorMsg = __( 'Given currency is not supported. ', 'paymob-woocommerce' );
+					$errorMsg = __( 'Given currency is not supported. ', 'paymob-for-woocommerce' );
 					if ( ! empty( $currencies ) ) {
-						$errorMsg .= __( 'Currency supported : ', 'paymob-woocommerce' ) . implode( ',', array_unique( $currencies ) );
+						$errorMsg .= __( 'Currency supported : ', 'paymob-for-woocommerce' ) . implode( ',', array_unique( $currencies ) );
 					}
 				}
 				return $paymobOrder->throwErrors( $errorMsg );
@@ -291,7 +292,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$order = wc_get_order( $order_id );
 		// Check if the order exists
 		if ( ! $order ) {
-			return new WP_Error( 'invalid_order', __( 'Order not found.', 'woocommerce' ) );
+			return new WP_Error( 'invalid_order', __( 'Order not found.', 'paymob-for-woocommerce' ) );
 		}
 
 		$ir_fee_cents = (int) $order->get_meta( '_paymob_instant_refund_fees' );
@@ -320,7 +321,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 				'paymob_ir_non_refundable',
 				sprintf(
 					/* translators: 1: non-refundable fee, 2: max refundable */
-					__( 'Instant Refund Fee %1$s is non-refundable. Maximum refundable amount is %2$s.', 'paymob-woocommerce' ),
+					__( 'Instant Refund Fee %1$s is non-refundable. Maximum refundable amount is %2$s.', 'paymob-for-woocommerce' ),
 					$fee_label,
 					$max_label
 				)
@@ -338,7 +339,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$status          = $paymobReq->refundPayment( $this->sec_key, $data );
 
 		if ( ! $status['success'] ) {
-			return new WP_Error( 'error', __( 'Refund failed: ', 'paymob-woocommerce' ) . $status['message'] );
+			return new WP_Error( 'error', __( 'Refund failed: ', 'paymob-for-woocommerce' ) . $status['message'] );
 		} else {
 			$paymob_refund_id = $status['refund_id'];
 			$msg              = $this->can_refund_orders( $order, $amount, $paymob_refund_id );
@@ -364,11 +365,11 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			$order_total = $order->get_total();
 		if ( $amount < $order_total ) {
 			// Partial refund
-			$msg = __( 'Paymob : Partial refund of ', 'paymob-woocommerce' ) . $amount;
+			$msg = __( 'Paymob : Partial refund of ', 'paymob-for-woocommerce' ) . $amount;
 
 		} elseif ( $amount == $order_total ) {
 			// Full refund
-			$msg = __( 'Paymob : Full refund of ', 'paymob-woocommerce' ) . $amount;
+			$msg = __( 'Paymob : Full refund of ', 'paymob-for-woocommerce' ) . $amount;
 		}
 			$info = "<br/>Woo Order Refund ID: {$recent_refund_id}<br/>Transaction Refund ID : {$paymob_refund_id}";
 			$order->add_order_note( $msg . $info );
@@ -409,13 +410,19 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$secKey        = $paymobOptions['sec_key'];
 		$apiKey        = $paymobOptions['api_key'];
 		if ( empty( $pubKey ) || empty( $secKey ) || empty( $apiKey ) ) {
-			WC_Admin_Settings::add_error( __( 'Please ensure you are entering API, public and secret keys in the main Paymob configuration.', 'paymob-woocommerce' ) );
+			WC_Admin_Settings::add_error( __( 'Please ensure you are entering API, public and secret keys in the main Paymob configuration.', 'paymob-for-woocommerce' ) );
 			return 'no';
 		}
 
 		$integrationId = $this->get_field_value( 'single_integration_id', $this->form_fields['single_integration_id'] );
 		if ( empty( $integrationId ) ) {
-			WC_Admin_Settings::add_error( __( 'Please, ensure adding (' . $this->method_title . ') integration ID.', 'paymob-woocommerce' ) );
+			WC_Admin_Settings::add_error(
+				sprintf(
+					/* translators: %s: payment method title */
+					__( 'Please, ensure adding (%s) integration ID.', 'paymob-for-woocommerce' ),
+					$this->method_title
+				)
+			);
 			return 'no';
 		}
 		return 'yes';

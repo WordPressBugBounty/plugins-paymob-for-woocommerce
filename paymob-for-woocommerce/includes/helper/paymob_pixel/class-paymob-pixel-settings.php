@@ -15,7 +15,7 @@ class Paymob_Pixel_Settings {
 
             if(!empty($applepayIDs) && count($applepayIDs)>1){
                 $appleArray=array(
-                        'name' => __('Apple Pay', 'paymob-woocommerce'),
+                        'name' => __('Apple Pay', 'paymob-for-woocommerce'),
                         'type' => 'select',
                         'id' => 'apple_pay_integration_id',
                         'options' => $applepayIDs,
@@ -27,7 +27,7 @@ class Paymob_Pixel_Settings {
             $googleArray=array();
             if(!empty($googlepayIDs)&& count($googlepayIDs)>1){
                 $googleArray=array(
-                        'name' => __('Google Pay', 'paymob-woocommerce'),
+                        'name' => __('Google Pay', 'paymob-for-woocommerce'),
                         'type' => 'select',
                         'id' => 'google_pay_integration_id',
                         'options' => $googlepayIDs,
@@ -45,28 +45,28 @@ class Paymob_Pixel_Settings {
                 array(
                     'type'  => 'title',
                     'class' => 'payment-feature-description',
-                    'name'  => __( 'About Feature', 'paymob-woocommerce' ),
+                    'name'  => __( 'About Feature', 'paymob-for-woocommerce' ),
                     'desc'  => '<div style="background-color: #f0f8ff; border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 8px; font-family: Arial, sans-serif; color: #333; width:70%; margin-left:1%">
                                     '.__( 'Feature enables consumers to complete their payments directly on your WooCommerce store. It is enabled by default on your store. To disable it, navigate to the Payment Integrations section and disable "paymob-pixel". If you wish to hide a specific payment method, simply avoid selecting its integration ID.<br/><br/>
                                     
                                     For card payments, select the required integration ID. By default, all integration IDs will be pre-selected. <br/><br/>
                                     
-                                    <span style="font-weight: bold; color: #007bff;">ℹ️ For Apple Pay and Google Pay:</span> Certain actions must be completed on Paymob\'s side. Please reach out to your account manager or <span style="white-space: nowrap;">contact us at <a href="mailto:support@paymob.com" style="color: #007bff; font-weight: bold;">support@paymob.com</a></span>. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay.' ).'
+                                    <span style="font-weight: bold; color: #007bff;">ℹ️ For Apple Pay and Google Pay:</span> Certain actions must be completed on Paymob\'s side. Please reach out to your account manager or <span style="white-space: nowrap;">contact us at <a href="mailto:support@paymob.com" style="color: #007bff; font-weight: bold;">support@paymob.com</a></span>. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay.', 'paymob-for-woocommerce' ).'
                                 </div>',
                 ),
                 array(
                     'type' => 'title',
-                    'name' => __('Section : Payment Methods', 'paymob-woocommerce'),
+                    'name' => __('Section : Payment Methods', 'paymob-for-woocommerce'),
                 ),
                 array(
-                    'name' => __('Payment Method -  Title', 'paymob-woocommerce'),
+                    'name' => __('Payment Method -  Title', 'paymob-for-woocommerce'),
                     'type' => 'text',
                     'id' => 'title',
                     'desc_tip' => true,
                     'default' => isset($pixel_settings['title']) ? $pixel_settings['title'] : '',
                 ),
                 array(
-                    'name' => __('Cards', 'paymob-woocommerce'),
+                    'name' => __('Cards', 'paymob-for-woocommerce'),
                     'type' => 'multiselect',
                     'id' => 'cards_integration_id',
                     'options' => $all_cards,
@@ -84,24 +84,24 @@ class Paymob_Pixel_Settings {
                 ),
                 array(
                     'type' => 'title',
-                    'name' => __('Section : Settings', 'paymob-woocommerce'),
+                    'name' => __('Section : Settings', 'paymob-for-woocommerce'),
                 ),
                 array(
-                    'name' => __('Show Save Card', 'paymob-woocommerce'),
+                    'name' => __('Show Save Card', 'paymob-for-woocommerce'),
                     'type' => 'checkbox',
                     'id' => 'show_save_card',
                     'desc_tip' => true,
                     'default' => isset($pixel_settings['show_save_card']) ? $pixel_settings['show_save_card'] : 'yes'
                 ),
                 array(
-                    'name' => __('Force Save Card', 'paymob-woocommerce'),
+                    'name' => __('Force Save Card', 'paymob-for-woocommerce'),
                     'type' => 'checkbox',
                     'id' => 'force_save_card',
                     'desc_tip' => true,
                     'default' => isset($pixel_settings['force_save_card']) ? $pixel_settings['force_save_card'] : 'no'
                 ),
                 // array(
-                //     'name' => __('Customize Pixel', 'paymob-woocommerce'),
+                //     'name' => __('Customize Pixel', 'paymob-for-woocommerce'),
                 //     'type' => 'checkbox',
                 //     'id' => 'customization_div',
                 //     'desc_tip' => true,

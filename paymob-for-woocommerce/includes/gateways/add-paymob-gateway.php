@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Adds custom sections to WooCommerce checkout settings for Paymob integrations.
  *

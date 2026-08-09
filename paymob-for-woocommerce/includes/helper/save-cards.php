@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 // Add a custom tab for 'Saved Cards' to My Account page
 add_filter( 'woocommerce_account_menu_items', 'paymob_add_saved_cards_tab', 40 );
 function paymob_add_saved_cards_tab( $menu_links ) {

@@ -1,4 +1,8 @@
-<?php 
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 $paymobOptions = get_option('woocommerce_paymob-main_settings');
 $mode = isset($paymobOptions['mode']) ? $paymobOptions['mode'] : 'test';
 $sliderMode = ($mode=='test')?'':'silderMode';

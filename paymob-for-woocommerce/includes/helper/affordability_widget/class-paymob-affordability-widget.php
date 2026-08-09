@@ -216,7 +216,7 @@ class Paymob_Affordability_Widget {
 				? ( wp_is_mobile() ? 46 : 32 )
 				: 0,
 			'logoUrl'        => plugins_url( PAYMOB_PLUGIN_NAME . '/assets/img/paymob.png' ),
-			'panelTitle'     => __( 'Choose your plan to proceed', 'paymob-woocommerce' ),
+			'panelTitle'     => __( 'Choose your plan to proceed', 'paymob-for-woocommerce' ),
 		);
 	}
 
@@ -410,7 +410,7 @@ class Paymob_Affordability_Widget {
 			data-amount-cents="<?php echo esc_attr( (string) $amount_cents ); ?>"
 			data-currency="<?php echo esc_attr( $meta['currency'] ); ?>"
 			data-integration-id="<?php echo esc_attr( self::get_integration_id() ); ?>"
-			data-theme="<?php echo esc_attr( $theme ); ?>"<?php echo $hidden ? ' style="display:none"' : ''; ?>>
+			data-theme="<?php echo esc_attr( $theme ); ?>"<?php if ( $hidden ) : ?> style="display:none"<?php endif; ?>>
 			<div id="<?php echo esc_attr( $instance_id ); ?>" class="paymob-aw-widget-mount"></div>
 		</div>
 		<?php
@@ -1684,7 +1684,7 @@ html body #paymob-aw-expanded-modal [class*="modal_closeFloatingMobile"] {
 		$header_js_path = PAYMOB_PLUGIN_PATH . 'assets/js/affordability-widget-panel-header.js';
 		$header_js      = file_exists( $header_js_path ) ? file_get_contents( $header_js_path ) : '';
 
-		echo '<style id="paymob-aw-panel-footer-critical">' . self::get_panel_layout_critical_css() . '</style>';
+		echo '<style id="paymob-aw-panel-footer-critical">' . wp_kses( self::get_panel_layout_critical_css(), array() ) . '</style>';
 		?>
 		<script id="paymob-aw-panel-layout-config">
 		window.paymobAwPanelLayout = window.paymobAwPanelLayout || <?php echo $panel_config; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
@@ -1724,6 +1724,7 @@ html body #paymob-aw-expanded-modal [class*="modal_closeFloatingMobile"] {
 	 */
 	public static function mark_sdk_script_as_module( $tag, $handle, $src ) {
 		if ( 'paymob-widget-sdk' === $handle ) {
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- script_loader_tag filter; SDK requires type="module".
 			$tag = '<script type="module" src="' . esc_url( $src ) . '" id="' . esc_attr( $handle ) . '-js"></script>' . "\n";
 		}
 		return $tag;

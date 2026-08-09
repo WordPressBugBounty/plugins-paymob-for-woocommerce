@@ -1,3 +1,8 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+?>
 <div id="paymob-elements"></div>
 <script>
     window.hasEmptyFields = false;

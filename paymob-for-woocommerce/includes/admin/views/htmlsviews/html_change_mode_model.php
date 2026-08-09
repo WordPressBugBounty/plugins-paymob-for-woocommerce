@@ -1,3 +1,8 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+?>
 <div id="changemodeconfirmationModal" class="changemode-modal" style="display:none;">
     <div class="changemode-modal-content">
     <p> Are You Sure To Switch Mode? </p>

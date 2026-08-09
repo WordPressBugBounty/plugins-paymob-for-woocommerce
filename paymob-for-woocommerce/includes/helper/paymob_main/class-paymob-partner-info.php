@@ -95,7 +95,7 @@ class Paymob_Main_Partner_Info
 					$conf['secKey'] = $main_settings['sec_key'] = $status['is_live'] ? $status['sk_key_live'] : $status['sk_key_test'];
 
 					$result = $paymobReq->authToken($conf);
-					Paymob::addLogs('1', WC_LOG_DIR . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-woocommerce'), $result);
+					Paymob::addLogs('1', WC_LOG_DIR . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
 					$gatewayData = $paymobReq->getPaymobGateways($main_settings['sec_key'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 
@@ -122,7 +122,7 @@ class Paymob_Main_Partner_Info
 						}
 						// Update webhook Url by default
 						$webhhok = $paymobReq->getIntegrationID($conf, $value['id']);
-						if (str_contains($webhhok->transaction_processed_callback, 'api/acceptance/post_pay')) {
+						if ( false !== strpos( $webhhok->transaction_processed_callback, 'api/acceptance/post_pay' ) ) {
 							$data = array(
 								'transaction_processed_callback' => add_query_arg(array('wc-api' => 'paymob_callback'), home_url()),
 								'transaction_response_callback' => add_query_arg(array('wc-api' => 'paymob_callback'), home_url())
@@ -178,13 +178,13 @@ class Paymob_Main_Partner_Info
 				}
 
 			} catch (\Exception $e) {
-				WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
+				WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 			}
 	}
 	public static function get_public_ip()
 	{
 		$response = wp_remote_get('https://api.ipify.org?format=json');
 		$response = json_decode(wp_remote_retrieve_body($response));
-		return !empty($response->ip)?$response->ip : WC_Admin_Settings::add_error(__('Error while retrieving the IP.', 'paymob-woocommerce')) ;
+		return !empty($response->ip)?$response->ip : WC_Admin_Settings::add_error(__('Error while retrieving the IP.', 'paymob-for-woocommerce')) ;
 	}
 }

@@ -13,11 +13,11 @@ class Paymob_Manual_Setup_Save {
         $isTestMode    =  sanitize_text_field( Paymob::filterVar( 'isTestMode', 'POST' ) ); 
         
         if(empty($apiKey)){
-            wp_send_json_error(['message' => __('Please fill Paymob API key.','paymob-woocommerce')]);
+            wp_send_json_error(['message' => __('Please fill Paymob API key.','paymob-for-woocommerce')]);
         }else if($isTestMode=='live' && empty($liveSecretKey) && empty($livePublicKey) && strpos($liveSecretKey, 'live')&& strpos($livePublicKey, 'live')){
-            wp_send_json_error(['message' => __('Please fill Paymob Live manual configuration.','paymob-woocommerce')]);
+            wp_send_json_error(['message' => __('Please fill Paymob Live manual configuration.','paymob-for-woocommerce')]);
         }else if($isTestMode=='test' && empty($testSecretKey) && empty($testPublicKey) && strpos($liveSecretKey, 'test')&& strpos($livePublicKey, 'test')){
-            wp_send_json_error(['message' => __('Please fill Paymob Test manual configuration.','paymob-woocommerce')]);
+            wp_send_json_error(['message' => __('Please fill Paymob Test manual configuration.','paymob-for-woocommerce')]);
         }
         $main_settings = get_option('woocommerce_paymob-main_settings',array());
         // $main_settings['pixel_payment']   = 'yes';
@@ -56,7 +56,7 @@ class Paymob_Manual_Setup_Save {
            try{
                 $paymobReq = new Paymob($debug, $addlog);
                 $result = $paymobReq->authToken($conf);
-                Paymob::addLogs($debug, $addlog, __('Merchant configuration: ', 'paymob-woocommerce'), $result);
+                Paymob::addLogs($debug, $addlog, __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
                 $gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
                 Paymob_Unset_Old_Setting::unset_old_settings();
                 // $wpdb->delete($wpdb->prefix . 'paymob_gateways', array('gateway_id' => 'paymob-pixel'));
@@ -82,8 +82,7 @@ class Paymob_Manual_Setup_Save {
 
                     // Update webhook Url by default
                     $webhhok    = $paymobReq->getIntegrationID( $conf,$value['id'] );
-                    if(str_contains($webhhok->transaction_processed_callback, 'api/acceptance/post_pay'))
-                    {
+                    if ( false !== strpos( $webhhok->transaction_processed_callback, 'api/acceptance/post_pay' ) ) {
                         $data =array(
                             'transaction_processed_callback'=>add_query_arg( array( 'wc-api' => 'paymob_callback' ), home_url() ),
                             'transaction_response_callback'=>add_query_arg( array( 'wc-api' => 'paymob_callback' ), home_url() )
@@ -94,7 +93,15 @@ class Paymob_Manual_Setup_Save {
                 }
 
                 if($count == 0){
-                    wp_send_json_error(['message' => __('No '.$isTestMode.' integrations in this account.', 'paymob-woocommerce')]);
+                    wp_send_json_error(
+						array(
+							'message' => sprintf(
+								/* translators: %s: test or live mode label */
+								__( 'No %s integrations in this account.', 'paymob-for-woocommerce' ),
+								$isTestMode
+							),
+						)
+					);
                 }
 
                 if (!empty($ids)) {
@@ -136,7 +143,7 @@ class Paymob_Manual_Setup_Save {
         }
         else
         {
-            wp_send_json_error(['message' => __('Empty configuration and we are not able to save configurations.', 'paymob-woocommerce')]);
+            wp_send_json_error(['message' => __('Empty configuration and we are not able to save configurations.', 'paymob-for-woocommerce')]);
         }
 		
     }

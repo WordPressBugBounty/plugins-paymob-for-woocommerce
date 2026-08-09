@@ -54,11 +54,11 @@ class Paymob_List_Gateways {
 		// Edit button with conditional disabled attribute for "paymob-pixel".
 		$row_html .= '<td data-label="Webhook URL" class="webhook_uRL" integration_id="'.$integration_id.'">' . ($webhook_url ? esc_html( $webhook_url ) : $webhook_button) . '</td>';  // Add Webhook URL column
 
-		$row_html .= '<td data-label="Action"><a href="' . esc_url( $edit_url ) . '" class="button button-secondary" >' . __( 'Edit', 'paymob-woocommerce' ) . '</a> ';
+		$row_html .= '<td data-label="Action"><a href="' . esc_url( $edit_url ) . '" class="button button-secondary" >' . __( 'Edit', 'paymob-for-woocommerce' ) . '</a> ';
 
 		// Remove button with conditional disabled attribute based on is_manual.
 		$remove_button_disabled = '0' === $gateway->is_manual ? 'disabled="disabled"' : '';
-		$row_html .= '<button type="button" class="button remove-button button-primary" data-gateway-id="' . esc_attr( $gateway_id ) . '" ' . $remove_button_disabled . '>' . __( 'Remove', 'paymob-woocommerce' ) . '</button></td>';
+		$row_html .= '<button type="button" class="button remove-button button-primary" data-gateway-id="' . esc_attr( $gateway_id ) . '" ' . $remove_button_disabled . '>' . __( 'Remove', 'paymob-for-woocommerce' ) . '</button></td>';
 		
 		$row_html .= '</tr>';
 
@@ -67,7 +67,7 @@ class Paymob_List_Gateways {
 
 	public static function paymob_not_found_record_table() {
 		$table_body  = '';
-		$table_body .= '<tr><td colspan="8">' . __( 'No gateways found.', 'paymob-woocommerce' ) . '</td></tr>';
+		$table_body .= '<tr><td colspan="8">' . __( 'No gateways found.', 'paymob-for-woocommerce' ) . '</td></tr>';
 		return $table_body;
 	}
 	

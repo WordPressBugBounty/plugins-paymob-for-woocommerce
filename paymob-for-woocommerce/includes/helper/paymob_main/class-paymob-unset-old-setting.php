@@ -17,20 +17,20 @@ class Paymob_Unset_Old_Setting {
 
 			// Unlink the files if they exist and are not the main paymob gateway
 			if (!in_array($gateway->gateway_id, ['paymob', 'paymob-pixel'])) {
-				if (file_exists($gateway_file_path)) {
-					if (!unlink($gateway_file_path)) {
+				if ( file_exists( $gateway_file_path ) ) {
+					if ( ! wp_delete_file( $gateway_file_path ) ) {
 						$all_deleted = false;
 					}
 				}
 
-				if (file_exists($gateway_block_file_path)) {
-					if (!unlink($gateway_block_file_path)) {
+				if ( file_exists( $gateway_block_file_path ) ) {
+					if ( ! wp_delete_file( $gateway_block_file_path ) ) {
 						$all_deleted = false;
 					}
 				}
 
-				if (file_exists($gateway_js_file_path)) {
-					if (!unlink($gateway_js_file_path)) {
+				if ( file_exists( $gateway_js_file_path ) ) {
+					if ( ! wp_delete_file( $gateway_js_file_path ) ) {
 						$all_deleted = false;
 					}
 				}

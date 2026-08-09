@@ -13,8 +13,12 @@ class WC_Paymob_ValuWidget {
 		global $wpdb;
 		
 		$option_valu_widget = get_option('woocommerce_valu_widget_settings');
-		$valu = '-valu';
-		$valuOption = $wpdb->get_results("SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '%$valu%'");
+		$valuOption = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
+				'%-valu%'
+			)
+		);
 		$valuEnabled = false;
 		if(!empty($valuOption[0])){
 			$valu = maybe_unserialize($valuOption[0]->option_value);
@@ -79,7 +83,7 @@ class WC_Paymob_ValuWidget {
 
 					)
 				);
-				echo "<button  class='single_add_to_cart_button button alt valuWidget /' id='valuWidget'>". __ ( 'Buy with Paymob', 'woocommerce' )."</button>";
+				echo "<button  class='single_add_to_cart_button button alt valuWidget /' id='valuWidget'>". esc_html__( 'Buy with Paymob', 'paymob-for-woocommerce' )."</button>";
 						echo "<div class='render_widget' id='render_widget'></div>";
 
 						echo"<div id='myModal' class='modal' style='display:none;'>
@@ -103,7 +107,7 @@ class WC_Paymob_ValuWidget {
                             
                         )
                     );
-				echo "<button class='valuWidget' id='valuWidget'>" . __('Buy with Paymob', 'woocommerce') . "</button>";
+				echo "<button class='valuWidget' id='valuWidget'>" . esc_html__( 'Buy with Paymob', 'paymob-for-woocommerce' ) . "</button>";
 	            echo "<div id='render_widget'></div>";
 
 	            echo "<div id='myModal' class='modal' style='display:none;'>

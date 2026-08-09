@@ -18,7 +18,7 @@ class Paymob_Save_Pixel_Settings {
         $google_pay_integration_id = Paymob::filterVar('google_pay_integration_id', 'POST');
 
         if (empty($cards_integration_id[0]) && empty($apple_pay_integration_id) && empty($google_pay_integration_id)) {
-            WC_Admin_Settings::add_error(__('Please enable at least one Payment Method with an integration ID.', 'paymob-woocommerce'));
+            WC_Admin_Settings::add_error(__('Please enable at least one Payment Method with an integration ID.', 'paymob-for-woocommerce'));
             // return;
         }
         $title = Paymob::filterVar('title', 'POST') ? sanitize_text_field(Paymob::filterVar('title', 'POST')) : 'Debit/Credit Card Payment';

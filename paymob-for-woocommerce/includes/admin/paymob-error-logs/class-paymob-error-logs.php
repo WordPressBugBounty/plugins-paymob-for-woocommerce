@@ -166,8 +166,8 @@ class Paymob_Error_Logs {
 	public static function register_menu() {
 		add_submenu_page(
 			'woocommerce',
-			__( 'Paymob Error Logs', 'paymob-woocommerce' ),
-			__( 'Paymob Error Logs', 'paymob-woocommerce' ),
+			__( 'Paymob Error Logs', 'paymob-for-woocommerce' ),
+			__( 'Paymob Error Logs', 'paymob-for-woocommerce' ),
 			'manage_woocommerce',
 			self::MENU_SLUG,
 			array( __CLASS__, 'render_page' )
@@ -214,7 +214,7 @@ class Paymob_Error_Logs {
 
 	public static function clear_logs() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied', 'paymob-woocommerce' ) );
+			wp_die( esc_html__( 'Permission denied', 'paymob-for-woocommerce' ) );
 		}
 
 		check_admin_referer( 'paymob_clear_error_logs' );
@@ -225,7 +225,7 @@ class Paymob_Error_Logs {
 
 	public static function export_logs() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied', 'paymob-woocommerce' ) );
+			wp_die( esc_html__( 'Permission denied', 'paymob-for-woocommerce' ) );
 		}
 
 		check_admin_referer( 'paymob_export_error_logs' );
@@ -239,7 +239,7 @@ class Paymob_Error_Logs {
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 
 		$output = fopen( 'php://output', 'w' );
-		fputcsv( $output, array( 'time', 'source', 'context', 'message', 'request_method', 'http_code', 'request_url', 'response_raw' ) );
+		fputcsv( $output, array( 'time', 'source', 'context', 'message', 'request_method', 'http_code', 'request_url', 'response_raw' ), ',', '"', '\\' );
 
 		foreach ( $logs as $log ) {
 			$meta = isset( $log['meta'] ) && is_array( $log['meta'] ) ? $log['meta'] : array();
@@ -254,11 +254,14 @@ class Paymob_Error_Logs {
 					isset( $meta['http_code'] ) ? $meta['http_code'] : '',
 					isset( $meta['request_url'] ) ? $meta['request_url'] : '',
 					isset( $meta['response_raw'] ) ? $meta['response_raw'] : '',
-				)
+				),
+				',',
+				'"',
+				'\\'
 			);
 		}
 
-		fclose( $output );
+		fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- php://output stream for CSV export.
 		exit;
 	}
 }

@@ -12,49 +12,51 @@ class Paymob {
 	}
 
 	public function HttpRequest( $apiPath, $method, $header = array(), $data = array() ) {
-		if ( ! in_array( 'curl', get_loaded_extensions() ) ) {
-			throw new Exception( 'Curl extension is not loaded on your server, please check with server admin. Then try again!' );
-		}
-		$agent=self::filterVar('HTTP_USER_AGENT','SERVER');
+		$agent = self::filterVar( 'HTTP_USER_AGENT', 'SERVER' );
 		ini_set( 'precision', 14 );
 		ini_set( 'serialize_precision', -1 );
-		$curl = curl_init();
-		curl_setopt( $curl, CURLOPT_URL, $apiPath );
-		if ( 'GET' == $method ) {
-			curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'GET' );
-		}elseif('PUT' == $method)
-		{
-			curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PUT');  // Correctly set PUT method
-			curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));  // Set data as JSON
-		} else {
-			curl_setopt( $curl, CURLOPT_POST, true );
-			curl_setopt( $curl, CURLOPT_POSTFIELDS, json_encode( $data ) );
+
+		$request_headers = array();
+		foreach ( (array) $header as $header_line ) {
+			if ( is_string( $header_line ) && false !== strpos( $header_line, ':' ) ) {
+				list( $header_name, $header_value ) = explode( ':', $header_line, 2 );
+				$request_headers[ trim( $header_name ) ] = trim( $header_value );
+			}
 		}
-		curl_setopt( $curl, CURLOPT_HTTPHEADER, $header );
-		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt($curl, CURLOPT_USERAGENT, $agent);
 
-		$response = curl_exec( $curl );
-		$http_code = (int) curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+		$args = array(
+			'headers'    => $request_headers,
+			'timeout'    => 60,
+			'user-agent' => $agent,
+		);
 
-		if ( false === $response ) {
-			$curl_error = curl_error( $curl );
-			curl_close( $curl );
+		if ( 'GET' === $method ) {
+			$response = wp_remote_get( $apiPath, $args );
+		} elseif ( 'PUT' === $method ) {
+			$args['method'] = 'PUT';
+			$args['body']   = wp_json_encode( $data );
+			$response       = wp_remote_request( $apiPath, $args );
+		} else {
+			$args['body'] = wp_json_encode( $data );
+			$response     = wp_remote_post( $apiPath, $args );
+		}
+
+		if ( is_wp_error( $response ) ) {
+			$curl_error = $response->get_error_message();
 			if ( class_exists( 'Paymob_Error_Logs' ) ) {
 				Paymob_Error_Logs::log_http_raw_response(
-					'cURL failed: ' . $curl_error,
+					'HTTP request failed: ' . $curl_error,
 					(string) $apiPath,
 					(string) $method,
 					0,
 					''
 				);
 			}
-			throw new Exception( 'Curl error: ' . $curl_error );
+			throw new Exception( esc_html( 'HTTP request error: ' . $curl_error ) );
 		}
 
-		curl_close( $curl );
-
-		$raw_body = (string) $response;
+		$http_code = (int) wp_remote_retrieve_response_code( $response );
+		$raw_body  = (string) wp_remote_retrieve_body( $response );
 
 		$decoded  = json_decode( $raw_body, false );
 		$json_err = json_last_error();

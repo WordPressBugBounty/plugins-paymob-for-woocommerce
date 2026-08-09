@@ -1,6 +1,11 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+?>
 <div id="confirmationModal">
-	<h2><?php echo esc_html(__( 'Disable Paymob Gateway','paymob-woocommerce')); ?></h2>
-	<p><?php echo esc_html(__( 'If you disable this gateway, all Paymob gateways will be disabled. Do you want to continue?','paymob-woocommerce')); ?></p>
+	<h2><?php echo esc_html(__( 'Disable Paymob Gateway','paymob-for-woocommerce')); ?></h2>
+	<p><?php echo esc_html(__( 'If you disable this gateway, all Paymob gateways will be disabled. Do you want to continue?','paymob-for-woocommerce')); ?></p>
 	<ul>
 		<?php
 		foreach ( $gateways as $gateway ) {
@@ -19,7 +24,7 @@
 		}
 		?>
 	</ul>
-	<button id="confirmDisable"><?php echo esc_html(__( 'Disable','paymob-woocommerce')); ?></button>
-	<button id="confirmCancel"><?php echo esc_html(__( 'Cancel','paymob-woocommerce')); ?></button>
+	<button id="confirmDisable"><?php echo esc_html(__( 'Disable','paymob-for-woocommerce')); ?></button>
+	<button id="confirmCancel"><?php echo esc_html(__( 'Cancel','paymob-for-woocommerce')); ?></button>
 </div>
 <div id="overlay"></div>

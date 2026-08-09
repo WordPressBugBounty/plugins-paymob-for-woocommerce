@@ -124,7 +124,7 @@ class WC_Paymob_HandelUpdate {
 					
 				}
 			} catch ( \Exception $e ) {
-				WC_Admin_Settings::add_error( __( $e->getMessage(), 'paymob-woocommerce' ) );
+				WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 			}
 		}
 		// Load gateways from db

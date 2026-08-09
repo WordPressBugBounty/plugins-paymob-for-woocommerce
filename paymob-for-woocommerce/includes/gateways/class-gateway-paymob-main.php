@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+#[\AllowDynamicProperties]
 class Paymob_Main_Gateway extends Paymob_Payment
 {
 
@@ -21,9 +22,9 @@ class Paymob_Main_Gateway extends Paymob_Payment
 
 		// config
 		$this->id = 'paymob-main';
-		$this->method_title = $this->title = __('Paymob', 'paymob-woocommerce');
-		$this->method_description = __('Accept payment through Paymob payment provider.', 'paymob-woocommerce');
-		$this->description = __('Main Configuration', 'paymob-woocommerce');
+		$this->method_title = $this->title = __('Paymob', 'paymob-for-woocommerce');
+		$this->method_description = __('Accept payment through Paymob payment provider.', 'paymob-for-woocommerce');
+		$this->description = __('Main Configuration', 'paymob-for-woocommerce');
 		parent::__construct();
 		// config
 		$this->init_settings();
@@ -102,7 +103,7 @@ class Paymob_Main_Gateway extends Paymob_Payment
 			parent::process_admin_options();
 			
 		} catch (\Exception $e) {
-			WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
+			WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 		}
 		return true;
 	}
@@ -232,7 +233,7 @@ function check_paymob_main_gateway_enabled($old_value, $new_value)
 				}
 				PaymobAutoGenerate::register_framework($ids, $debug ? 'yes' : 'no');
 			} catch (\Exception $e) {
-				WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
+				WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 			}
 		}
 	}

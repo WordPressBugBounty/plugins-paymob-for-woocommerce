@@ -23,7 +23,7 @@ class Paymob_Reset_gateways {
 				
 				Paymob_Reset_gateways::resetGateways($conf);
 				// Return success message.
-				wp_send_json_success( array( 'message' => __( 'Payment methods have been reset successfully.', 'paymob-woocommerce' ) ) );
+				wp_send_json_success( array( 'message' => __( 'Payment methods have been reset successfully.', 'paymob-for-woocommerce' ) ) );
 			} catch ( Exception $exc ) {
 				Paymob::addLogs( $debug, WC_LOG_DIR . 'paymob-auth.log', $exc->getMessage() );
 				wp_send_json_error(

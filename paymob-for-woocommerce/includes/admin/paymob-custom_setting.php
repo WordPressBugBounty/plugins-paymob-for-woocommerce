@@ -12,24 +12,24 @@ return array(
     ),
 	array(
 		'type' => 'title',
-		'name' => __( 'Add Payment Integration', 'paymob-woocommerce' ),
+		'name' => __( 'Add Payment Integration', 'paymob-for-woocommerce' ),
 	),
 	array(
-		'name'     => __( 'Enable', 'paymob-woocommerce' ),
+		'name'     => __( 'Enable', 'paymob-for-woocommerce' ),
 		'type'     => 'checkbox',
 		'id'       => 'payment_enabled',
 		'desc_tip' => true,
 		'default'  => 'no',
 	),
 	array(
-		'name'              => __( 'Payment Method', 'paymob-woocommerce' ),
+		'name'              => __( 'Payment Method', 'paymob-for-woocommerce' ),
 		'type'              => 'text',
 		'id'                => 'payment_integrations_type',
 		'desc_tip'          => true,
 		'custom_attributes' => array( 'required' => 'required' ),
 	),
 	array(
-		'name'              => __( 'Paymob Integration ID', 'paymob-woocommerce' ),
+		'name'              => __( 'Paymob Integration ID', 'paymob-for-woocommerce' ),
 		'type'              => 'select',
 		'id'                => 'integration_id',
 		'desc_tip'          => true,
@@ -37,21 +37,21 @@ return array(
 		'options'           => PaymobAutoGenerate::get_integration_ids(), // Dynamically loaded options.
 	),
 	array(
-		'name'              => __( 'Payment Method -  Title', 'paymob-woocommerce' ),
+		'name'              => __( 'Payment Method -  Title', 'paymob-for-woocommerce' ),
 		'type'              => 'text',
 		'id'                => 'checkout_title',
 		'desc_tip'          => true,
 		'custom_attributes' => array( 'required' => 'required' ),
 	),
 	array(
-		'name'              => __( 'Payment Method -  Description', 'paymob-woocommerce' ),
+		'name'              => __( 'Payment Method -  Description', 'paymob-for-woocommerce' ),
 		'type'              => 'textarea',
 		'id'                => 'checkout_description',
 		'desc_tip'          => true,
 		'custom_attributes' => array( 'required' => 'required' ),
 	),
 	array(
-		'name'              => __( 'Payment Method - Logo URL', 'paymob-woocommerce' ),
+		'name'              => __( 'Payment Method - Logo URL', 'paymob-for-woocommerce' ),
 		'type'              => 'text',
 		'id'                => 'payment_logo',
 		'desc_tip'          => true,

@@ -24,11 +24,11 @@ class Paymob_Change_Mode_Save {
                         );
                         if(empty($results))
                         {
-                            wp_send_json_error(['message' => __('No Test Payment Method Integrations Available.','paymob-woocommerce'),'mode'=>'live']);
+                            wp_send_json_error(['message' => __('No Test Payment Method Integrations Available.','paymob-for-woocommerce'),'mode'=>'live']);
 
                         }
                 }else{
-                    wp_send_json_error(['message' => __('Test Keys are not available','paymob-woocommerce')]);
+                    wp_send_json_error(['message' => __('Test Keys are not available','paymob-for-woocommerce')]);
                 }
             }
             else if($main_settings['mode']=='test')
@@ -50,12 +50,12 @@ class Paymob_Change_Mode_Save {
                     );
                     if(empty($results))
                     {
-                        wp_send_json_error(['message' => __('No Live Payment Method Integrations Available.','paymob-woocommerce'),'mode'=>'test']);
+                        wp_send_json_error(['message' => __('No Live Payment Method Integrations Available.','paymob-for-woocommerce'),'mode'=>'test']);
 
                     }
 
                 }else{
-                    wp_send_json_error(['message' => __('Live Keys are not available','paymob-woocommerce')]);
+                    wp_send_json_error(['message' => __('Live Keys are not available','paymob-for-woocommerce')]);
 
                 }            
             }
@@ -64,9 +64,9 @@ class Paymob_Change_Mode_Save {
             update_option('woocommerce_paymob-main_settings', $main_settings); 
             update_option('woocommerce_paymob_settings', $paymob_settings);
             delete_option('woocommerce_paymob_widget_settings');
-            // wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-woocommerce'),
+            // wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-for-woocommerce'),
             // 'redirect_url'=>admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob-main')]);
-            wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-woocommerce'),
+            wp_send_json_success(['message' => __('Paymob Mode has changed sucessfully.','paymob-for-woocommerce'),
             'redirect_url' => home_url( $_SERVER['REQUEST_URI'] )]);
             
 

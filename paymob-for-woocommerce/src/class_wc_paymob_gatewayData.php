@@ -23,7 +23,7 @@ class WC_Paymob_GatewayData
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 					delete_option( 'woocommerce_paymob_gateway_data_failure' );
 				} catch (\Exception $e) {
-					WC_Admin_Settings::add_error(__($e->getMessage(), 'paymob-woocommerce'));
+					WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 					update_option('woocommerce_paymob_gateway_data_failure', current_time('timestamp')); // Record failure time
 				}
 			}
@@ -32,15 +32,16 @@ class WC_Paymob_GatewayData
 				foreach ($gatewayData as $key => $gateway) {
 					$logoPath = PAYMOB_PLUGIN_PATH . 'assets/img/' . strtolower($key) . '.png';
 					// Skip downloading the logo if the logo URL is empty
-					if (!empty($gateway['logo'])) {
-						if (!file_exists($logoPath)) {
-							$ch = curl_init();
-							curl_setopt($ch, CURLOPT_HEADER, 0);
-							curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-							curl_setopt($ch, CURLOPT_URL, $gateway['logo']);
-							$data = curl_exec($ch);
-							curl_close($ch);
-							file_put_contents($logoPath, $data);
+					if ( ! empty( $gateway['logo'] ) ) {
+						if ( ! file_exists( $logoPath ) ) {
+							$response = wp_remote_get( $gateway['logo'] );
+							if ( ! is_wp_error( $response ) ) {
+								$logo_data = wp_remote_retrieve_body( $response );
+								if ( '' !== $logo_data ) {
+									// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Saving downloaded gateway logo to plugin assets.
+									file_put_contents( $logoPath, $logo_data );
+								}
+							}
 						}
 					}
 				}

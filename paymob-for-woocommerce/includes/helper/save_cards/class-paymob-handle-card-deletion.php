@@ -25,7 +25,7 @@ class Paymob_Handle_Card_Deletion {
 			);
 
 			// Optionally add a message or redirect after deletion
-			wc_add_notice( __( 'Card deleted successfully.', 'paymob-woocommerce' ), 'success' );
+			wc_add_notice( __( 'Card deleted successfully.', 'paymob-for-woocommerce' ), 'success' );
 			wp_safe_redirect( wc_get_account_endpoint_url( 'saved-cards' ) );
 			exit;
 		}

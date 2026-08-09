@@ -7,7 +7,7 @@ class Paymob_Save_Cards_Tab {
 
 		if ( 'yes' === $default_enabled ) {
 			$menu_links = array_slice( $menu_links, 0, 5, true )
-				+ array( 'saved-cards' => __( 'Paymob Saved Cards', 'paymob-woocommerce' ) )
+				+ array( 'saved-cards' => __( 'Paymob Saved Cards', 'paymob-for-woocommerce' ) )
 				+ array_slice( $menu_links, 5, null, true );
 
 		}

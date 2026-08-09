@@ -8,9 +8,9 @@ class Paymob_Update_Pixel_Data {
 		}
 		if ( sizeof( Paymob_Saved_Cards_Tokens::getUserTokens() ) > 3 ) {
 			$url = wc_get_endpoint_url( 'saved-cards', '', get_permalink( wc_get_page_id( 'myaccount' ) ) );
-			$url = '<a href="' . $url . '">' . esc_html( __( 'Paymob Saved Cards', 'paymob-woocommerce' ) ) . '</a>';
-			$url = esc_html( __( 'Please remove your cards from', 'paymob-woocommerce' ) ) . ' ' . $url . ' ' . esc_html( __( 'to complete your purchase', 'paymob-woocommerce' ) );
-			$msg = esc_html( __( 'Ops,Max number of card tokens is 3.', 'paymob-woocommerce' ) ) . '<br>' . $url;
+			$url = '<a href="' . $url . '">' . esc_html( __( 'Paymob Saved Cards', 'paymob-for-woocommerce' ) ) . '</a>';
+			$url = esc_html( __( 'Please remove your cards from', 'paymob-for-woocommerce' ) ) . ' ' . $url . ' ' . esc_html( __( 'to complete your purchase', 'paymob-for-woocommerce' ) );
+			$msg = esc_html( __( 'Ops,Max number of card tokens is 3.', 'paymob-for-woocommerce' ) ) . '<br>' . $url;
 			wp_send_json_error( $msg );
 			return;
 		}
@@ -162,7 +162,7 @@ class Paymob_Update_Pixel_Data {
 
 		$status = $paymobReq->createIntention( $secKey, $data, 'Loading Pixel', '', 'POST' );
 		if ( empty( $status['cs'] ) ) {
-			wp_send_json_error( ! empty( $status['message'] ) ? $status['message'] : __( 'Error in creating Paymob Intension, please try again.', 'paymob-woocommerce' ) );
+			wp_send_json_error( ! empty( $status['message'] ) ? $status['message'] : __( 'Error in creating Paymob Intension, please try again.', 'paymob-for-woocommerce' ) );
 		}
 
 		$session = WC()->session;
