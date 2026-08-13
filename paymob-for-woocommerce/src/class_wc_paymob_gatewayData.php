@@ -17,9 +17,11 @@ class WC_Paymob_GatewayData
 				$debug = isset($mainOptions['debug']) ? $mainOptions['debug'] : '';
 				$debug = 'yes' === $debug ? '1' : '0';
 				try {
-					$paymobReq = new Paymob($debug, WC_LOG_DIR . 'paymob-auth.log');
+					$paymobReq = new Paymob($debug, Paymob::log_dir() . 'paymob-auth.log');
 					$conf['secKey'] = isset($mainOptions['sec_key']) ? $mainOptions['sec_key'] : '';
-					$gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
+					$result = $paymobReq->authToken( $conf );
+					$token  = ( is_array( $result ) && isset( $result['token'] ) ) ? $result['token'] : '';
+					$gatewayData = $paymobReq->getPaymobGateways($conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', $token);
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 					delete_option( 'woocommerce_paymob_gateway_data_failure' );
 				} catch (\Exception $e) {

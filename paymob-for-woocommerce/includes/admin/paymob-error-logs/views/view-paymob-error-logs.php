@@ -1,12 +1,31 @@
 <?php
 /**
  * Paymob Error Logs admin view.
- *
- * @var array<int,array{time:string,message:string,context:string,source:string,meta?:array}> $logs
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+// Defaults when this view is analysed or included without caller-provided vars.
+if ( ! isset( $logs ) || ! is_array( $logs ) ) {
+	$logs = array();
+}
+if ( ! isset( $filters ) || ! is_array( $filters ) ) {
+	$filters = array(
+		'source'    => '',
+		'context'   => '',
+		'http_code' => '',
+		'date_from' => '',
+		'date_to'   => '',
+		'search'    => '',
+	);
+}
+if ( ! isset( $sources ) || ! is_array( $sources ) ) {
+	$sources = array();
+}
+if ( ! isset( $contexts ) || ! is_array( $contexts ) ) {
+	$contexts = array();
 }
 ?>
 <div class="wrap paymob-error-logs-page">

@@ -197,7 +197,7 @@ class Paymob_Error_Logs {
 		$logs     = array_reverse( self::get_filtered_logs( $filters ) );
 		$sources  = self::get_distinct_values( 'source' );
 		$contexts = self::get_distinct_values( 'context' );
-		include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-error-logs/views/view-paymob-error-logs.php';
+		include __DIR__ . '/views/view-paymob-error-logs.php';
 	}
 
 	public static function ajax_log_error() {

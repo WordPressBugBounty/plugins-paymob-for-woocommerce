@@ -19,7 +19,7 @@ class Paymob_Widget_Settings {
 			return $settings;
 		}
 
-		$new_settings = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-widget-setting.php';
+		$new_settings = include __DIR__ . '/../../admin/paymob-widget-setting.php';
 
 		if ( is_array( $new_settings ) ) {
 			foreach ( $new_settings as $new_setting ) {

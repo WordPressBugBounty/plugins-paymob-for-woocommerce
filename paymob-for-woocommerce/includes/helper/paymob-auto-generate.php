@@ -287,7 +287,7 @@ class PaymobAutoGenerate {
 		}
 		$paymob_options = get_option( 'woocommerce_paymob_settings' );
 		$mainOptions = get_option('woocommerce_paymob-main_settings');
-		$paymobReq = new Paymob( '1', WC_LOG_DIR . 'paymob-auth.log' );
+		$paymobReq = new Paymob( '1', Paymob::log_dir() . 'paymob-auth.log' );
 		$mode = $paymobReq->getMode( $paymob_options['sec_key'] );
 
 		if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
@@ -325,7 +325,7 @@ class PaymobAutoGenerate {
 		}
 	
 		$paymob_options = get_option('woocommerce_paymob_settings');
-		$paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
+		$paymobReq = new Paymob('1', Paymob::log_dir() . 'paymob-auth.log');
 		$mode = $paymobReq->getMode($paymob_options['sec_key']); // Get the current mode (live/test)
 	
 		if (isset($paymob_options['integration_id_hidden']) && !empty($paymob_options['integration_id_hidden'])) {
@@ -481,7 +481,7 @@ class PaymobAutoGenerate {
 
 				$debug   = 'yes' === $debug ? '1' : '0';
 				$sec_key = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
-				$add_log = WC_LOG_DIR . 'paymob-auth.log';
+				$add_log = Paymob::log_dir() . 'paymob-auth.log';
 				// Re-index after array_unique so JSON encodes a list [], not a dict {}.
 				// Paymob rejects: Expected a list of items but got type "dict".
 				$unique_ids = array_values(
@@ -496,12 +496,12 @@ class PaymobAutoGenerate {
 					)
 				);
 				$unique_ids = array_values( array_unique( $unique_ids ) );
-				$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
+				$paymob_req = new Paymob( $debug, Paymob::log_dir() . 'paymob-auth.log' );
 				$data       = array(
 					'url'                   => get_site_url(),
 					'is_ssl'                => is_ssl(),
 					'platform'              => 'WORDPRESS',
-					'platform_version'      => WC_VERSION,
+					'platform_version'      => defined( 'WC_VERSION' ) ? constant( 'WC_VERSION' ) : ( function_exists( 'WC' ) && WC() ? WC()->version : '' ),
 					'plugin_version'        => PAYMOB_VERSION,
 					'selected_integrations' => $unique_ids, // JSON list of ints.
 					'info'                  => array(),

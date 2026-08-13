@@ -307,6 +307,9 @@ class PaymobOrder {
 	}
 
 	public function createSubscriptionPlans($orderId) {
+		if ( ! function_exists( 'wcs_get_subscriptions_for_order' ) ) {
+			return array( 'error' => 'WooCommerce Subscriptions is not active.' );
+		}
 		$subscriptions = wcs_get_subscriptions_for_order($orderId, ['order_type' => 'any']);
 
 		foreach ($subscriptions as $subscription) {

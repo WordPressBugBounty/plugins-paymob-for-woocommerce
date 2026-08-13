@@ -7,7 +7,7 @@ class Paymob_Pixel_Update_Intention {
 		$paymobOptions = get_option('woocommerce_paymob-main_settings', []);
 		$secKey = $paymobOptions['sec_key'] ?? '';
 		$debug = !empty($paymobOptions['debug']) ? '1' : '0';
-		$log_file = WC_LOG_DIR . $payment_method_id . '.log';
+		$log_file = Paymob::log_dir() . $payment_method_id . '.log';
 		$intention_order_id = WC()->session->get('intention_order_id');
 		$cs = WC()->session->get('cs');
 		// Retrieve the order object

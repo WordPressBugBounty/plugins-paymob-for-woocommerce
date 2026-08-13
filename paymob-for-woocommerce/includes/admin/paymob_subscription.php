@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Include admin tabs (if needed)
-$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+$tabs = include __DIR__ . '/paymob-admin-tabs.php';
 
 $moto_options = PaymobAutoGenerate::get_moto_integration_ids();
 $threeds_options = PaymobAutoGenerate::get_ds3_integration_ids();

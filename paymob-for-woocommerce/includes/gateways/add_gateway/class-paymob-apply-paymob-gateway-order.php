@@ -70,7 +70,7 @@ class Paymob_Apply_Gateway_Order {
 		}
 	
 		$cart = WC()->cart;
-		if ( empty( $cart ) || empty( $cart->get_cart() ) ) {
+		if ( ! $cart || empty( $cart->get_cart() ) ) {
 			return false;
 		}
 	

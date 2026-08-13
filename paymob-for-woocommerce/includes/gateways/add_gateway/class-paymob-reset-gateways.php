@@ -25,7 +25,7 @@ class Paymob_Reset_gateways {
 				// Return success message.
 				wp_send_json_success( array( 'message' => __( 'Payment methods have been reset successfully.', 'paymob-for-woocommerce' ) ) );
 			} catch ( Exception $exc ) {
-				Paymob::addLogs( $debug, WC_LOG_DIR . 'paymob-auth.log', $exc->getMessage() );
+				Paymob::addLogs( $debug, Paymob::log_dir() . 'paymob-auth.log', $exc->getMessage() );
 				wp_send_json_error(
 					wp_json_encode(
 						array(
@@ -49,7 +49,7 @@ class Paymob_Reset_gateways {
 		$default_enabled = isset( $main_options['enabled'] ) ? $main_options['enabled'] : '';
 		$debug_ = isset( $main_options['debug'] ) ? $main_options['debug'] : '';
 
-		$paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
+		$paymob_req = new Paymob( $debug, Paymob::log_dir() . 'paymob-auth.log' );
 		// Get the auth token and gateway data.
 		$result       = $paymob_req->authToken( $conf );
 		$gateway_data = $paymob_req->getPaymobGateways( $conf['secKey'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '' );
@@ -63,7 +63,7 @@ class Paymob_Reset_gateways {
 			$ids[]                   = trim( $value['id'] );
 		}
 		if ( 'yes' === $default_enabled ) {
-			PaymobAutoGenerate::register_framework( $ids, $debug_ ? 'yes' : 'no' );
+			PaymobAutoGenerate::register_framework( $ids );
 		}
 		$paymob_existing_settings = get_option( 'woocommerce_paymob_settings', array() );
 		// print_r($paymob_existing_settings['integration_id_hidden']);

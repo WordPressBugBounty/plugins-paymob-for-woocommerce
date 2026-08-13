@@ -39,11 +39,11 @@ class Paymob_Main_Gateway extends Paymob_Payment
 		$paymobOptions = get_option('woocommerce_paymob-main_settings');
 		if(!empty($paymobOptions))
 		{
-           $this->form_fields = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-main.php';	
+           $this->form_fields = include __DIR__ . '/../admin/paymob-main.php';	
 		}
 		else
 		{
-			$this->form_fields = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-connect.php';
+			$this->form_fields = include __DIR__ . '/../admin/paymob-connect.php';
 		}
 
 		
@@ -65,10 +65,10 @@ class Paymob_Main_Gateway extends Paymob_Payment
 
 	 /**
 	 * Don't enable this payment, if there is no configuration keys
-	 * 
-	 * @param type $key
-	 * @param type $value
-	 * 
+	 *
+	 * @param string $key   Field key.
+	 * @param mixed  $value Field value.
+	 *
 	 * @return string
 	 */
     public function validate_enabled_field($key, $value) {
@@ -224,14 +224,14 @@ function check_paymob_main_gateway_enabled($old_value, $new_value)
 
 				$conf['apiKey'] = isset($paymob_options['api_key']) ? sanitize_text_field($paymob_options['api_key']) : '';
 
-				$addlog = WC_LOG_DIR . 'paymob-auth.log';
+				$addlog = Paymob::log_dir() . 'paymob-auth.log';
 				$paymobReq = new Paymob($debug, $addlog);
 				$result = $paymobReq->authToken($conf);
 				$ids = array();
 				foreach ($result['integrationIDs'] as $value) {
 					$ids[] = trim($value['id']);
 				}
-				PaymobAutoGenerate::register_framework($ids, $debug ? 'yes' : 'no');
+				PaymobAutoGenerate::register_framework($ids);
 			} catch (\Exception $e) {
 				WC_Admin_Settings::add_error( esc_html( $e->getMessage() ) );
 			}

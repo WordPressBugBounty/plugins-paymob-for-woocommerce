@@ -23,6 +23,6 @@ class Paymob_Gateway_Blocks extends AbstractPaymentMethodType {
 
 	public function get_payment_method_data() {
 
-		return include PAYMOB_PLUGIN_PATH . 'includes/checkout/checkout_paymob_gateways.php';
+		return include __DIR__ . '/../checkout/checkout_paymob_gateways.php';
 	}
 }

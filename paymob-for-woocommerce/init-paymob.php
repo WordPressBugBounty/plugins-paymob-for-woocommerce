@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.9
+ * Version: 4.1.10
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-for-woocommerce
@@ -11,8 +11,8 @@
  * Requires at least: 5.0
  * Requires Plugins: woocommerce
  * WC requires at least: 4.0
- * WC tested up to: 10.9
- * Tested up to: 7.0
+ * WC tested up to: 11.0
+ * Tested up to: 7.1
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * Copyright: © 2024 Paymob
@@ -23,19 +23,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.9');
+	define( 'PAYMOB_VERSION', '4.1.10');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
 }
 if ( ! defined( 'PAYMOB_PLUGIN_PATH' ) ) {
-	define( 'PAYMOB_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
+	// Use dirname( __FILE__ ) (not plugin_dir_path) so PHPStan can resolve include paths.
+	define( 'PAYMOB_PLUGIN_PATH', dirname( __FILE__ ) . '/' );
 }
 if ( ! defined( 'PAYMOB_PLUGIN_NAME' ) ) {
 	define( 'PAYMOB_PLUGIN_NAME', dirname( PAYMOB_PLUGIN ) );
 }
 
-include_once PAYMOB_PLUGIN_PATH . '/src/class_wc_paymob_initDependencies.php';
+include_once __DIR__ . '/src/class_wc_paymob_initDependencies.php';
 class Init_Paymob {
 	protected static $instance = null;
 	protected $gateways;

@@ -57,15 +57,15 @@ function create_order() {
     // Check for nonce for security
     check_ajax_referer('update_checkout', 'security');
     try {
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- inside create order' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- inside create order' );
         // Get cart data
         $cart = WC()->cart->get_cart();
         if (empty($cart)) {
-        Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- cart empty' );
+        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- cart empty' );
             wp_send_json_error(['message' => 'Cart is empty.']);
             return;
         }
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' ---------after 1st if' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' ---------after 1st if' );
 
         // Reuse the pending Pixel order for this intention when present — avoids duplicate
         // Woo orders / Paymob "same merchant id" errors on double Place Order.
@@ -84,7 +84,7 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' ---------after 1st if' )
                 $maybe = wc_get_order( $existing_order_id );
                 if ( $maybe && in_array( $maybe->get_status(), array( 'pending', 'pending-payment', 'failed', 'on-hold' ), true ) ) {
                     $order = $maybe;
-                    Paymob::addLogs( '1', WC_LOG_DIR . 'paymob-pixel.log', ' --------- create_order reusing order #' . $existing_order_id );
+                    Paymob::addLogs( '1', Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order reusing order #' . $existing_order_id );
                 }
             }
         }
@@ -119,7 +119,7 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' ---------after 1st if' )
                 'total'    => $cart_item['line_total'],
             ]);
         }
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after for cart ietms' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after for cart ietms' );
         // Add applied coupons
         $applied_coupons = WC()->cart->get_applied_coupons();
         if (!empty($applied_coupons)) {
@@ -138,7 +138,7 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after for cart
                 'tax_class' => $fee->taxable ? $fee->tax_class : '',
             ]);
         }
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after fees for' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after fees for' );
       
        // Add taxes to the order
         $cart_taxes = WC()->cart->get_cart_contents_taxes(); // Cart item taxes
@@ -159,9 +159,10 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after fees for
             }
         }
 
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after all tax' );
+        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after all tax' );
         // Add shipping
-        $shipping_methods = WC()->shipping->get_packages();
+        $shipping = WC()->shipping();
+        $shipping_methods = ( $shipping && is_object( $shipping ) ) ? $shipping->get_packages() : array();
         if (!empty($shipping_methods)) {
             foreach ($shipping_methods as $package) {
                 foreach ($package['rates'] as $rate) {
@@ -169,14 +170,14 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after all tax'
                 }
             }
         }
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after shipping' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after shipping' );
         // Check if customer data exists
         if (empty(WC()->customer)) {
-        Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- inside wc customer' );
+        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- inside wc customer' );
             wp_send_json_error(['message' => 'Billing data is not defined.']);
             return;
         }
-Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after wc customer' );
+Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after wc customer' );
         // Add billing and shipping details
         $order->set_address([
             'first_name' => WC()->customer->get_billing_first_name(),
@@ -233,7 +234,7 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after wc custo
                 $ir_enabled ? $fee_cents : 0,
                 $ir_enabled
             );
-            Paymob::addLogs( '1', WC_LOG_DIR . 'paymob-pixel.log', ' --------- create_order synced Pixel total ' . $order->get_total() . ' discount ' . $order->get_discount_total() );
+            Paymob::addLogs( '1', Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order synced Pixel total ' . $order->get_total() . ' discount ' . $order->get_discount_total() );
         }
 
         $order->set_payment_method( 'paymob-pixel' );
@@ -257,11 +258,11 @@ Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- after wc custo
         if ( function_exists( 'Paymob_Pixel_Update_Intention' ) || class_exists( 'Paymob_Pixel_Update_Intention' ) ) {
             Paymob_Pixel_Update_Intention::update_intention( $order->get_id(), $order );
         }
-        Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- oid'.$order->get_id(). ' cs  '.WC()->session->get('cs').' pxl idn '. WC()->session->get('pixel_identifier') );
+        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- oid'.$order->get_id(). ' cs  '.WC()->session->get('cs').' pxl idn '. WC()->session->get('pixel_identifier') );
         $session = WC()->session;
         $session->__unset('order_id');
         $session->set( 'order_id',  WC()->session->get('pixel_identifier'));
-        Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant oid from session'.$session->get( 'order_id'));
+        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant oid from session'.$session->get( 'order_id'));
         // Return success response
         wp_send_json_success([
             'message'  => 'Order created successfully!',
@@ -736,7 +737,7 @@ function paymob_sync_pixel_intention() {
 	$paymob_options     = get_option( 'woocommerce_paymob-main_settings', array() );
 	$sec_key            = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
 	$debug              = ! empty( $paymob_options['debug'] ) ? '1' : '0';
-	$log_file           = WC_LOG_DIR . 'paymob-pixel.log';
+	$log_file           = Paymob::log_dir() . 'paymob-pixel.log';
 	$intention_order_id = WC()->session->get( 'intention_order_id' );
 
 	$data = array(

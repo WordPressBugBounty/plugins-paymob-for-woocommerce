@@ -7,7 +7,7 @@ class WC_Paymob_HandelUpdate {
 	public static function handle_plugin_update( $gateways ) {
 		// Retrieve the main settings
 		$mainOptions = get_option( 'woocommerce_paymob-main_settings' );
-		$paymobReq = new Paymob( '1', WC_LOG_DIR . 'paymob-auth.log' );
+		$paymobReq = new Paymob( '1', Paymob::log_dir() . 'paymob-auth.log' );
 		// Check if main settings are empty
 		if ( empty( $mainOptions ) ) {
 			// Retrieve the Paymob settings
@@ -105,7 +105,7 @@ class WC_Paymob_HandelUpdate {
 				$paymob_country = get_option( 'woocommerce_paymob_country' );
 				$lastFailure = get_option('woocommerce_paymob_gateway_data_failure');
 				if ( empty( $paymob_country ) && empty($lastFailure) ) {
-					$paymobReq = new Paymob( $debug, WC_LOG_DIR . 'paymob-auth.log' );
+					$paymobReq = new Paymob( $debug, Paymob::log_dir() . 'paymob-auth.log' );
 					update_option( 'woocommerce_paymob_country', Paymob::getCountryCode( $conf['pubKey'] ) );
 					$result = $paymobReq->authToken( $conf );
 					$ids    = array();

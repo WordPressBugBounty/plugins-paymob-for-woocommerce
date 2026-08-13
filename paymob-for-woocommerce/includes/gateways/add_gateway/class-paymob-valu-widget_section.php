@@ -8,7 +8,7 @@ class Paymob_Valu_Widget_Settings
         if ('valu_widget' === $current_section && !$already_added) {
             $already_added = true; // Mark as processed
 
-            $new_settings = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-valu_widget_setting.php';
+            $new_settings = include __DIR__ . '/../../admin/paymob-valu_widget_setting.php';
 
             if (is_array($new_settings)) {
                 foreach ($new_settings as $new_setting) {
@@ -19,8 +19,8 @@ class Paymob_Valu_Widget_Settings
                 }
             }
 
-            Paymob_Style::paymob_admin();
-            Paymob_Scripts::enqueue_paymob_valu_widget_script();
+			Paymob_Style::paymob_admin();
+            Paymob_Scripts::enqueue_paymob_widget_script();
         }
 
         return $settings;

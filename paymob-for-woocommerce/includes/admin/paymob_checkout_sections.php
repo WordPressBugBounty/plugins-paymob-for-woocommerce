@@ -10,4 +10,4 @@ if ( !empty( $pub_key ) && !empty( $sec_key ) && !empty( $api_key ) ) {
     $sections['paymob_pixel']   = __( 'Card Embedded Settings', 'paymob-for-woocommerce' );
     $sections['paymob_add_gateway']   = __( 'Add Payment Integration', 'paymob-for-woocommerce' );    
 }
-return $sections; 
+return $sections;

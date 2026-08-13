@@ -49,11 +49,15 @@ class WC_Paymob_ValuWidget {
 				PAYMOB_VERSION,
 				true
 			);
-			if ( is_a($product, 'WC_Product' ) ) {
+			if ( is_a( $product, 'WC_Product' ) ) {
 				//////////////get price of product////
-				$product = wc_get_product( get_the_ID());
-	
-				if ( $product->is_type( 'variable' ) ) {
+				$product = wc_get_product( get_the_ID() );
+
+				if ( ! $product ) {
+					return;
+				}
+
+				if ( $product instanceof WC_Product_Variable ) {
 					// Product has attributes (variations)
 					$available_variations = $product->get_available_variations();
 					$variation_prices = array_map( function( $variation ) {

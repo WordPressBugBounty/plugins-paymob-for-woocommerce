@@ -24,16 +24,16 @@ class Paymob_Save_Gateway_Settings {
 		} else {
 			$integration_id = Paymob::filterVar( 'integration_id', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) ) : '';
 			$payment_enabled = Paymob::filterVar( 'payment_enabled', 'POST' ) ? 'yes' : 'no';
-			$payment_integrations_type = Paymob::filterVar( 'payment_integrations_type', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'payment_integrations_type', 'POST' ) ) : '';
+			$payment_integrations_type_raw = Paymob::filterVar( 'payment_integrations_type', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'payment_integrations_type', 'POST' ) ) : '';
 			$checkout_title = Paymob::filterVar( 'checkout_title', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'checkout_title', 'POST' ) ) : '';
 			$checkout_description = Paymob::filterVar( 'checkout_description', 'POST' ) ? sanitize_text_field( Paymob::filterVar( 'checkout_description', 'POST' ) ) : '';
 
-			$payment_integrations_type = 'paymob-' . preg_replace( '/[^a-zA-Z0-9]+/', '-', strtolower( $payment_integrations_type ) );
+			$payment_integrations_type = 'paymob-' . preg_replace( '/[^a-zA-Z0-9]+/', '-', strtolower( $payment_integrations_type_raw ) );
 			$file_name = 'class-gateway-' .$payment_integrations_type. '.php';
 
 			$gateway = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}paymob_gateways WHERE gateway_id = %s", $payment_integrations_type ), OBJECT );
 
-			if ( ! $gateway && ! empty( $payment_integrations_type ) ) {
+			if ( ! $gateway && '' !== $payment_integrations_type_raw ) {
 				$ordering = $wpdb->get_var( "SELECT max(ordering) FROM {$wpdb->prefix}paymob_gateways" );
 				++$ordering;
 
@@ -222,16 +222,19 @@ class Paymob_Save_Gateway_Settings {
 
 		// Get subscription settings
 		$subscription_settings = Paymob::filterVar('woocommerce_paymob-subscription_settings', 'POST');
+		if ( ! is_array( $subscription_settings ) ) {
+			$subscription_settings = array();
+		}
 		$enabled = (!empty($subscription_settings['enabled']) && $subscription_settings['enabled'] === '1') ? 'yes' : 'no';
 		$title        = !empty($subscription_settings['title']) ? sanitize_text_field($subscription_settings['title']) : 'Paymob Subscription';
 		$description  = !empty($subscription_settings['description']) ? sanitize_text_field($subscription_settings['description']) : 'Recurring payment via Paymob.';
-		$moto_id      = !empty($subscription_settings['moto_integration_id']) ? sanitize_text_field($subscription_settings['moto_integration_id']) : '';
-		$threeds_ids  = !empty($subscription_settings['ds3_integration_ids']) ? sanitize_text_field($subscription_settings['ds3_integration_ids']) : '';
+		$moto_id      = isset( $subscription_settings['moto_integration_id'] ) ? sanitize_text_field( (string) $subscription_settings['moto_integration_id'] ) : '';
+		$threeds_ids  = isset( $subscription_settings['ds3_integration_ids'] ) ? sanitize_text_field( (string) $subscription_settings['ds3_integration_ids'] ) : '';
 		$allow_cancel = (!empty($subscription_settings['allow_cancel']) && $subscription_settings['allow_cancel'] === '1')
 		? 'yes'
 		: 'no';
 
-		if (empty($moto_id) || empty($threeds_ids)) {
+		if ( '' === $moto_id || '' === $threeds_ids ) {
 			WC_Admin_Settings::add_error(__('Please select both MOTO and 3DS Integration IDs.', 'paymob-for-woocommerce'));
 			return;
 		}

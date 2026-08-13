@@ -1,9 +1,16 @@
 <?php
+/**
+ * Unified gateway settings fields.
+ *
+ * Included from gateway init_form_fields().
+ */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+$tabs = include __DIR__ . '/paymob-admin-tabs.php';
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- section is used only for default logo path.
+$gateway_id = isset( $_GET['section'] ) ? sanitize_text_field( wp_unslash( $_GET['section'] ) ) : 'paymob';
             
 return array(
 	'tabs'=> array(
@@ -38,7 +45,7 @@ return array(
 	),
 	'logo'           => array(
 		'title'             => __( 'Payment Method - Logo URL', 'paymob-for-woocommerce' ),
-		'default'           => plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/img/' . $this->id . '.png',
+		'default'           => plugins_url( PAYMOB_PLUGIN_NAME ) . '/assets/img/' . $gateway_id . '.png',
 		'type'              => 'text',
 		'description'       => __( 'Add a Logo URL for checkout icon.', 'paymob-for-woocommerce' ),
 		'sanitize_callback' => 'sanitize_url',

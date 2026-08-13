@@ -8,7 +8,7 @@ class Paymob_Webhook_Url {
         $mainOptions = get_option( 'woocommerce_paymob-main_settings' );
         $debug = isset( $mainOptions['debug'] ) ? $mainOptions['debug'] : '';
 		$debug = 'yes' === $debug ? '1' : '0';
-        $addlog    = WC_LOG_DIR . 'paymob-auth.log';
+        $addlog    = Paymob::log_dir() . 'paymob-auth.log';
 		// Load integrations IDs
 		$conf['apiKey'] = isset( $mainOptions['api_key'] ) ? $mainOptions['api_key'] : '';
 		$conf['pubKey'] = isset( $mainOptions['pub_key'] ) ? $mainOptions['pub_key'] : '';

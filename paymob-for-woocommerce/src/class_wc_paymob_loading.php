@@ -98,7 +98,7 @@ class WC_Paymob_Loading {
 				continue;
 			}
 
-			include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-paymob-payment.php';
+			include_once __DIR__ . '/../includes/gateways/class-paymob-payment.php';
 			include_once $file;
 			$gateways[] = $class_name;
 		}

@@ -19,7 +19,7 @@ class Paymob_Update_Pixel_Data {
 		$secKey        = isset( $paymobOptions['sec_key'] ) ? $paymobOptions['sec_key'] : '';
 		$debug         = isset( $paymobOptions['debug'] ) ? sanitize_text_field( $paymobOptions['debug'] ) : '';
 		$debug         = $debug ? '1' : '0';
-		$addlog        = WC_LOG_DIR . 'paymob-pixel.log';
+		$addlog        = Paymob::log_dir() . 'paymob-pixel.log';
 
 		$force_new      = self::post_flag( 'force_new' );
 		$reset_discount = self::post_flag( 'reset_discount' ) || $force_new;

@@ -80,7 +80,7 @@ class Paymob_Main_Partner_Info
 			$livePubKey = isset($main_settings['live_pub_key']) ? sanitize_text_field($main_settings['live_pub_key']) : '';
 			$testSecKey = isset($main_settings['test_sec_key']) ? sanitize_text_field($main_settings['test_sec_key']) : '';
 			$livesecKey = isset($main_settings['live_sec_key']) ? sanitize_text_field($main_settings['live_sec_key']) : '';
-			$apiKey = isset($paymobOptions['api_key']) ? sanitize_text_field($main_settings['api_key']) : '';
+			$apiKey = isset($main_settings['api_key']) ? sanitize_text_field($main_settings['api_key']) : '';
 			$main_settings['enabled'] = isset($main_settings['enabled']) ? ($main_settings['enabled']) :'yes';
 
 			// if (
@@ -95,7 +95,7 @@ class Paymob_Main_Partner_Info
 				];
 				// echo "<pre>";print_r($data);exit;
 				// Paymob Request
-				$paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
+				$paymobReq = new Paymob('1', Paymob::log_dir() . 'paymob-auth.log');
 				$status = $paymobReq->getPartnerInfo($woo_code, $data);
 				$status = (array) $status;
 
@@ -113,7 +113,7 @@ class Paymob_Main_Partner_Info
 					$conf['secKey'] = $main_settings['sec_key'] = $status['is_live'] ? $status['sk_key_live'] : $status['sk_key_test'];
 
 					$result = $paymobReq->authToken($conf);
-					Paymob::addLogs('1', WC_LOG_DIR . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
+					Paymob::addLogs('1', Paymob::log_dir() . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
 					$gatewayData = $paymobReq->getPaymobGateways($main_settings['sec_key'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 

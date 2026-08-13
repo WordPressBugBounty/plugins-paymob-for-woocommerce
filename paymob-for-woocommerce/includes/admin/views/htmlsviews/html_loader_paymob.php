@@ -21,7 +21,7 @@ $paymobOptions = get_option( 'woocommerce_paymob-main_settings' );
 $mode         = isset( $paymobOptions['mode'] ) ? $paymobOptions['mode'] : 'test';
 $sliderMode   = ( 'test' === $mode ) ? '' : 'silderMode';
 // Generate HTML row.
-$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+$tabs = include __DIR__ . '/../../paymob-admin-tabs.php';
 $modeSwitcher = sprintf(
 	'<div id="changemodemodal_confirm_button" class="mode-toggle-container switch-mode" style="max-width: 20%%;">
     <label for="mode-toggle"></label>

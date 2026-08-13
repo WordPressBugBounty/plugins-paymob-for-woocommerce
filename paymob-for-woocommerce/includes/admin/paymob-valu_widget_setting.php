@@ -9,7 +9,7 @@ $integration_description = empty($valu_integration_ids)
     ? '<strong style="color: red;">Please enable a ValU Integration ID from the Payment Integrations section to use the ValU Widget.</strong>'
     : 'Choose the Integration ID for the ValU Widget.';
 
-$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+$tabs = include __DIR__ . '/paymob-admin-tabs.php';
             
 $settings = array(
     'tab'=>array(

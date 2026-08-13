@@ -10,10 +10,14 @@ class Paymob_WooCommerce {
 	public $gateway;
 	public $id;
 	public $hmac_hidden;
+	public $debug;
+	public $addlog;
 
 	public function __construct( $id ) {
 		$this->id      = $id;
 		$this->gateway = ucwords( str_replace( '-', '_', $id ), '_' ) . '_Gateway';
+		$this->debug   = '0';
+		$this->addlog  = Paymob::log_dir() . 'paymob-auth.log';
 		// filters
 		add_filter( 'plugin_action_links_' . PAYMOB_PLUGIN, array( $this, 'add_plugin_links' ) );
 		add_filter( 'woocommerce_payment_gateways', array( $this, 'register' ), 0 );
@@ -34,8 +38,8 @@ class Paymob_WooCommerce {
 	 * Register the gateway to WooCommerce
 	 */
 	public function register( $gateways ) {
-		include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-paymob-payment.php';
-		include_once PAYMOB_PLUGIN_PATH . '/includes/gateways/class-gateway-' .$this->id. '.php';
+		include_once __DIR__ . '/../includes/gateways/class-paymob-payment.php';
+		include_once __DIR__ . '/../includes/gateways/class-gateway-' . $this->id . '.php';
 		if ( ! isset( $gateways[ $this->id ] ) ) {
 			$gateways[] = $this->gateway;
 		}
@@ -81,7 +85,7 @@ class Paymob_WooCommerce {
             $this->subscriptionTransactionWebhook( $json_data, $url, $country );
 		}
 		elseif ( isset( $json_data['type'] ) && 'TOKEN' === $json_data['type'] ) {
-			$addlog          = WC_LOG_DIR  . 'paymob-token.log';
+			$addlog          = Paymob::log_dir()  . 'paymob-token.log';
 			Paymob::addLogs( $this->gateway->debug, $addlog, ' In TOKEN REQUEST >>>> ', wp_json_encode( $json_data ) );
 			$this->saveCardToken( $json_data );
 
@@ -110,7 +114,7 @@ class Paymob_WooCommerce {
 
 			$order           = wc_get_order( $orderId );
 			$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
-			$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+			$addlog          = Paymob::log_dir() . $PaymobPaymentId . '.log';
 			Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
 			$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
 			$status = $order->get_status();
@@ -210,7 +214,7 @@ class Paymob_WooCommerce {
 		$OrderIntensionId = $order->get_meta( 'PaymobIntentionId', true );
 		$OrderAmount      = $order->get_meta( 'PaymobCentsAmount', true );
 		$PaymobPaymentId  = $order->get_meta( 'PaymobPaymentId', true );
-		$addlog           = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog           = Paymob::log_dir() . $PaymobPaymentId . '.log';
 
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
 	   
@@ -338,7 +342,7 @@ class Paymob_WooCommerce {
 
 		$table_name = $wpdb->prefix . 'paymob_cards_token';
 		$obj        = isset( $json_data['obj'] ) && is_array( $json_data['obj'] ) ? $json_data['obj'] : array();
-		$addlog     = WC_LOG_DIR . 'paymob-auth.log';
+		$addlog     = Paymob::log_dir() . 'paymob-auth.log';
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In save Card Token Webhook', wp_json_encode( $json_data ) );
 
 		if ( empty( $obj['token'] ) || empty( $obj['masked_pan'] ) ) {
@@ -439,7 +443,7 @@ class Paymob_WooCommerce {
 		$OrderIntensionId = $order->get_meta( 'PaymobIntentionId', true );
 		$OrderAmount      = $order->get_meta( 'PaymobCentsAmount', true );
 		$PaymobPaymentId  = $order->get_meta( 'PaymobPaymentId', true );
-		$addlog           = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog           = Paymob::log_dir() . $PaymobPaymentId . '.log';
 
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
 		$cents = 100;
@@ -449,7 +453,7 @@ class Paymob_WooCommerce {
 	  
 		$order           = wc_get_order( $orderId );
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
-		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog          = Paymob::log_dir() . $PaymobPaymentId . '.log';
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In Webhook action, for order# ' . $orderId, wp_json_encode( $json_data ) );
 		$order  = PaymobOrder::validateOrderInfo( $orderId, $PaymobPaymentId );
 		$status = $order->get_status();
@@ -532,7 +536,7 @@ class Paymob_WooCommerce {
 		$today            = strtotime( gmdate( 'Y-m-d' ) );
 
 		// ===== LOG FILE =====
-		$addlog = WC_LOG_DIR . 'paymob-subscription.log';
+		$addlog = Paymob::log_dir() . 'paymob-subscription.log';
 
 		Paymob::addLogs(
 			$this->gateway->debug,
@@ -604,6 +608,10 @@ class Paymob_WooCommerce {
 			$addlog,
 			'Processing subscriptions for order #' . $order->get_id()
 		);
+
+		if ( ! function_exists( 'wcs_get_subscriptions_for_order' ) ) {
+			die( 'WooCommerce Subscriptions is not active' );
+		}
 
 		$subscriptions = wcs_get_subscriptions_for_order( $order, [ 'order_type' => 'any' ] );
 
@@ -709,6 +717,10 @@ class Paymob_WooCommerce {
 			return false;
 		}
 
+		if ( ! function_exists( 'wcs_get_subscription' ) || ! function_exists( 'wcs_create_renewal_order' ) ) {
+			return false;
+		}
+
 		$subscription = wcs_get_subscription( $subscription_id );
 		if ( ! $subscription ) {
 			return false;
@@ -754,6 +766,10 @@ class Paymob_WooCommerce {
 
 		$transaction_id = intval( $json_data['transaction_id'] );
 
+		if ( ! function_exists( 'wcs_get_subscription' ) || ! function_exists( 'wcs_create_renewal_order' ) ) {
+			return false;
+		}
+
 		$subscription = wcs_get_subscription( $subscription_id );
 		if ( ! $subscription ) {
 			return false;
@@ -796,7 +812,7 @@ class Paymob_WooCommerce {
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
 		
 		$merchant_order_id = sanitize_text_field( (string) Paymob::filterVar( 'merchant_order_id' ) );
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
+		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
 		if ( strpos( $orderId, 'pixel' ) !== false ) {
 			global $wpdb;
 			$orderId = $wpdb->get_var(
@@ -807,11 +823,11 @@ class Paymob_WooCommerce {
 			);
 			
 		}
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- order id'.$orderId );
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- GET'.print_r($_GET,1));
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
+		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- order id'.$orderId );
+		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- GET'.print_r($_GET,1));
+		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
 		
-		Paymob::addLogs( "1", WC_LOG_DIR . 'paymob-pixel.log', ' --------- errorrrrr'.Paymob::filterVar( 'errmsg' ) );
+		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- errorrrrr'.Paymob::filterVar( 'errmsg' ) );
 		$order           = wc_get_order( $orderId );
 		
 		if(!$order ){
@@ -861,7 +877,7 @@ class Paymob_WooCommerce {
 			exit();
 		}
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
-		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog          = Paymob::log_dir() . $PaymobPaymentId . '.log';
 
 		if ( ! Paymob::verifyHmac( $this->hmac_hidden, Paymob::sanitizeVar() ) ) {
 			$checkout_url = wc_get_checkout_url().'?gatewayerror='. __( 'Sorry, you are accessing wrong data due to mismatch verification.', 'paymob-for-woocommerce' );
@@ -986,7 +1002,7 @@ class Paymob_WooCommerce {
 		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
 		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
 		$PaymobPaymentId = $order->get_meta('PaymobPaymentId', true);
-		$addlog = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog = Paymob::log_dir() . $PaymobPaymentId . '.log';
 		$paymobReq = new Paymob($this->debug, $this->addlog);
 		// Get auth token
 		$token = $paymobReq->authToken($conf);
@@ -1017,7 +1033,7 @@ class Paymob_WooCommerce {
 		$conf['pubKey'] = $mainOptions['pub_key'] ?? '';
 		$conf['secKey'] = $mainOptions['sec_key'] ?? '';
 		$PaymobPaymentId = $order->get_meta('PaymobPaymentId', true);
-		$addlog = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog = Paymob::log_dir() . $PaymobPaymentId . '.log';
 		$paymobReq = new Paymob($this->debug, $this->addlog);
 		// Get auth token
 		$token = $paymobReq->authToken($conf);

@@ -1,6 +1,12 @@
 <?php
+/**
+ * Confirmation modal for disabling Paymob gateways.
+ */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+if ( ! isset( $gateways ) || ! is_array( $gateways ) ) {
+	$gateways = array();
 }
 ?>
 <div id="confirmationModal">

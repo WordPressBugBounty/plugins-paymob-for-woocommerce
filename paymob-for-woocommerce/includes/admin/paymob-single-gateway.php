@@ -1,10 +1,17 @@
 <?php
+/**
+ * Single gateway settings fields.
+ *
+ * Included from Paymob_Payment::init_form_fields().
+ */
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 $single_integration_id_properties = PaymobAutoGenerate::disable_single_integration_id_field();
-$tabs = include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php';
+$tabs = include __DIR__ . '/paymob-admin-tabs.php';
+$title_default       = '';
+$description_default = '';
             
     
 $settings = array(
@@ -23,14 +30,14 @@ $settings = array(
         'title'             => __( 'Payment Method - Title', 'paymob-for-woocommerce' ),
         'type'              => 'text',
         'description'       => __( 'This controls the title which the user sees during checkout.', 'paymob-for-woocommerce' ),
-        'default'           => $this->title,
+        'default'           => $title_default,
         'sanitize_callback' => 'sanitize_text_field',
         'custom_attributes' => array( 'required' => 'required' ),
     ),
     'description' => array(
         'title'             => __( 'Payment Method - Description', 'paymob-for-woocommerce' ),
         'type'              => 'textarea',
-        'default'           => $this->description,
+        'default'           => $description_default,
         'description'       => __( 'This controls the description which the user sees during checkout.', 'paymob-for-woocommerce' ),
         'sanitize_callback' => 'sanitize_text_field',
         'custom_attributes' => array( 'required' => 'required' ),

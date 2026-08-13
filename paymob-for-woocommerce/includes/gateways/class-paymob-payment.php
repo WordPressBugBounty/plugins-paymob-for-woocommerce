@@ -123,14 +123,18 @@ class Paymob_Payment extends WC_Payment_Gateway {
 		$this->description           = $this->get_option( 'description' );
 		$this->logo                  = $this->get_option( 'logo' );
 		$this->single_integration_id = $this->get_option( 'single_integration_id' );
-		$this->addlog                = WC_LOG_DIR . $this->id . '.log';
+		$this->addlog                = Paymob::log_dir() . $this->id . '.log';
 		$this->cents                 = 100;
 		// callback
 		$this->notify_url = WC()->api_request_url( 'wc-paymob-card' );
 		add_action( 'admin_enqueue_scripts', array( $this, 'paymob_admin_enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'paymob_frontend_enqueue' ) );
-		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
-		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+		add_action(
+			'woocommerce_update_options_payment_gateways_' . $this->id,
+			function () {
+				$this->process_admin_options();
+			}
+		);
 		add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'on_subscription_cancelled' ), 10, 1 );
 		add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'on_subscription_suspended' ), 10, 1 );
 		add_action( 'woocommerce_subscription_status_active',array( $this, 'on_subscription_reactivated' ),10,1);
@@ -330,7 +334,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 
 		$transactionId   = $order->get_meta( 'PaymobTransactionId', true );
 		$PaymobPaymentId = $order->get_meta( 'PaymobPaymentId', true );
-		$addlog          = WC_LOG_DIR . $PaymobPaymentId . '.log';
+		$addlog          = Paymob::log_dir() . $PaymobPaymentId . '.log';
 		$data            = array(
 			'transaction_id' => $transactionId,
 			'amount_cents'   => (int) round( $amount * $cents ),
@@ -350,7 +354,10 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	}
 
 	public function can_refund_orders( $order, $amount, $paymob_refund_id ) {
-		$refunds = $order->get_refunds(); // Get all refunds associated with the order
+		$refunds          = $order->get_refunds(); // Get all refunds associated with the order
+		$recent_refund_id = '';
+		$msg              = __( 'Paymob : Refund of ', 'paymob-for-woocommerce' ) . $amount;
+
 		if ( ! empty( $refunds ) ) {
 			usort(
 				$refunds,
@@ -362,18 +369,17 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			$recent_refund_id = $recent_refund->get_id();
 		}
 
-			$order_total = $order->get_total();
+		$order_total = $order->get_total();
 		if ( $amount < $order_total ) {
 			// Partial refund
 			$msg = __( 'Paymob : Partial refund of ', 'paymob-for-woocommerce' ) . $amount;
-
 		} elseif ( $amount == $order_total ) {
 			// Full refund
 			$msg = __( 'Paymob : Full refund of ', 'paymob-for-woocommerce' ) . $amount;
 		}
-			$info = "<br/>Woo Order Refund ID: {$recent_refund_id}<br/>Transaction Refund ID : {$paymob_refund_id}";
-			$order->add_order_note( $msg . $info );
-			return $msg;
+		$info = "<br/>Woo Order Refund ID: {$recent_refund_id}<br/>Transaction Refund ID : {$paymob_refund_id}";
+		$order->add_order_note( $msg . $info );
+		return $msg;
 	}
 	public function payment_fields() {
 		if('paymob-pixel' !== $this->id){
@@ -382,13 +388,13 @@ class Paymob_Payment extends WC_Payment_Gateway {
 			}
 		}else{
 			if (function_exists('is_checkout') && is_checkout()) {
-				include PAYMOB_PLUGIN_PATH . 'includes/admin/scripts/pixel_checkout.php';
+				include __DIR__ . '/../admin/scripts/pixel_checkout.php';
 			}
 		}
 	}
 
 	public function init_form_fields() {
-		$this->form_fields = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-single-gateway.php';
+		$this->form_fields = include __DIR__ . '/../admin/paymob-single-gateway.php';
 		
 	}
 

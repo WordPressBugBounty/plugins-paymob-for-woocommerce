@@ -64,7 +64,7 @@ class Paymob {
 		if ( JSON_ERROR_NONE !== $json_err ) {
 			if ( class_exists( 'Paymob_Error_Logs' ) ) {
 				Paymob_Error_Logs::log_http_raw_response(
-					'JSON decode failed: ' . json_last_error_msg() . ' — raw body stored below.',
+					'JSON decode failed: ' . json_last_error_msg() . ' â€” raw body stored below.',
 					(string) $apiPath,
 					(string) $method,
 					$http_code,
@@ -77,7 +77,7 @@ class Paymob {
 		if ( $http_code >= 400 ) {
 			if ( class_exists( 'Paymob_Error_Logs' ) ) {
 				Paymob_Error_Logs::log_http_raw_response(
-					'HTTP ' . $http_code . ' — raw Paymob body stored below.',
+					'HTTP ' . $http_code . ' â€” raw Paymob body stored below.',
 					(string) $apiPath,
 					(string) $method,
 					$http_code,
@@ -382,6 +382,22 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, ' In api/ecommerce/plugins: ' . json_encode( $registerRes ) );
 		return $registerRes;
 	}
+
+	/**
+	 * Fetch ValU installment tenures for a given amount.
+	 *
+	 * @param string $secKey Secret key.
+	 * @param array  $data   Request payload (expects amount).
+	 * @return object|null
+	 */
+	public function valuWidget( $secKey, $data ) {
+		$api_url = $this->getApiUrl( $this->getCountryCode( $secKey ) );
+		$header  = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
+		$this->addLogs( $this->debug_order, $this->file, 'ValU Widget request', $data );
+		$response = $this->HttpRequest( $api_url . 'api/acceptance/valu', 'POST', $header, $data );
+		$this->addLogs( $this->debug_order, $this->file, 'ValU Widget response', $response );
+		return $response;
+	}
 	public function refundPayment( $secKey, $data ) {
 		$flash  = $this->getApiUrl( $this->getCountryCode( $secKey ) );
 		$header = array( 'Content-Type: application/json', 'Authorization: Token ' . $secKey );
@@ -625,6 +641,22 @@ class Paymob {
 		return $GLOBALS[ '_' . $type ];
 	}
 
+	/**
+	 * WooCommerce log directory with trailing slash (PHPStan-safe; avoids WC_LOG_DIR).
+	 *
+	 * @return string
+	 */
+	public static function log_dir() {
+		if ( function_exists( 'wc_get_log_dir' ) ) {
+			return trailingslashit( wc_get_log_dir() );
+		}
+
+		$upload_dir = wp_upload_dir( null, false );
+		$base       = isset( $upload_dir['basedir'] ) ? $upload_dir['basedir'] : WP_CONTENT_DIR . '/uploads';
+
+		return trailingslashit( $base ) . 'wc-logs/';
+	}
+
 	public static function addLogs( $debug, $file, $note, $data = false ) {
 		if ( '1' !== (string) $debug ) {
 			return;
@@ -701,13 +733,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -722,13 +748,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -743,13 +763,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -765,13 +779,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -787,13 +795,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -808,13 +810,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;
@@ -830,13 +826,7 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, $note_i, print_r( $plans, 1 ) );
 		if ( empty( $plans ) ) {
 			$this->addLogs( $this->debug_order, $this->file, $note_i, $plans );
-		}
-		
-		if ( isset( $plans ) ) {
-			$plans = $plans;
-		}
-		else {
-			$plans = ( isset( $plans ) ) ? $plans : 'Something went wrong';
+			$plans = 'Something went wrong';
 		}
 		$this->addLogs( $this->debug_order, $this->file, $note_i, json_encode( $plans ) );
 		return $plans;

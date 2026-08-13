@@ -25,7 +25,7 @@ class Paymob_List_Gateways_Settings
 					OBJECT
 			);
 		
-			$custom_settings = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob-custom_list_setting.php';
+			$custom_settings = include __DIR__ . '/../../admin/paymob-custom_list_setting.php';
 			$table_body = '';
 			// print_r($results); die;
 			if (!empty($results)) {
@@ -38,7 +38,7 @@ class Paymob_List_Gateways_Settings
 			}
 
 			echo '<script>window.paymob_gateways_table_body = ' . wp_json_encode($table_body) . ';</script>';
-			include_once PAYMOB_PLUGIN_PATH . '/includes/admin/views/htmlsviews/html_loader_paymob.php';
+			include_once __DIR__ . '/../../admin/views/htmlsviews/html_loader_paymob.php';
 			$settings = array_merge($settings, $custom_settings);
 		}
 

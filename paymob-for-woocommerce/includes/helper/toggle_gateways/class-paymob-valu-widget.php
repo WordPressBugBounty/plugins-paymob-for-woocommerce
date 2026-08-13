@@ -21,9 +21,9 @@ class Paymob_Valu_Widget {
             $conf['secKey'] = isset( $paymob_options['sec_key'] ) ? $paymob_options['sec_key'] : '';
             $debug  = isset( $paymob_options['debug'] ) ? sanitize_text_field( $paymob_options['debug'] ) : '0';
             $debug   = 'yes' === $debug ? '1' : '0';
-            $add_log = WC_LOG_DIR . 'paymob.log';
+            $add_log = Paymob::log_dir() . 'paymob.log';
 
-            $paymob_req = new Paymob( $debug, WC_LOG_DIR . 'paymob.log' );
+            $paymob_req = new Paymob( $debug, Paymob::log_dir() . 'paymob.log' );
             $price = sanitize_text_field( Paymob::filterVar( 'price', 'POST' ) );
             $data = array(
 				'amount'  => (float)$price

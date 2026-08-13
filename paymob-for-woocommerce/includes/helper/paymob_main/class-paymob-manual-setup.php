@@ -46,7 +46,7 @@ class Paymob_Manual_Setup_Save {
             $main_settings['sec_key']   = $testSecretKey;
         }
       
-        $addlog = WC_LOG_DIR . 'paymob-auth.log';
+        $addlog = Paymob::log_dir() . 'paymob-auth.log';
         $debug='1';
         delete_option('woocommerce_paymob_widget_settings');
 
@@ -154,10 +154,10 @@ class Paymob_Manual_Setup_Save {
         // var_dump($gateway_data);die;
 		$pixel_settings = get_option('woocommerce_paymob-pixel_settings', array());
 		$pixel_settings['title'] = empty($pixel_settings['title'])? 'Debit/Credit Card Payment' : $pixel_settings['title'];
-        $pixel_enabled = $pixel_settings['enabled'] = isset($pixel_enabled['enabled']) ? ($pixel_enabled['enabled']) :'yes';
+        $pixel_enabled = $pixel_settings['enabled'] = isset($pixel_settings['enabled']) ? ($pixel_settings['enabled']) :'yes';
         $pixel_settings['show_save_card'] = isset($pixel_settings['show_save_card'])? $pixel_settings['show_save_card'] : 'yes';
         $pixel_settings['force_save_card'] = isset($pixel_settings['force_save_card'])? $pixel_settings['force_save_card'] : 'no';
-        if ($pixel_enabled) {
+        if ( $pixel_enabled ) {
             $card_id1 = array_keys(PaymobAutoGenerate::get_pixel_integration_ids('Card'));
             $card_id2 = array_keys(PaymobAutoGenerate::get_pixel_integration_ids('OMANNET'));
             $card_ids = array_merge($card_id1,$card_id2);

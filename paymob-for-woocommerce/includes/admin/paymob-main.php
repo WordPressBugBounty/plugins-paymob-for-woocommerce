@@ -5,12 +5,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	'tabs'       => array(
 		'title'       =>'',
-		'description' => include PAYMOB_PLUGIN_PATH . '/includes/admin/paymob-admin-tabs.php',
+		'description' => include __DIR__ . '/paymob-admin-tabs.php',
 		'type'        => 'title',
 	),
 	'buttons'       => array(
 		'title'       =>'',
-		'description' => include PAYMOB_PLUGIN_PATH . '/includes/admin/views/htmlsviews/html_reconnect_buttons.php',
+		'description' => include __DIR__ . '/views/htmlsviews/html_reconnect_buttons.php',
 		'type'        => 'title',
 	),
    'has_items'         => array(
@@ -34,6 +34,6 @@ return array(
 		'type'    => 'checkbox',
 		'default' => 'yes',
 		'description'=>'<div  style="width:50%" id="-description"><div style="background-color: #f0f8ff;border: 1px solid #ddd;padding: 15px;margin-top: 20px;border-radius: 8px;font-family: Arial, sans-serif;color: #333">
-                ' . __( 'Enabling the Debug Log checkbox in this section will log all actions in Paymob files. These files will be saved in the directory', 'paymob-for-woocommerce' ) . ' <b>' . ( defined( 'WC_LOG_DIR' ) ? WC_LOG_DIR : WC()->plugin_path() . '/logs/' ) . '</b>.</div></div>',
+                ' . __( 'Enabling the Debug Log checkbox in this section will log all actions in Paymob files. These files will be saved in the directory', 'paymob-for-woocommerce' ) . ' <b>' . Paymob::log_dir() . '</b>.</div></div>',
 	),
 );

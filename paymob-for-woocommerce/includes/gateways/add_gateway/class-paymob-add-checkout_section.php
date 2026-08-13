@@ -25,7 +25,7 @@ class Paymob_Checkout_Section
 				'widget' === Paymob::filterVar('section'))
 		) {
 
-			$sections = include PAYMOB_PLUGIN_PATH . 'includes/admin/paymob_checkout_sections.php';
+			$sections = include __DIR__ . '/../../admin/paymob_checkout_sections.php';
 		}
 		return $sections; 
 	}

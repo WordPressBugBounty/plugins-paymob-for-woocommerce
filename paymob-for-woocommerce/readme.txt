@@ -2,11 +2,11 @@
 Contributors: nspaymob, nermeenshoman, amlfares, babarali1234
 Tags: paymob, payment, gateway, woocommerce
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.0
 WC requires at least: 4.0
-WC tested up to: 10.4
-Stable tag: 4.1.9
+WC tested up to: 11.0
+Stable tag: 4.1.10
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -183,8 +183,8 @@ Remember to save your changes for them to reflect on the checkout.
 
 
 == Changelog ==
-2026-08-09 - version 4.1.9
-- security enhancement 
+2026-08-14 - version 4.1.10
+- checkout page  enhancement 
 
   
 

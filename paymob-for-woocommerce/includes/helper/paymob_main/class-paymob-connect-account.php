@@ -34,7 +34,7 @@ class Paymob_Main_Connect_Account {
 			// 'clt'     => '41.40.92.52',
 		];
 		// Paymob Request
-		$paymobReq = new Paymob('1', WC_LOG_DIR . 'paymob-auth.log');
+		$paymobReq = new Paymob('1', Paymob::log_dir() . 'paymob-auth.log');
 		$response = $paymobReq->getOnboardingUrl('egy', $data);
 		// Check for errors in Paymob response
 		$currentURL = Paymob_Main_Partner_Info::get_partner_redirect_url();
