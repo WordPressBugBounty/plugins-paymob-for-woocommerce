@@ -15,7 +15,7 @@ jQuery( document ).ready(
 				if ( $field.closest( '.customization-settings-table' ).length ) {
 					return false;
 				}
-				if ( $field.is( '#apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id' ) ) {
+				if ( $field.is( '#apple_pay_integration_id, #google_pay_integration_id, #bank_installment_integration_id, #cards_integration_id' ) ) {
 					return false;
 				}
 				var fieldName = $field.attr( 'name' ) || '';

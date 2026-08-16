@@ -12,6 +12,59 @@ class Paymob_Pixel_Settings {
             $googlepayIDs = $ggle1+ $ggle2;
 
             $applepayIDs = PaymobAutoGenerate::get_pixel_integration_ids('apple_pay');
+            $bankInstallmentIDs = array();
+            $bankInstallmentArray = array();
+
+            // PRD: Bank Installment in Pixel Embedding Settings is Egypt-only.
+            // UI matches Cards (Select2 multiselect pills).
+            // if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
+            //     $bankInstallmentIDs = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
+            //     $bank_installment_count = count( $bankInstallmentIDs );
+
+            //     if ( $bank_installment_count > 0 ) {
+            //         $stored_bank = isset( $pixel_settings['bank_installment_integration_id'] ) ? $pixel_settings['bank_installment_integration_id'] : array();
+            //         if ( ! is_array( $stored_bank ) ) {
+            //             $stored_bank = ( '' === (string) $stored_bank ) ? array() : array( (string) $stored_bank );
+            //         }
+            //         $stored_bank = array_values(
+            //             array_filter(
+            //                 array_map( 'strval', $stored_bank ),
+            //                 function ( $id ) use ( $bankInstallmentIDs ) {
+            //                     return isset( $bankInstallmentIDs[ $id ] );
+            //                 }
+            //             )
+            //         );
+
+            //         if ( 1 === $bank_installment_count ) {
+            //             // Only 1 integration → pre-select automatically and persist.
+            //             $single_bank_installment_id = (string) array_key_first( $bankInstallmentIDs );
+            //             $stored_bank                = array( $single_bank_installment_id );
+            //             if (
+            //                 ! isset( $pixel_settings['bank_installment_integration_id'] )
+            //                 || (array) $pixel_settings['bank_installment_integration_id'] !== $stored_bank
+            //             ) {
+            //                 $pixel_settings['bank_installment_integration_id'] = $stored_bank;
+            //                 update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
+            //             }
+            //         }
+
+            //         $bankInstallmentArray = array(
+            //             'name'              => __( 'Bank Installment', 'paymob-for-woocommerce' ),
+            //             'type'              => 'multiselect',
+            //             'id'                => 'bank_installment_integration_id',
+            //             'options'           => $bankInstallmentIDs,
+            //             'desc_tip'          => true,
+            //             'custom_attributes' => array(
+            //                 'multiple' => 'multiple',
+            //             ),
+            //             'default'           => $stored_bank,
+            //         );
+            //     }
+            // } elseif ( ! empty( $pixel_settings['bank_installment_integration_id'] ) ) {
+            //     // Clear stale value for non-Egypt merchants.
+            //     $pixel_settings['bank_installment_integration_id'] = array();
+            //     update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
+            // }
 
             if(!empty($applepayIDs) && count($applepayIDs)>1){
                 $appleArray=array(
@@ -78,6 +131,7 @@ class Paymob_Pixel_Settings {
                 ),
                 $appleArray,
                 $googleArray,
+                $bankInstallmentArray,
                 array(
                     'type' => 'sectionend',
                     'id' => 'payment_methods_end',

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.10
+ * Version: 4.1.11
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-for-woocommerce
@@ -22,8 +22,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Early HTTP 403 when a log path is routed through PHP (Nginx often serves *.log as static files —
+// those legacy files are purged on plugins_loaded; PHP-guarded logs self-deny with 403).
+if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
+	$paymob_req_path = wp_parse_url( rawurldecode( (string) wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
+	if ( is_string( $paymob_req_path )
+		&& (
+			preg_match( '#/wp-content/uploads/wc-logs/.+\.log$#i', $paymob_req_path )
+			|| preg_match( '#/wp-content/uploads/paymob-private-logs/#i', $paymob_req_path )
+			|| preg_match( '#/(?:paymob(?:-auth|-pixel|-token|-subscription)?)\.log$#i', $paymob_req_path )
+		)
+	) {
+		status_header( 403 );
+		nocache_headers();
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'X-Content-Type-Options: nosniff' );
+		exit( 'Forbidden' );
+	}
+}
+
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.10');
+	define( 'PAYMOB_VERSION', '4.1.11');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );
@@ -47,6 +66,9 @@ class Init_Paymob {
 		// Set redirect flag upon activation of PayMob plugin
 		add_action( 'activated_plugin', array( $this, 'set_redirect_flag_on_activation' ) );
 		add_action( 'plugins_loaded', array( $this, 'load' ), 20 );
+		// Block / purge publicly reachable Paymob logs as early as possible (Nginx ignores .htaccess).
+		add_action( 'plugins_loaded', array( $this, 'harden_paymob_logging' ), 1 );
+		add_action( 'activate_' . PAYMOB_PLUGIN, array( $this, 'harden_paymob_logging' ), 1 );
 		$subscription_settings = get_option('woocommerce_paymob-subscription_settings', []);
 		$allow_cancel = (!empty($subscription_settings['allow_cancel']) && $subscription_settings['allow_cancel'] === 'yes');
 
@@ -113,6 +135,21 @@ class Init_Paymob {
 
 	public function load() {
 		return WC_Paymob_Loading::load();
+	}
+
+	/**
+	 * Ensure Paymob debug logs are not publicly downloadable (HTTP 403 / purged legacy *.log).
+	 */
+	public function harden_paymob_logging() {
+		if ( ! class_exists( 'Paymob' ) ) {
+			$paymob_helper = PAYMOB_PLUGIN_PATH . 'includes/helper/paymob.php';
+			if ( file_exists( $paymob_helper ) ) {
+				include_once $paymob_helper;
+			}
+		}
+		if ( class_exists( 'Paymob' ) && method_exists( 'Paymob', 'harden_logging' ) ) {
+			Paymob::harden_logging();
+		}
 	}
 }
 

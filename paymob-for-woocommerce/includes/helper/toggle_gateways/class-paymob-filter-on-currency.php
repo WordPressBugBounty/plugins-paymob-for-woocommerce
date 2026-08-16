@@ -71,6 +71,9 @@ class Paymob_Filter_currency
 			if (isset($paymob_gateway->google_pay_integration_id)) {
 				$google_pay_integration_id = $paymob_gateway->google_pay_integration_id;
 			}
+			if (isset($paymob_gateway->bank_installment_integration_id)) {
+				$bank_installment_integration_id = $paymob_gateway->bank_installment_integration_id;
+			}
 			$integration_ids = [];
 			// Check and merge only non-empty arrays
 			if (!empty($cards_integration_id)) {
@@ -81,6 +84,9 @@ class Paymob_Filter_currency
 			}
 			if (!empty($google_pay_integration_id)) {
 				$integration_ids = array_merge($integration_ids, (array) $google_pay_integration_id);
+			}
+			if (!empty($bank_installment_integration_id)) {
+				$integration_ids = array_merge($integration_ids, (array) $bank_installment_integration_id);
 			}
 			if (!check_integration_id_match($integration_ids, get_woocommerce_currency()) || 'no' === $default_enabled) {
 				unset($available_gateways['paymob-pixel']);

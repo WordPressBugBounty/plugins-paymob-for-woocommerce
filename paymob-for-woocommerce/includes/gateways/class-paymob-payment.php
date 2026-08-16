@@ -60,6 +60,7 @@ class Paymob_Payment extends WC_Payment_Gateway {
 	public $color_input_fields;
 	public $color_primary;
 	public $apple_pay_integration_id;
+	public $bank_installment_integration_id;
 	public $force_save_card;
 	public $vertical_padding_for_button;
 	public $customization_div;

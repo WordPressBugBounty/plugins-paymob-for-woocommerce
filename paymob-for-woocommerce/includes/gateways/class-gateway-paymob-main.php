@@ -126,7 +126,8 @@ class Paymob_Main_Gateway extends Paymob_Payment
 			$google_pay1 = array_keys(PaymobAutoGenerate::get_pixel_integration_ids('google-pay'));
 			$google_pay2 = array_keys(PaymobAutoGenerate::get_pixel_integration_ids('Google-pay'));
 			$google_pay_ids = array_merge($google_pay1 , $google_pay2);
-			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids);
+			$bank_installment_ids = array_keys( PaymobAutoGenerate::get_pixel_bank_installment_integration_ids() );
+			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids, $bank_installment_ids);
 			$all_ids = array_filter($all_ids);
 			$integration_ids = implode(',', $all_ids);
 			$card_integrations1 = array_map('strval', array_keys(PaymobAutoGenerate::get_pixel_integration_ids('Card')));

@@ -175,7 +175,8 @@ class Paymob_Manual_Setup_Save {
              // $googlePay3 =   array_keys(PaymobAutoGenerate::get_pixel_integration_ids('Google-Pay',$migrate));
 
 			$google_pay_ids = array_merge($googlePay, $googlePay2);
-			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids);
+			$bank_installment_ids = array_keys( PaymobAutoGenerate::get_pixel_bank_installment_integration_ids() );
+			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids, $bank_installment_ids);
 			$all_ids = array_filter($all_ids);
 
 			$integration_ids = implode(',', $all_ids);
@@ -287,7 +288,8 @@ class Paymob_Manual_Setup_Save {
             $googlePay = array_keys(PaymobAutoGenerate::get_pixel_integration_ids_all('google-pay'));
             $googlePay2 =   array_keys(PaymobAutoGenerate::get_pixel_integration_ids_all('Google-pay'));
 			$google_pay_ids = array_merge($googlePay, $googlePay2);
-			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids);
+			$bank_installment_ids = array_keys( PaymobAutoGenerate::get_pixel_bank_installment_integration_ids() );
+			$all_ids = array_merge($card_ids, $apple_pay_ids, $google_pay_ids, $bank_installment_ids);
 			$all_ids = array_filter($all_ids);
 			$integration_ids = implode(',', $all_ids);
             if(!empty( $gateway_data['integrationIDs'] ) ) {

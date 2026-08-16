@@ -94,8 +94,13 @@ class Paymob {
 		$this->addLogs( $this->debug_order, $this->file, ' Authenticate Paymob configuration' );
 		$apiUrl = $this->getApiUrl( $this->getCountryCode( $conf['secKey'] ) );
 		$tokenRes = $this->HttpRequest( $apiUrl . 'api/auth/tokens', 'POST', array( 'Content-Type: application/json' ), array( 'api_key' => $conf['apiKey'] ) );
-		
-		$this->addLogs( $this->debug_order, $this->file, ' In api/auth/tokens Response: ' . json_encode( $tokenRes ) );
+
+		// Never log tokens / profile secrets — status only.
+		$this->addLogs(
+			$this->debug_order,
+			$this->file,
+			' In api/auth/tokens Response: token_received=' . ( isset( $tokenRes->token ) ? 'yes' : 'no' )
+		);
 
 		if ( isset( $tokenRes->token ) ) {
 			$hmacRes     = $this->getHmac( $tokenRes->token, $apiUrl );
@@ -114,7 +119,11 @@ class Paymob {
 
 	public function getHmac( $token, $apiUrl ) {
 		$hmacRes = $this->HttpRequest( $apiUrl . 'api/auth/hmac_secret/get_hmac', 'GET', array( 'Content-Type: application/json', 'Authorization: Bearer ' . $token ) );
-		$this->addLogs( $this->debug_order, $this->file, ' In api/auth/hmac_secret/get_hmac Response: ' . json_encode( $hmacRes ) );
+		$this->addLogs(
+			$this->debug_order,
+			$this->file,
+			' In api/auth/hmac_secret/get_hmac Response: hmac_received=' . ( isset( $hmacRes->hmac_secret ) ? 'yes' : 'no' )
+		);
 		if ( isset( $hmacRes->hmac_secret ) ) {
 			return $hmacRes->hmac_secret;
 		} else {
@@ -429,18 +438,44 @@ class Paymob {
 	public function getOnboardingUrl( $code, $data ) {
 		$flash       = $this->getApiUrl($code);
 		$header = array( 'Content-Type: application/json');
-		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/country_url request', self::redact_for_log( $data ) );
 		$onboardingRes = $this->HttpRequest( $flash . 'api/onboarding/partners-utils/country_url', 'POST', $header, $data );
-		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/country_url: ' . json_encode( $onboardingRes ) );
+		// Log URL host only — never woocode / tokens embedded in the onboarding URL.
+		$url_host = '';
+		if ( is_object( $onboardingRes ) && ! empty( $onboardingRes->url ) && is_string( $onboardingRes->url ) ) {
+			$parts    = wp_parse_url( $onboardingRes->url );
+			$url_host = isset( $parts['host'] ) ? $parts['host'] : '';
+		}
+		$this->addLogs(
+			$this->debug_order,
+			$this->file,
+			' In api/onboarding/partners-utils/country_url: host=' . $url_host . ' url_received=' . ( $url_host ? 'yes' : 'no' )
+		);
 		return $onboardingRes;
 	}
 	public function getPartnerInfo( $woo_code, $data ) {
 		// return $this->getCountryCode( $woo_code );
 		$flash       = $this->getApiUrl( strtolower($this->getCountryCode( $woo_code )) );
 		$header      = array( 'Content-Type: application/json', 'Authorization:' . $woo_code );
-		$this->addLogs( $this->debug_order, $this->file, print_r( $data, 1 ) );
+		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/merchant_info request', self::redact_for_log( $data ) );
 		$partnerInfoRes = $this->HttpRequest( $flash . 'api/onboarding/partners-utils/merchant_info', 'POST', $header, $data );
-		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/merchant_info: ' . json_encode( $partnerInfoRes ) );
+		// Never log api_key / secrets from merchant_info — ids / flags only.
+		$safe_info = array();
+		if ( is_object( $partnerInfoRes ) ) {
+			if ( isset( $partnerInfoRes->merchant_id ) ) {
+				$safe_info['merchant_id'] = $partnerInfoRes->merchant_id;
+			}
+			if ( isset( $partnerInfoRes->is_live ) ) {
+				$safe_info['is_live'] = $partnerInfoRes->is_live;
+			}
+			if ( isset( $partnerInfoRes->error ) ) {
+				$safe_info['error'] = $partnerInfoRes->error;
+			}
+			$safe_info['has_api_key'] = isset( $partnerInfoRes->api_key );
+		} elseif ( is_array( $partnerInfoRes ) ) {
+			$safe_info = self::redact_for_log( $partnerInfoRes );
+		}
+		$this->addLogs( $this->debug_order, $this->file, ' In api/onboarding/partners-utils/merchant_info: ', $safe_info );
 		return $partnerInfoRes;
 	}
 	public function matchMode( $conf ) {
@@ -657,19 +692,375 @@ class Paymob {
 		return trailingslashit( $base ) . 'wc-logs/';
 	}
 
+	/**
+	 * Private Paymob log directory. Log files are PHP scripts that return HTTP 403
+	 * when requested over the web (works on Nginx + Apache; .htaccess alone is ignored by Nginx).
+	 *
+	 * @return string
+	 */
+	public static function secure_log_dir() {
+		$upload_dir = wp_upload_dir( null, false );
+		$base       = isset( $upload_dir['basedir'] ) ? $upload_dir['basedir'] : WP_CONTENT_DIR . '/uploads';
+		$dir        = trailingslashit( $base ) . 'paymob-private-logs';
+
+		if ( ! is_dir( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+
+		self::ensure_log_dir_denied( $dir );
+
+		return trailingslashit( $dir );
+	}
+
+	/**
+	 * Write Apache/Nginx-friendly deny stubs into a log directory.
+	 *
+	 * @param string $dir Absolute directory path.
+	 */
+	public static function ensure_log_dir_denied( $dir ) {
+		$dir = trailingslashit( $dir );
+
+		$htaccess = $dir . '.htaccess';
+		$ht_body  = "Deny from all\n<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n";
+		if ( ! file_exists( $htaccess ) || false === strpos( (string) file_get_contents( $htaccess ), 'Deny from all' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( $htaccess, $ht_body, LOCK_EX );
+		}
+
+		$index_php = $dir . 'index.php';
+		$deny_php  = "<?php\nhttp_response_code( 403 );\nheader( 'Content-Type: text/plain; charset=utf-8' );\nheader( 'X-Content-Type-Options: nosniff' );\nexit( 'Forbidden' );\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $index_php, $deny_php, LOCK_EX );
+
+		$index_html = $dir . 'index.html';
+		if ( ! file_exists( $index_html ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( $index_html, '', LOCK_EX );
+		}
+
+		// Nginx sample (hosts must include it); documents the required 403 for web servers that ignore .htaccess.
+		$nginx = $dir . 'nginx-deny.conf';
+		if ( ! file_exists( $nginx ) ) {
+			$snippet = "# Include from your Nginx server block to deny HTTP access to Paymob/WooCommerce logs:\n"
+				. "# include " . $dir . "nginx-deny.conf;\n"
+				. "location ~* /wp-content/uploads/(wc-logs|paymob-private-logs)/ {\n"
+				. "    deny all;\n"
+				. "    return 403;\n"
+				. "}\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( $nginx, $snippet, LOCK_EX );
+		}
+	}
+
+	/**
+	 * Site-specific hash for a log channel (filename has no guessable "paymob-pixel" etc.).
+	 *
+	 * @param string $source Log source key.
+	 * @return string Hex hash (64 chars).
+	 */
+	public static function log_source_hash( $source ) {
+		$source = strtolower( sanitize_file_name( (string) $source ) );
+		if ( '' === $source ) {
+			$source = 'paymob';
+		}
+
+		$payload = 'paymob-log|' . $source;
+		if ( function_exists( 'wp_salt' ) ) {
+			return hash_hmac( 'sha256', $payload, (string) wp_salt( 'auth' ) );
+		}
+		if ( function_exists( 'wp_hash' ) ) {
+			return hash( 'sha256', wp_hash( $payload ) );
+		}
+
+		$salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'paymob';
+		return hash( 'sha256', $payload . '|' . $salt );
+	}
+
+	/**
+	 * PHP file path for a log source.
+	 * Pattern: {source}-{Y-m-d}-{hash}.php (readable channel + date + unguessable hash).
+	 * HTTP access still executes PHP → 403.
+	 *
+	 * @param string $source Log source key.
+	 * @return string
+	 */
+	public static function secure_log_file( $source ) {
+		$source = strtolower( sanitize_file_name( (string) $source ) );
+		if ( '' === $source ) {
+			$source = 'paymob';
+		}
+		// Normalize common aliases for clearer filenames in the private logs folder.
+		$source = str_replace( '_', '-', $source );
+		if ( 0 !== strpos( $source, 'paymob' ) ) {
+			$source = 'paymob-' . $source;
+		}
+
+		$date = gmdate( 'Y-m-d' );
+		$hash = self::log_source_hash( $source . '|' . $date );
+
+		return self::secure_log_dir() . $source . '-' . $date . '-' . $hash . '.php';
+	}
+
+	/**
+	 * Remove legacy predictable *.log files that Nginx would serve as static downloads.
+	 */
+	public static function purge_public_paymob_logs() {
+		$dirs = array_unique(
+			array_filter(
+				array(
+					self::log_dir(),
+					defined( 'PAYMOB_PLUGIN_PATH' ) ? PAYMOB_PLUGIN_PATH : '',
+					defined( 'PAYMOB_PLUGIN_PATH' ) ? PAYMOB_PLUGIN_PATH . 'logs/' : '',
+				)
+			)
+		);
+
+		foreach ( $dirs as $dir ) {
+			$dir = trailingslashit( $dir );
+			if ( ! is_dir( $dir ) ) {
+				continue;
+			}
+
+			$patterns = array(
+				$dir . 'paymob*.log',
+				$dir . 'paymob-auth.log',
+				$dir . 'paymob-pixel.log',
+				$dir . 'paymob-token.log',
+				$dir . 'paymob-subscription.log',
+				$dir . 'paymob.log',
+			);
+
+			foreach ( $patterns as $pattern ) {
+				$matches = glob( $pattern );
+				if ( empty( $matches ) ) {
+					continue;
+				}
+				foreach ( $matches as $file ) {
+					if ( is_file( $file ) ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+						@unlink( $file );
+					}
+				}
+			}
+
+			// Reinforce deny on WooCommerce log dir (Apache); Nginx needs return 403 via server config / PHP-guarded files.
+			if ( false !== strpos( $dir, 'wc-logs' ) ) {
+				self::ensure_log_dir_denied( $dir );
+			}
+		}
+
+		// Remove only legacy predictable PHP log names (exact), never dated/hashed files.
+		$upload  = wp_upload_dir( null, false );
+		$base    = ( ! empty( $upload['basedir'] ) ) ? $upload['basedir'] : ( WP_CONTENT_DIR . '/uploads' );
+		$private = trailingslashit( $base ) . 'paymob-private-logs/';
+		if ( is_dir( $private ) ) {
+			$legacy_exact = array(
+				'paymob.php',
+				'paymob-auth.php',
+				'paymob-pixel.php',
+				'paymob-token.php',
+				'paymob-subscription.php',
+				'paymob.log.php',
+			);
+			foreach ( $legacy_exact as $name ) {
+				$file = $private . $name;
+				if ( is_file( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+					@unlink( $file );
+				}
+			}
+		}
+	}
+
+	/**
+	 * If the current HTTP request targets Paymob/public log paths, end with 403.
+	 * Covers Apache and Nginx setups where the request is routed through WordPress/PHP.
+	 */
+	public static function forbid_public_log_request() {
+		if ( empty( $_SERVER['REQUEST_URI'] ) ) {
+			return;
+		}
+
+		$uri = rawurldecode( (string) wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$path = wp_parse_url( $uri, PHP_URL_PATH );
+		if ( ! is_string( $path ) || '' === $path ) {
+			$path = $uri;
+		}
+
+		// Only block direct file access under known log directories / legacy log filenames.
+		$is_log_file = (bool) preg_match( '#\.log$#i', $path );
+		$under_logs  = (bool) preg_match( '#/wp-content/uploads/(?:wc-logs|paymob-private-logs)/#i', $path );
+		$legacy_name = (bool) preg_match( '#/(?:paymob(?:-auth|-pixel|-token|-subscription)?|paymob)\.log$#i', $path );
+		$private_php = (bool) preg_match( '#/wp-content/uploads/paymob-private-logs/.+\.php$#i', $path );
+
+		if ( ! ( ( $under_logs && $is_log_file ) || $legacy_name || $private_php || ( $under_logs && preg_match( '#/index\.php$#i', $path ) ) ) ) {
+			return;
+		}
+
+		if ( ! headers_sent() ) {
+			status_header( 403 );
+			nocache_headers();
+			header( 'Content-Type: text/plain; charset=utf-8' );
+			header( 'X-Content-Type-Options: nosniff' );
+		}
+		exit( 'Forbidden' );
+	}
+
+	/**
+	 * One-shot hardening: purge public logs + ensure deny stubs + block URI.
+	 */
+	public static function harden_logging() {
+		self::forbid_public_log_request();
+		self::purge_public_paymob_logs();
+		self::secure_log_dir();
+	}
+
+	/**
+	 * Whether Paymob debug logging is enabled in main settings.
+	 *
+	 * @return string '1' or '0'
+	 */
+	public static function debug_flag() {
+		$opts = get_option( 'woocommerce_paymob-main_settings', array() );
+		return ( isset( $opts['debug'] ) && 'yes' === $opts['debug'] ) ? '1' : '0';
+	}
+
+	/**
+	 * Strip sensitive values before writing logs (omit entirely — never log secrets, even as placeholders).
+	 *
+	 * @param mixed $data Data to sanitize.
+	 * @return mixed
+	 */
+	public static function redact_for_log( $data ) {
+		$sensitive_keys = array(
+			'token',
+			'api_key',
+			'apikey',
+			'sec_key',
+			'seckey',
+			'secret',
+			'secret_key',
+			'pub_key',
+			'pubkey',
+			'hmac',
+			'hmac_secret',
+			'authorization',
+			'password',
+			'client_secret',
+			'cs',
+			'jwt',
+			'refresh_token',
+			'access_token',
+			'pk_key_live',
+			'pk_key_test',
+			'sk_key_live',
+			'sk_key_test',
+			'woocode',
+			'secretkey',
+			'public_key',
+			'private_key',
+		);
+
+		if ( is_array( $data ) ) {
+			$clean = array();
+			foreach ( $data as $key => $value ) {
+				$key_l = is_string( $key ) ? strtolower( $key ) : $key;
+				if ( is_string( $key_l ) && in_array( $key_l, $sensitive_keys, true ) ) {
+					// Omit sensitive fields completely (do not log [REDACTED] placeholders).
+					continue;
+				}
+				$clean[ $key ] = self::redact_for_log( $value );
+			}
+			return $clean;
+		}
+
+		if ( is_object( $data ) ) {
+			$obj = clone $data;
+			foreach ( get_object_vars( $obj ) as $key => $value ) {
+				$key_l = strtolower( (string) $key );
+				if ( in_array( $key_l, $sensitive_keys, true ) ) {
+					unset( $obj->$key );
+					continue;
+				}
+				$obj->$key = self::redact_for_log( $value );
+			}
+			return $obj;
+		}
+
+		if ( is_string( $data ) ) {
+			// Remove sensitive JSON fields entirely (key + value).
+			$data = preg_replace(
+				'/,?\s*"(api_key|apikey|token|hmac_secret|hmac|sec_key|seckey|pub_key|pubkey|password|authorization|client_secret|access_token|refresh_token|pk_key_live|pk_key_test|sk_key_live|sk_key_test|cs|secret|secret_key|woocode|secretkey|public_key|private_key)"\s*:\s*"(?:\\\\.|[^"\\\\])*"/i',
+				'',
+				$data
+			);
+			// Non-string JSON values for the same keys (numbers/bools/null/objects — drop common scalar forms).
+			$data = preg_replace(
+				'/,?\s*"(api_key|apikey|token|hmac_secret|hmac|sec_key|seckey|secret|secret_key|cs|woocode)"\s*:\s*(?:true|false|null|[0-9]+)/i',
+				'',
+				$data
+			);
+			// Tidy broken commas after removals.
+			$data = preg_replace( '/\{\s*,/', '{', $data );
+			$data = preg_replace( '/,\s*\}/', '}', $data );
+			$data = preg_replace( '/\[\s*,/', '[', $data );
+			$data = preg_replace( '/,\s*\]/', ']', $data );
+			$data = preg_replace( '/,\s*,+/', ',', $data );
+
+			// Drop onboarding woocode query values.
+			$data = preg_replace( '/([?&])woocode=[^&\s"\\\\]*/i', '$1', $data );
+
+			// Drop JWTs / long tokens / key prefixes entirely (no placeholder).
+			$data = preg_replace( '/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/', '', $data );
+			$data = preg_replace( '/\bZXlK[A-Za-z0-9+\/=_-]{20,}/', '', $data );
+			$data = preg_replace( '/\bBearer\s+[A-Za-z0-9\-_\.=]+/i', '', $data );
+			$data = preg_replace( '/\b(sk_|pk_|egyp_|egy_|omn_|ksa_|uae_)[A-Za-z0-9_\-]+/', '', $data );
+
+			return trim( preg_replace( '/\s{2,}/', ' ', $data ) );
+		}
+
+		return $data;
+	}
+
 	public static function addLogs( $debug, $file, $note, $data = false ) {
 		if ( '1' !== (string) $debug ) {
 			return;
 		}
 
+		$note = self::redact_for_log( (string) $note );
+
 		if ( is_bool( $data ) ) {
-			$line = PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note;
+			$message = $note;
 		} else {
-			$line = PHP_EOL . gmdate( 'd.m.Y h:i:s' ) . ' - ' . $note . ' -- ' . wp_json_encode( $data );
+			// If callers pass already-encoded JSON/print_r strings, still redact patterns.
+			if ( is_string( $data ) ) {
+				$payload = self::redact_for_log( $data );
+			} else {
+				$payload = wp_json_encode( self::redact_for_log( $data ) );
+			}
+			$message = $note . ' -- ' . $payload;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- intentional plugin log file append.
-		file_put_contents( $file, $line, FILE_APPEND | LOCK_EX );
+		$source = is_string( $file ) ? sanitize_file_name( str_replace( '.log', '', basename( $file ) ) ) : 'paymob';
+		$source = strtolower( (string) $source );
+		if ( '' === $source ) {
+			$source = 'paymob';
+		}
+
+		// Write only to hashed PHP-guarded files (HTTP 403). Filenames are not guessable (no paymob-pixel.log).
+		$path = self::secure_log_file( $source );
+		if ( ! file_exists( $path ) || filesize( $path ) < 32 ) {
+			$header  = "<?php\nhttp_response_code( 403 );\nheader( 'Content-Type: text/plain; charset=utf-8' );\nheader( 'X-Content-Type-Options: nosniff' );\nexit( 'Forbidden' );\n";
+			$header .= '// Paymob secure log — keep the PHP header above. Filename is hashed; channel is for admins only.' . "\n";
+			$header .= '// channel: ' . $source . "\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( $path, $header, LOCK_EX );
+		}
+
+		$safe_line = str_replace( array( "\r", "\n" ), ' ', (string) $message );
+		$line      = '// ' . gmdate( 'c' ) . ' ' . $safe_line . "\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $path, $line, FILE_APPEND | LOCK_EX );
 	}
 
 	public function getIntegrationID( $conf,$IntegrationID ) {

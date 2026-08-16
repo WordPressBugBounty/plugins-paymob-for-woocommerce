@@ -25,67 +25,115 @@ class PaymobAutoGenerate {
 	 * @return void
 	 */
 	public $needle;
-	public static function generate_files( $file_data ) {
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			WP_Filesystem();
+
+	/**
+	 * Recreate generated gateway/block files from DB after a plugin zip update.
+	 *
+	 * WordPress deletes the whole plugin folder on update, so merchant-specific
+	 * PHP classes disappear while wp_paymob_gateways rows remain.
+	 *
+	 * @return void
+	 */
+	public static function ensure_generated_gateway_files() {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'paymob_gateways';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
 		}
 
-		$gateway_file_path       = PAYMOB_PLUGIN_PATH . '/includes/gateways/' . $file_data['file_name'];
-		$gateway_block_file_path = PAYMOB_PLUGIN_PATH . '/includes/blocks/' . $file_data['gateway_id'] . '-block.php';
-		$gateway_js_file_path    = PAYMOB_PLUGIN_PATH . '/assets/js/blocks/' . $file_data['gateway_id'] . '_block.js';
+		$gateways = self::get_db_gateways_data();
+		if ( empty( $gateways ) ) {
+			return;
+		}
 
-		// Ensure the directories exist.
-		$directories = array(
-			dirname( $gateway_file_path ),
-			dirname( $gateway_block_file_path ),
-			dirname( $gateway_js_file_path ),
-		);
-
-		foreach ( $directories as $directory ) {
-			if ( ! $wp_filesystem->is_dir( $directory ) ) {
-				$wp_filesystem->mkdir( $directory );
+		foreach ( $gateways as $gateway ) {
+			if ( empty( $gateway->gateway_id ) || empty( $gateway->class_name ) ) {
+				continue;
 			}
+
+			self::generate_files(
+				array(
+					'class_name'           => $gateway->class_name,
+					'gateway_id'           => $gateway->gateway_id,
+					'checkout_title'       => isset( $gateway->checkout_title ) ? $gateway->checkout_title : '',
+					'checkout_description' => isset( $gateway->checkout_description ) ? $gateway->checkout_description : '',
+					'file_name'            => ! empty( $gateway->file_name ) ? $gateway->file_name : ( 'class-gateway-' . $gateway->gateway_id . '.php' ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Write a file into the plugin directory (survives WP_Filesystem credential failures).
+	 *
+	 * @param string $path     Absolute path.
+	 * @param string $contents File contents.
+	 * @return bool
+	 */
+	private static function write_plugin_file( $path, $contents ) {
+		$dir = dirname( $path );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			return false;
 		}
 
-		// Check if files already exist.
-		if ( $wp_filesystem->exists( $gateway_file_path ) && $wp_filesystem->exists( $gateway_block_file_path ) && $wp_filesystem->exists( $gateway_js_file_path ) ) {
-			// Files already exist, do not create them again.
+		return false !== file_put_contents( $path, $contents, LOCK_EX );
+	}
+
+	public static function generate_files( $file_data ) {
+		if ( empty( $file_data['file_name'] ) || empty( $file_data['gateway_id'] ) || empty( $file_data['class_name'] ) ) {
 			return;
 		}
 
-		$template_gateway_file       = PAYMOB_PLUGIN_PATH . '/templates/gateway.php';
-		$template_gateway_block_file = PAYMOB_PLUGIN_PATH . '/templates/gateway_block.php';
-		$template_gateway_js_file    = PAYMOB_PLUGIN_PATH . '/templates/gateway_block.js';
+		$gateway_file_path       = PAYMOB_PLUGIN_PATH . 'includes/gateways/' . $file_data['file_name'];
+		$gateway_block_file_path = PAYMOB_PLUGIN_PATH . 'includes/blocks/' . $file_data['gateway_id'] . '-block.php';
+		$gateway_js_file_path    = PAYMOB_PLUGIN_PATH . 'assets/js/blocks/' . $file_data['gateway_id'] . '_block.js';
 
-		// Ensure the template files exist.
-		if ( ! $wp_filesystem->exists( $template_gateway_file ) || ! $wp_filesystem->exists( $template_gateway_block_file ) || ! $wp_filesystem->exists( $template_gateway_js_file ) ) {
-			// Log an error or handle it as needed.
+		if ( file_exists( $gateway_file_path ) && file_exists( $gateway_block_file_path ) && file_exists( $gateway_js_file_path ) ) {
 			return;
 		}
 
-		$content = $wp_filesystem->get_contents( $template_gateway_file );
-		$content = str_replace( 'class_name', $file_data['class_name'], $content );
-		$content = str_replace( 'gateway_id', $file_data['gateway_id'], $content );
-		$content = str_replace( 'checkout_title', $file_data['checkout_title'], $content );
-		$content = str_replace( 'checkout_description', $file_data['checkout_description'], $content );
-		$wp_filesystem->put_contents( $gateway_file_path, $content );
+		$template_gateway_file       = PAYMOB_PLUGIN_PATH . 'templates/gateway.php';
+		$template_gateway_block_file = PAYMOB_PLUGIN_PATH . 'templates/gateway_block.php';
+		$template_gateway_js_file    = PAYMOB_PLUGIN_PATH . 'templates/gateway_block.js';
 
-		$cb_content = $wp_filesystem->get_contents( $template_gateway_block_file );
-		$cb_content = str_replace( 'class_name', $file_data['class_name'], $cb_content );
-		$cb_content = str_replace( 'gateway_id', $file_data['gateway_id'], $cb_content );
-		$wp_filesystem->put_contents( $gateway_block_file_path, $cb_content );
+		if ( ! file_exists( $template_gateway_file ) || ! file_exists( $template_gateway_block_file ) || ! file_exists( $template_gateway_js_file ) ) {
+			return;
+		}
 
-		$jb_content = $wp_filesystem->get_contents( $template_gateway_js_file );
-		$jb_content = str_replace( 'checkout_title', $file_data['checkout_title'], $jb_content );
-		$jb_content = str_replace( 'gateway_id', $file_data['gateway_id'], $jb_content );
+		$content = str_replace(
+			array( 'class_name', 'gateway_id', 'checkout_title', 'checkout_description' ),
+			array(
+				$file_data['class_name'],
+				$file_data['gateway_id'],
+				isset( $file_data['checkout_title'] ) ? $file_data['checkout_title'] : '',
+				isset( $file_data['checkout_description'] ) ? $file_data['checkout_description'] : '',
+			),
+			(string) file_get_contents( $template_gateway_file )
+		);
+		self::write_plugin_file( $gateway_file_path, $content );
+
+		$cb_content = str_replace(
+			array( 'class_name', 'gateway_id' ),
+			array( $file_data['class_name'], $file_data['gateway_id'] ),
+			(string) file_get_contents( $template_gateway_block_file )
+		);
+		self::write_plugin_file( $gateway_block_file_path, $cb_content );
+
+		$jb_content = str_replace(
+			array( 'checkout_title', 'gateway_id' ),
+			array(
+				isset( $file_data['checkout_title'] ) ? $file_data['checkout_title'] : '',
+				$file_data['gateway_id'],
+			),
+			(string) file_get_contents( $template_gateway_js_file )
+		);
 		if ( false !== strpos( $file_data['gateway_id'], 'apple-pay' ) ) {
 			$jb_content = str_replace( '//check_a_pay', 'if (typeof window.ApplePaySession !== "undefined")', $jb_content );
 		} else {
 			$jb_content = str_replace( '//check_a_pay', '', $jb_content );
 		}
-		$wp_filesystem->put_contents( $gateway_js_file_path, $jb_content );
+		self::write_plugin_file( $gateway_js_file_path, $jb_content );
 	}
 	/**
 	 * Creates and updates Paymob gateways based on the provided data.
@@ -287,7 +335,7 @@ class PaymobAutoGenerate {
 		}
 		$paymob_options = get_option( 'woocommerce_paymob_settings' );
 		$mainOptions = get_option('woocommerce_paymob-main_settings');
-		$paymobReq = new Paymob( '1', Paymob::log_dir() . 'paymob-auth.log' );
+		$paymobReq = new Paymob( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-auth.log' );
 		$mode = $paymobReq->getMode( $paymob_options['sec_key'] );
 
 		if ( isset( $paymob_options['integration_id_hidden'] ) && ! empty( $paymob_options['integration_id_hidden'] ) ) {
@@ -325,7 +373,7 @@ class PaymobAutoGenerate {
 		}
 	
 		$paymob_options = get_option('woocommerce_paymob_settings');
-		$paymobReq = new Paymob('1', Paymob::log_dir() . 'paymob-auth.log');
+		$paymobReq = new Paymob( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-auth.log' );
 		$mode = $paymobReq->getMode($paymob_options['sec_key']); // Get the current mode (live/test)
 	
 		if (isset($paymob_options['integration_id_hidden']) && !empty($paymob_options['integration_id_hidden'])) {
@@ -570,6 +618,74 @@ class PaymobAutoGenerate {
 			}
 		}
 		return $integration_ids;
+	}
+
+	/**
+	 * Bank installment integration IDs for Paymob Pixel settings.
+	 *
+	 * @param bool $include_placeholder Whether to prepend an empty "Select an Integration ID" option.
+	 * @return array<string, string>
+	 */
+	public static function get_pixel_bank_installment_integration_ids( $include_placeholder = false ) {
+		$integration_ids = array();
+		if ( $include_placeholder ) {
+			$integration_ids[''] = __( 'Select an Integration ID', 'paymob-for-woocommerce' );
+		}
+
+		$paymob_options = get_option( 'woocommerce_paymob_settings' );
+		$main_options   = get_option( 'woocommerce_paymob-main_settings' );
+		$mode           = ! empty( $main_options['mode'] ) ? $main_options['mode'] : 'test';
+
+		if ( empty( $paymob_options['integration_id_hidden'] ) ) {
+			return $integration_ids;
+		}
+
+		foreach ( explode( ',', (string) $paymob_options['integration_id_hidden'] ) as $entry ) {
+			if ( stripos( $entry, $mode ) === false ) {
+				continue;
+			}
+
+			$parts = explode( ':', $entry );
+			if ( count( $parts ) < 3 ) {
+				continue;
+			}
+
+			$id         = trim( $parts[0] );
+			$label      = trim( $parts[1] );
+			$currency   = trim( $parts[2] );
+			$entry_mode = ! empty( $parts[3] ) ? trim( $parts[3] ) : $mode;
+
+			if ( '' === $id || false === stripos( $label, 'bank-installments' ) ) {
+				continue;
+			}
+
+			$integration_ids[ $id ] = $id . ' : ' . strtolower( $label ) . ' : ' . $currency . ' : ' . $entry_mode;
+		}
+
+		return $integration_ids;
+	}
+
+	/**
+	 * Whether the connected Paymob account is Egypt.
+	 *
+	 * @return bool
+	 */
+	public static function is_paymob_egypt_merchant() {
+		$country = strtolower( (string) get_option( 'woocommerce_paymob_country', '' ) );
+		if ( 'egy' === $country ) {
+			return true;
+		}
+
+		$main_options = get_option( 'woocommerce_paymob-main_settings', array() );
+		$sec_key      = isset( $main_options['sec_key'] ) ? (string) $main_options['sec_key'] : '';
+		$pub_key      = isset( $main_options['pub_key'] ) ? (string) $main_options['pub_key'] : '';
+		$key          = '' !== $sec_key ? $sec_key : $pub_key;
+
+		if ( '' === $key || ! class_exists( 'Paymob' ) ) {
+			return false;
+		}
+
+		return 'egy' === strtolower( (string) Paymob::getCountryCode( $key ) );
 	}
 
 	public static function get_pixel_integration_ids_all($name) {

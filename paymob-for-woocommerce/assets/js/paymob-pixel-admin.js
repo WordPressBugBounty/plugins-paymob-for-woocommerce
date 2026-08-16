@@ -15,7 +15,7 @@ function paymobUnlockPixelSettingsForm() {
     form.setAttribute('novalidate', 'novalidate');
 
     form.querySelectorAll(
-        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id'
+        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #bank_installment_integration_id, #cards_integration_id'
     ).forEach(function(field) {
         field.removeAttribute('required');
         field.setAttribute('aria-required', 'false');
@@ -48,8 +48,8 @@ jQuery(document).ready(function ($) {
         $('#mainform').on('submit', paymobUnlockPixelSettingsForm);
     }
 
-    // Initialize Select2 for the Cards Integration ID
-    $('#cards_integration_id').select2({
+    // Initialize Select2 for Cards + Bank Installment (same pill UI).
+    $('#cards_integration_id, #bank_installment_integration_id').select2({
         placeholder: 'Select Integration ID(s)',
         allowClear: true,
         width: '100%', // Ensure full width

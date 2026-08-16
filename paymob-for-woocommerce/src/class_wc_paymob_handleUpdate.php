@@ -7,7 +7,7 @@ class WC_Paymob_HandelUpdate {
 	public static function handle_plugin_update( $gateways ) {
 		// Retrieve the main settings
 		$mainOptions = get_option( 'woocommerce_paymob-main_settings' );
-		$paymobReq = new Paymob( '1', Paymob::log_dir() . 'paymob-auth.log' );
+		$paymobReq = new Paymob( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-auth.log' );
 		// Check if main settings are empty
 		if ( empty( $mainOptions ) ) {
 			// Retrieve the Paymob settings

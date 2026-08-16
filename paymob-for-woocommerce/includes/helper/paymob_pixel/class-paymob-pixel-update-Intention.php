@@ -35,42 +35,47 @@ class Paymob_Pixel_Update_Intention {
 			'billing_data' => $billing,
 			// 'special_reference' => $order_id . '_' . time(),
 		];
-        $final_total = WC()->session->get('paymob_final_total');
-        $final_cents_session = (int) WC()->session->get( 'paymob_final_cents' );
-        $discount_value = WC()->session->get('paymob_discount');
-        $discount_cents_session = (int) WC()->session->get( 'paymob_discount_cents' );
         $ir_enabled = '1' === (string) WC()->session->get( 'paymob_instant_refund_enabled', '0' );
-        $instant_refund_fee = $ir_enabled
-            ? (float) WC()->session->get( 'paymob_instant_refund_fee', 0 )
-            : 0;
         $fee_cents_session = $ir_enabled ? (int) WC()->session->get( 'paymob_instant_refund_fee_cents', 0 ) : 0;
 
-        if ( $final_cents_session > 0 || ( $final_total && $final_total > 0 ) ) {
-            // Prefer exact cents from the discount/IR payload (avoids 0.5 → 1 float drift).
+        // Charge amount must come from Woo cart (+ IR fee), never from client discount/final.
+        if ( function_exists( 'paymob_pixel_trusted_payable_cents' ) ) {
+            $trusted = paymob_pixel_trusted_payable_cents( $fee_cents_session, $ir_enabled );
+            $amount  = (int) $trusted['final_cents'];
+            $fee_cents_session = (int) $trusted['fee_cents'];
+            $discount_cents_session = 0;
+            // After cart is cleared, fall back to the Woo order total already computed server-side.
+            if ( $amount <= 0 && $order instanceof WC_Order ) {
+                $amount = function_exists( 'paymob_pixel_amount_to_cents' )
+                    ? paymob_pixel_amount_to_cents( (float) $order->get_total( 'edit' ), $cents_multiplier )
+                    : (int) round( (float) $order->get_total( 'edit' ) * (int) $cents_multiplier );
+            }
+            if ( $amount > 0 ) {
+                $data['amount'] = $amount;
+                WC()->session->set( 'paymob_final_cents', $amount );
+                WC()->session->set( 'paymob_discount_cents', 0 );
+            }
+        } else {
+            $final_total = WC()->session->get('paymob_final_total');
+            $final_cents_session = (int) WC()->session->get( 'paymob_final_cents' );
             $amount = $final_cents_session > 0
                 ? $final_cents_session
-                : ( function_exists( 'paymob_pixel_amount_to_cents' )
-                    ? paymob_pixel_amount_to_cents( (float) $final_total, $cents_multiplier )
-                    : (int) round( (float) $final_total * (int) $cents_multiplier ) );
+                : (int) round( (float) $order->get_total() * (int) $cents_multiplier );
             $data['amount'] = $amount;
+            $discount_cents_session = 0;
+        }
 
-            if ( $discount_cents_session <= 0 && $discount_value && (float) $discount_value > 0 ) {
-                $discount_cents_session = function_exists( 'paymob_pixel_amount_to_cents' )
-                    ? paymob_pixel_amount_to_cents( (float) $discount_value, $cents_multiplier )
-                    : (int) round( (float) $discount_value * (int) $cents_multiplier );
-            }
-            if ( $fee_cents_session <= 0 && $ir_enabled && $instant_refund_fee > 0 ) {
-                $fee_cents_session = function_exists( 'paymob_pixel_amount_to_cents' )
-                    ? paymob_pixel_amount_to_cents( (float) $instant_refund_fee, $cents_multiplier )
-                    : (int) round( (float) $instant_refund_fee * (int) $cents_multiplier );
-            }
+        $instant_refund_fee = $ir_enabled
+            ? ( $fee_cents_session / $cents_multiplier )
+            : 0;
 
+        if ( ! empty( $data['amount'] ) ) {
             // Keep Woo total / discount at Paymob precision (never shop 0-decimal rounding).
             if ( function_exists( 'paymob_pixel_apply_order_amounts' ) ) {
                 paymob_pixel_apply_order_amounts(
                     $order,
-                    $amount,
-                    $discount_cents_session,
+                    (int) $data['amount'],
+                    0,
                     $ir_enabled ? $fee_cents_session : 0,
                     $ir_enabled
                 );

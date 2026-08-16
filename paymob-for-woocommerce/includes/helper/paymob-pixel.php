@@ -57,15 +57,15 @@ function create_order() {
     // Check for nonce for security
     check_ajax_referer('update_checkout', 'security');
     try {
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- inside create order' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- inside create order' );
         // Get cart data
         $cart = WC()->cart->get_cart();
         if (empty($cart)) {
-        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- cart empty' );
+        Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- cart empty' );
             wp_send_json_error(['message' => 'Cart is empty.']);
             return;
         }
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' ---------after 1st if' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' ---------after 1st if' );
 
         // Reuse the pending Pixel order for this intention when present — avoids duplicate
         // Woo orders / Paymob "same merchant id" errors on double Place Order.
@@ -84,7 +84,7 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' ---------after 1s
                 $maybe = wc_get_order( $existing_order_id );
                 if ( $maybe && in_array( $maybe->get_status(), array( 'pending', 'pending-payment', 'failed', 'on-hold' ), true ) ) {
                     $order = $maybe;
-                    Paymob::addLogs( '1', Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order reusing order #' . $existing_order_id );
+                    Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order reusing order #' . $existing_order_id );
                 }
             }
         }
@@ -119,7 +119,7 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' ---------after 1s
                 'total'    => $cart_item['line_total'],
             ]);
         }
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after for cart ietms' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- after for cart ietms' );
         // Add applied coupons
         $applied_coupons = WC()->cart->get_applied_coupons();
         if (!empty($applied_coupons)) {
@@ -138,7 +138,7 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after f
                 'tax_class' => $fee->taxable ? $fee->tax_class : '',
             ]);
         }
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after fees for' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- after fees for' );
       
        // Add taxes to the order
         $cart_taxes = WC()->cart->get_cart_contents_taxes(); // Cart item taxes
@@ -159,7 +159,7 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after f
             }
         }
 
-        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after all tax' );
+        Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- after all tax' );
         // Add shipping
         $shipping = WC()->shipping();
         $shipping_methods = ( $shipping && is_object( $shipping ) ) ? $shipping->get_packages() : array();
@@ -170,14 +170,14 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after f
                 }
             }
         }
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after shipping' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- after shipping' );
         // Check if customer data exists
         if (empty(WC()->customer)) {
-        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- inside wc customer' );
+        Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- inside wc customer' );
             wp_send_json_error(['message' => 'Billing data is not defined.']);
             return;
         }
-Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after wc customer' );
+Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- after wc customer' );
         // Add billing and shipping details
         $order->set_address([
             'first_name' => WC()->customer->get_billing_first_name(),
@@ -208,25 +208,17 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after w
         // Calculate totals and save the order
         $order->calculate_totals();
 
-        // Apply Pixel discount / discounted final when present (discount-only or + IR).
-        // Use cents + forced decimals so shop "0 decimals" never turns 0.50→1 / 4.50→5.
-        $final_cents    = WC()->session ? (int) WC()->session->get( 'paymob_final_cents' ) : 0;
-        $discount_cents = WC()->session ? (int) WC()->session->get( 'paymob_discount_cents' ) : 0;
-        $fee_cents      = WC()->session ? (int) WC()->session->get( 'paymob_instant_refund_fee_cents' ) : 0;
-        $ir_enabled     = WC()->session && '1' === (string) WC()->session->get( 'paymob_instant_refund_enabled', '0' );
-        $final_total    = WC()->session ? WC()->session->get( 'paymob_final_total' ) : null;
-        $discount_value = WC()->session ? WC()->session->get( 'paymob_discount' ) : null;
+        // Payable amount is always derived from the Woo cart (+ Instant Refund fee only).
+        $ir_enabled = WC()->session && '1' === (string) WC()->session->get( 'paymob_instant_refund_enabled', '0' );
+        $fee_cents  = $ir_enabled && WC()->session ? (int) WC()->session->get( 'paymob_instant_refund_fee_cents' ) : 0;
+        $trusted    = paymob_pixel_trusted_payable_cents( $fee_cents, $ir_enabled );
+        $final_cents    = $trusted['final_cents'];
+        $discount_cents = 0;
+        $fee_cents      = $trusted['fee_cents'];
         $meta           = paymob_pixel_cents_meta();
         $div            = max( 1, (int) $meta['cents'] );
 
-        if ( $final_cents <= 0 && null !== $final_total && '' !== $final_total && (float) $final_total > 0 ) {
-            $final_cents = paymob_pixel_amount_to_cents( (float) $final_total, $div );
-        }
-        if ( $discount_cents <= 0 && null !== $discount_value && '' !== $discount_value && (float) $discount_value > 0 ) {
-            $discount_cents = paymob_pixel_amount_to_cents( (float) $discount_value, $div );
-        }
-
-        if ( $final_cents > 0 || $discount_cents > 0 ) {
+        if ( $final_cents > 0 ) {
             paymob_pixel_apply_order_amounts(
                 $order,
                 $final_cents,
@@ -234,7 +226,12 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after w
                 $ir_enabled ? $fee_cents : 0,
                 $ir_enabled
             );
-            Paymob::addLogs( '1', Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order synced Pixel total ' . $order->get_total() . ' discount ' . $order->get_discount_total() );
+            if ( WC()->session ) {
+                WC()->session->set( 'paymob_final_cents', $final_cents );
+                WC()->session->set( 'paymob_discount_cents', 0 );
+                WC()->session->set( 'paymob_instant_refund_fee_cents', $fee_cents );
+            }
+            Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log', ' --------- create_order synced Pixel total ' . $order->get_total() . ' discount ' . $order->get_discount_total() );
         }
 
         $order->set_payment_method( 'paymob-pixel' );
@@ -258,11 +255,11 @@ Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- after w
         if ( function_exists( 'Paymob_Pixel_Update_Intention' ) || class_exists( 'Paymob_Pixel_Update_Intention' ) ) {
             Paymob_Pixel_Update_Intention::update_intention( $order->get_id(), $order );
         }
-        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- oid'.$order->get_id(). ' cs  '.WC()->session->get('cs').' pxl idn '. WC()->session->get('pixel_identifier') );
+        Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- oid'.$order->get_id(). ' pxl idn '. WC()->session->get('pixel_identifier') );
         $session = WC()->session;
         $session->__unset('order_id');
         $session->set( 'order_id',  WC()->session->get('pixel_identifier'));
-        Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant oid from session'.$session->get( 'order_id'));
+        Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant oid from session'.$session->get( 'order_id'));
         // Return success response
         wp_send_json_success([
             'message'  => 'Order created successfully!',
@@ -392,6 +389,45 @@ function paymob_pixel_end_precise_amounts() {
 }
 
 /**
+ * Server-side cart total in minor units (never trust the browser for this).
+ *
+ * @return int
+ */
+function paymob_pixel_server_cart_cents() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return 0;
+	}
+	WC()->cart->calculate_totals();
+	$meta = paymob_pixel_cents_meta();
+	return paymob_pixel_amount_to_cents( WC()->cart->get_total( 'edit' ), max( 1, (int) $meta['cents'] ) );
+}
+
+/**
+ * Build a trusted payable amount from the WooCommerce cart.
+ *
+ * Client-supplied discount reductions are ignored (price-manipulation hardening).
+ * Instant Refund may increase the total when explicitly enabled, with a fee cap.
+ *
+ * @param int  $fee_cents   Requested Instant Refund fee in minor units.
+ * @param bool $ir_enabled  Whether Instant Refund is enabled for this checkout.
+ * @return array{original_cents:int,discount_cents:int,fee_cents:int,final_cents:int}
+ */
+function paymob_pixel_trusted_payable_cents( $fee_cents = 0, $ir_enabled = false ) {
+	$cart_cents = paymob_pixel_server_cart_cents();
+	$fee_cents  = $ir_enabled ? max( 0, (int) $fee_cents ) : 0;
+	if ( $cart_cents > 0 && $fee_cents > $cart_cents ) {
+		$fee_cents = $cart_cents;
+	}
+
+	return array(
+		'original_cents' => $cart_cents,
+		'discount_cents' => 0,
+		'fee_cents'      => $fee_cents,
+		'final_cents'    => max( 0, $cart_cents + $fee_cents ),
+	);
+}
+
+/**
  * Format an amount using Paymob currency precision (ignores shop 0-decimal rounding).
  *
  * @param float  $amount   Major-unit amount.
@@ -454,42 +490,31 @@ function paymob_apply_discount() {
     $div  = max( 1, (int) $meta['cents'] );
     $prec = (int) $meta['precision'];
 
-    // Prefer integer cents from the client when provided to avoid 0.5 → 1 rounding.
-    $discount_cents = isset( $_POST['discount_cents'] ) ? intval( $_POST['discount_cents'] ) : 0;
-    $final_cents    = isset( $_POST['final_cents'] ) ? intval( $_POST['final_cents'] ) : 0;
-    $fee_cents      = isset( $_POST['instant_refund_fee_cents'] ) ? intval( $_POST['instant_refund_fee_cents'] ) : 0;
-    $original_cents = isset( $_POST['original_cents'] ) ? intval( $_POST['original_cents'] ) : 0;
-
-    $original = $original_cents > 0 ? paymob_pixel_cents_to_major( $original_cents, $div ) : floatval( $_POST['original'] ?? 0 );
-    $discount = $discount_cents > 0 ? paymob_pixel_cents_to_major( $discount_cents, $div ) : floatval( $_POST['discount'] ?? 0 );
-    $final    = $final_cents > 0 ? paymob_pixel_cents_to_major( $final_cents, $div ) : floatval( $_POST['final_total'] ?? 0 );
-    $instant_refund_fee = $fee_cents > 0 ? paymob_pixel_cents_to_major( $fee_cents, $div ) : floatval( $_POST['instant_refund_fee'] ?? 0 );
+    $fee_cents              = isset( $_POST['instant_refund_fee_cents'] ) ? intval( $_POST['instant_refund_fee_cents'] ) : 0;
     $instant_refund_enabled = paymob_pixel_post_flag( 'instant_refund_enabled' );
-
     if ( ! $instant_refund_enabled ) {
-        $instant_refund_fee = 0;
-        $fee_cents          = 0;
+        $fee_cents = 0;
     }
 
-    // Keep exact minor-unit precision (never round 0.50 up to 1.00).
+    // Never trust client final/discount for the payable amount (retest Critical #3).
+    $trusted = paymob_pixel_trusted_payable_cents( $fee_cents, $instant_refund_enabled );
+    if ( $trusted['final_cents'] <= 0 ) {
+        wp_send_json_error( array( 'message' => 'Cart total unavailable' ) );
+    }
+
+    $original_cents = $trusted['original_cents'];
+    $discount_cents = $trusted['discount_cents'];
+    $final_cents    = $trusted['final_cents'];
+    $fee_cents      = $trusted['fee_cents'];
+
+    $original           = paymob_pixel_cents_to_major( $original_cents, $div );
+    $discount           = 0;
+    $final              = paymob_pixel_cents_to_major( $final_cents, $div );
+    $instant_refund_fee = paymob_pixel_cents_to_major( $fee_cents, $div );
+
     $original = round( (float) $original, $prec );
-    $discount = round( (float) $discount, $prec );
     $final    = round( (float) $final, $prec );
     $instant_refund_fee = round( (float) $instant_refund_fee, $prec );
-
-    // Re-derive cents from major units only when the client did not send them.
-    if ( $original_cents <= 0 && $original > 0 ) {
-        $original_cents = paymob_pixel_amount_to_cents( $original, $div );
-    }
-    if ( $discount_cents <= 0 && $discount > 0 ) {
-        $discount_cents = paymob_pixel_amount_to_cents( $discount, $div );
-    }
-    if ( $final_cents <= 0 && $final > 0 ) {
-        $final_cents = paymob_pixel_amount_to_cents( $final, $div );
-    }
-    if ( $fee_cents <= 0 && $instant_refund_fee > 0 ) {
-        $fee_cents = paymob_pixel_amount_to_cents( $instant_refund_fee, $div );
-    }
 
     if ( WC()->session ) {
         WC()->session->set( 'paymob_original_amount', $original );
@@ -656,23 +681,17 @@ function paymob_pixel_billing_payload( $billing_data = array() ) {
  * @return int
  */
 function paymob_pixel_session_amount_cents() {
-	$meta = paymob_pixel_cents_meta();
-	$div  = (int) $meta['cents'];
-
-	if ( function_exists( 'WC' ) && WC()->session ) {
-		$final_cents = (int) WC()->session->get( 'paymob_final_cents' );
-		if ( $final_cents > 0 ) {
-			return $final_cents;
-		}
-		$final_total = WC()->session->get( 'paymob_final_total' );
-		if ( null !== $final_total && '' !== $final_total && (float) $final_total > 0 ) {
-			return paymob_pixel_amount_to_cents( $final_total, $div );
-		}
+	$ir_enabled = function_exists( 'WC' ) && WC()->session && '1' === (string) WC()->session->get( 'paymob_instant_refund_enabled', '0' );
+	$fee_cents  = $ir_enabled && WC()->session ? (int) WC()->session->get( 'paymob_instant_refund_fee_cents', 0 ) : 0;
+	$trusted    = paymob_pixel_trusted_payable_cents( $fee_cents, $ir_enabled );
+	if ( $trusted['final_cents'] > 0 ) {
+		return $trusted['final_cents'];
 	}
 
 	if ( function_exists( 'WC' ) && WC()->cart ) {
 		WC()->cart->calculate_totals();
-		return paymob_pixel_amount_to_cents( WC()->cart->get_total( 'edit' ), $div );
+		$meta = paymob_pixel_cents_meta();
+		return paymob_pixel_amount_to_cents( WC()->cart->get_total( 'edit' ), (int) $meta['cents'] );
 	}
 
 	return 0;
@@ -693,18 +712,28 @@ function paymob_sync_pixel_intention() {
 		wp_send_json_error( 'Session unavailable' );
 	}
 
-	// Prefer explicit final_cents from the discount payload (discount-only safe).
-	$posted_final_cents = isset( $_POST['final_cents'] ) ? intval( $_POST['final_cents'] ) : 0;
-	if ( $posted_final_cents > 0 ) {
-		WC()->session->set( 'paymob_final_cents', $posted_final_cents );
-		$meta = paymob_pixel_cents_meta();
-		WC()->session->set(
-			'paymob_final_total',
-			round( $posted_final_cents / max( 1, (int) $meta['cents'] ), (int) $meta['precision'] )
-		);
+	// Prefer Instant Refund fee from POST/session, but never trust client final/discount.
+	$ir_enabled = paymob_pixel_post_flag( 'instant_refund_enabled' )
+		|| ( WC()->session && '1' === (string) WC()->session->get( 'paymob_instant_refund_enabled', '0' ) );
+	$fee_cents  = isset( $_POST['instant_refund_fee_cents'] ) ? intval( $_POST['instant_refund_fee_cents'] ) : 0;
+	if ( $fee_cents <= 0 && WC()->session ) {
+		$fee_cents = (int) WC()->session->get( 'paymob_instant_refund_fee_cents', 0 );
+	}
+	$trusted = paymob_pixel_trusted_payable_cents( $fee_cents, $ir_enabled );
+	if ( $trusted['final_cents'] <= 0 ) {
+		wp_send_json_error( 'Cart total unavailable' );
 	}
 
-	$amount = $posted_final_cents > 0 ? $posted_final_cents : paymob_pixel_session_amount_cents();
+	$meta = paymob_pixel_cents_meta();
+	WC()->session->set( 'paymob_original_cents', $trusted['original_cents'] );
+	WC()->session->set( 'paymob_discount_cents', 0 );
+	WC()->session->set( 'paymob_discount', 0 );
+	WC()->session->set( 'paymob_final_cents', $trusted['final_cents'] );
+	WC()->session->set( 'paymob_final_total', paymob_pixel_cents_to_major( $trusted['final_cents'], max( 1, (int) $meta['cents'] ) ) );
+	WC()->session->set( 'paymob_instant_refund_enabled', $ir_enabled ? '1' : '0' );
+	WC()->session->set( 'paymob_instant_refund_fee_cents', $trusted['fee_cents'] );
+
+	$amount = $trusted['final_cents'];
 	if ( $amount <= 0 ) {
 		wp_send_json_error( 'Missing final amount' );
 	}

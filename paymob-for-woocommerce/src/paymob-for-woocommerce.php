@@ -38,8 +38,15 @@ class Paymob_WooCommerce {
 	 * Register the gateway to WooCommerce
 	 */
 	public function register( $gateways ) {
+		$file = __DIR__ . '/../includes/gateways/class-gateway-' . $this->id . '.php';
+		if ( ! file_exists( $file ) && class_exists( 'PaymobAutoGenerate' ) ) {
+			PaymobAutoGenerate::ensure_generated_gateway_files();
+		}
+		if ( ! file_exists( $file ) ) {
+			return $gateways;
+		}
 		include_once __DIR__ . '/../includes/gateways/class-paymob-payment.php';
-		include_once __DIR__ . '/../includes/gateways/class-gateway-' . $this->id . '.php';
+		include_once $file;
 		if ( ! isset( $gateways[ $this->id ] ) ) {
 			$gateways[] = $this->gateway;
 		}
@@ -812,7 +819,7 @@ class Paymob_WooCommerce {
 		$orderId         = Paymob::getIntentionId( Paymob::filterVar( 'merchant_order_id' ) );
 		
 		$merchant_order_id = sanitize_text_field( (string) Paymob::filterVar( 'merchant_order_id' ) );
-		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
+		Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log',' --------- merchant order id '. $merchant_order_id );
 		if ( strpos( $orderId, 'pixel' ) !== false ) {
 			global $wpdb;
 			$orderId = $wpdb->get_var(
@@ -823,11 +830,10 @@ class Paymob_WooCommerce {
 			);
 			
 		}
-		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- order id'.$orderId );
-		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- GET'.print_r($_GET,1));
-		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- POST'.print_r($_POST,1));
+		Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log', ' --------- order id'.$orderId );
+		Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log', ' --------- request method ' . ( isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '' ) );
 		
-		Paymob::addLogs( "1", Paymob::log_dir() . 'paymob-pixel.log', ' --------- errorrrrr'.Paymob::filterVar( 'errmsg' ) );
+		Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-pixel.log', ' --------- errmsg ' . Paymob::filterVar( 'errmsg' ) );
 		$order           = wc_get_order( $orderId );
 		
 		if(!$order ){

@@ -9,6 +9,7 @@ class Paymob_Save_Pixel_Settings {
         delete_option('cards_integration_id');
         delete_option('apple_pay_integration_id');
         delete_option('google_pay_integration_id');
+        delete_option('bank_installment_integration_id');
         delete_option('show_save_card');
         delete_option('title');
         $pixel_settings = get_option('woocommerce_paymob-pixel_settings', array());
@@ -16,8 +17,37 @@ class Paymob_Save_Pixel_Settings {
         $cards_integration_id = Paymob::filterVar('cards_integration_id', 'POST');
         $apple_pay_integration_id = Paymob::filterVar('apple_pay_integration_id', 'POST');
         $google_pay_integration_id = Paymob::filterVar('google_pay_integration_id', 'POST');
+        $bank_installment_integration_id = Paymob::filterVar('bank_installment_integration_id', 'POST');
 
-        if (empty($cards_integration_id[0]) && empty($apple_pay_integration_id) && empty($google_pay_integration_id)) {
+        // PRD: Bank Installment is Egypt-only; 1 ID auto-selected, multiple require manual choice.
+        // Stored as an array (same shape as Cards) for Select2 multiselect UI.
+        if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
+            $bank_ids   = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
+            $bank_count = count( $bank_ids );
+            if ( 1 === $bank_count ) {
+                $bank_installment_integration_id = array( (string) array_key_first( $bank_ids ) );
+            } elseif ( $bank_count > 1 ) {
+                if ( ! is_array( $bank_installment_integration_id ) ) {
+                    $bank_installment_integration_id = ( '' === (string) $bank_installment_integration_id )
+                        ? array()
+                        : array( (string) $bank_installment_integration_id );
+                }
+                $bank_installment_integration_id = array_values(
+                    array_filter(
+                        array_map( 'strval', $bank_installment_integration_id ),
+                        function ( $id ) use ( $bank_ids ) {
+                            return isset( $bank_ids[ $id ] );
+                        }
+                    )
+                );
+            } else {
+                $bank_installment_integration_id = array();
+            }
+        } else {
+            $bank_installment_integration_id = array();
+        }
+
+        if (empty($cards_integration_id[0]) && empty($apple_pay_integration_id) && empty($google_pay_integration_id) && empty($bank_installment_integration_id[0])) {
             WC_Admin_Settings::add_error(__('Please enable at least one Payment Method with an integration ID.', 'paymob-for-woocommerce'));
             // return;
         }
@@ -68,6 +98,7 @@ class Paymob_Save_Pixel_Settings {
         $pixel_settings['cards_integration_id'] = $cards_integration_id;
         $pixel_settings['apple_pay_integration_id'] = $apple_pay_integration_id;
         $pixel_settings['google_pay_integration_id'] = $google_pay_integration_id;
+        $pixel_settings['bank_installment_integration_id'] = $bank_installment_integration_id;
         $pixel_settings['show_save_card'] = $show_save_card;
         $pixel_settings['force_save_card'] = $force_save_card;
         $pixel_settings['customization_div'] = $customization_div;

@@ -194,7 +194,7 @@ class Paymob_Pixel_Customization_Html
                                 form.setAttribute( 'novalidate', 'novalidate' );
 
                                 form.querySelectorAll(
-                                        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #cards_integration_id'
+                                        '[name^="woocommerce_paymob_pixel_"], .customization-settings-table input, .customization-settings-table select, .customization-settings-table textarea, #apple_pay_integration_id, #google_pay_integration_id, #bank_installment_integration_id, #cards_integration_id'
                                 ).forEach( function( field ) {
                                         field.removeAttribute( 'required' );
                                         field.setAttribute( 'aria-required', 'false' );

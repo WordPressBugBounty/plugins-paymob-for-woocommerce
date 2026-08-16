@@ -226,11 +226,12 @@ class Paymob_Update_Pixel_Data {
 	}
 
 	public static function getIntegrationIds() {
-		$pixelOptions              = get_option( 'woocommerce_paymob-pixel_settings' );
-		$integration_ids           = array();
-		$cards_integration_id      = isset( $pixelOptions['cards_integration_id'] ) ? $pixelOptions['cards_integration_id'] : '';
-		$apple_pay_integration_id  = isset( $pixelOptions['apple_pay_integration_id'] ) ? $pixelOptions['apple_pay_integration_id'] : '';
-		$google_pay_integration_id = isset( $pixelOptions['google_pay_integration_id'] ) ? $pixelOptions['google_pay_integration_id'] : '';
+		$pixelOptions                      = get_option( 'woocommerce_paymob-pixel_settings' );
+		$integration_ids                   = array();
+		$cards_integration_id              = isset( $pixelOptions['cards_integration_id'] ) ? $pixelOptions['cards_integration_id'] : '';
+		$apple_pay_integration_id          = isset( $pixelOptions['apple_pay_integration_id'] ) ? $pixelOptions['apple_pay_integration_id'] : '';
+		$google_pay_integration_id         = isset( $pixelOptions['google_pay_integration_id'] ) ? $pixelOptions['google_pay_integration_id'] : '';
+		$bank_installment_integration_id   = isset( $pixelOptions['bank_installment_integration_id'] ) ? $pixelOptions['bank_installment_integration_id'] : '';
 
 		if ( ! empty( $cards_integration_id ) ) {
 			foreach ( $cards_integration_id as $id ) {
@@ -245,6 +246,24 @@ class Paymob_Update_Pixel_Data {
 		}
 		if ( ! empty( $google_pay_integration_id ) ) {
 			$integration_ids[] = (int) $google_pay_integration_id;
+		}
+		// PRD: Bank Installment on Pixel is Egypt-only.
+		if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
+			$bank_ids = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
+			if ( 1 === count( $bank_ids ) ) {
+				$bank_installment_integration_id = array( (string) array_key_first( $bank_ids ) );
+			}
+			if ( ! is_array( $bank_installment_integration_id ) ) {
+				$bank_installment_integration_id = ( '' === (string) $bank_installment_integration_id )
+					? array()
+					: array( (string) $bank_installment_integration_id );
+			}
+			foreach ( $bank_installment_integration_id as $id ) {
+				$id = (string) $id;
+				if ( isset( $bank_ids[ $id ] ) ) {
+					$integration_ids[] = (int) $id;
+				}
+			}
 		}
 		return $integration_ids;
 	}

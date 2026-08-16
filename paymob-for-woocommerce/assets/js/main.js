@@ -47,11 +47,17 @@ jQuery(document).ready(function ($) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Get the current URL
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('error-msg')) {
-        jQuery('.wrap').prepend('<div class="notice notice-error is-dismissible"><p>'+urlParams.get('error-msg')+'</p></div>');
+    const errorMsg = urlParams.get('error-msg');
+    if (!errorMsg) {
+        return;
     }
+
+    // Build the notice with textContent so URL payloads cannot execute as HTML/JS (DOM XSS).
+    var $notice = jQuery('<div class="notice notice-error is-dismissible"></div>');
+    var $p = jQuery('<p></p>').text(errorMsg);
+    $notice.append($p);
+    jQuery('.wrap').prepend($notice);
 });
 
 

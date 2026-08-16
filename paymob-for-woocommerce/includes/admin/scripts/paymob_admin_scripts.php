@@ -131,6 +131,7 @@ class Paymob_Scripts {
 	            'key' => $pubKey,
 	            'appleenabled' => !empty($paymob_pixel['apple_pay_integration_id'])?1:0,
 	            'googleenabled' => !empty($paymob_pixel['google_pay_integration_id'])?1:0,
+	            'bankinstallmentenabled' => ( PaymobAutoGenerate::is_paymob_egypt_merchant() && !empty($paymob_pixel['bank_installment_integration_id']) && ( !is_array($paymob_pixel['bank_installment_integration_id']) || !empty($paymob_pixel['bank_installment_integration_id'][0]) ) )?1:0,
 	            'cardsenabled' => !empty($paymob_pixel['cards_integration_id'])?1:0,
 	            'customize' => $customize,
 	            'forcesavecard' => (isset($paymob_pixel['force_save_card']) && $paymob_pixel['force_save_card']=='yes') ? true : false,

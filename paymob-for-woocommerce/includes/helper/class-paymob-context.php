@@ -86,28 +86,6 @@ class Paymob_Context {
 	}
 
 	/**
-	 * WooCommerce frontend AJAX (?wc-ajax=update_order_review, checkout, coupons, …).
-	 *
-	 * This is NOT admin-ajax.php, so wp_doing_ajax() is often false on plugins_loaded.
-	 * The checkout page posts to /?wc-ajax=update_order_review (home URL, no /checkout/ slug),
-	 * which made 4.1.9 skip gateway bootstrap and drop Paymob methods after first AJAX refresh.
-	 *
-	 * @return bool
-	 */
-	public static function is_wc_ajax_request() {
-		if ( isset( $_GET['wc-ajax'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			return '' !== sanitize_text_field( wp_unslash( $_GET['wc-ajax'] ) );
-		}
-
-		if ( isset( $_REQUEST['wc-ajax'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			return '' !== sanitize_text_field( wp_unslash( $_REQUEST['wc-ajax'] ) );
-		}
-
-		$uri = self::get_request_uri();
-		return ( '' !== $uri && false !== strpos( $uri, 'wc-ajax=' ) );
-	}
-
-	/**
 	 * Frontend/admin AJAX used by Paymob checkout or settings.
 	 *
 	 * @return bool
@@ -230,10 +208,6 @@ class Paymob_Context {
 		}
 
 		if ( self::is_store_api_request() ) {
-			return true;
-		}
-
-		if ( self::is_wc_ajax_request() ) {
 			return true;
 		}
 

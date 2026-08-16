@@ -57,6 +57,7 @@ class WC_Paymob_Loading {
 
 		self::$gateways_loaded = true;
 
+		PaymobAutoGenerate::ensure_generated_gateway_files();
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
 		WC_Paymob_HandelUpdate::handle_plugin_update( $gateways );
 		WC_Paymob_GatewayData::getPaymobGatewayData();

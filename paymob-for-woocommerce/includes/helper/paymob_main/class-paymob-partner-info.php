@@ -95,7 +95,7 @@ class Paymob_Main_Partner_Info
 				];
 				// echo "<pre>";print_r($data);exit;
 				// Paymob Request
-				$paymobReq = new Paymob('1', Paymob::log_dir() . 'paymob-auth.log');
+				$paymobReq = new Paymob( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-auth.log' );
 				$status = $paymobReq->getPartnerInfo($woo_code, $data);
 				$status = (array) $status;
 
@@ -113,7 +113,7 @@ class Paymob_Main_Partner_Info
 					$conf['secKey'] = $main_settings['sec_key'] = $status['is_live'] ? $status['sk_key_live'] : $status['sk_key_test'];
 
 					$result = $paymobReq->authToken($conf);
-					Paymob::addLogs('1', Paymob::log_dir() . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
+					Paymob::addLogs( Paymob::debug_flag(), Paymob::log_dir() . 'paymob-auth.log', __('Merchant configuration: ', 'paymob-for-woocommerce'), $result);
 					$gatewayData = $paymobReq->getPaymobGateways($main_settings['sec_key'], PAYMOB_PLUGIN_PATH . 'assets/img/', isset( $result['token'] ) ? $result['token'] : '');
 					update_option('woocommerce_paymob_gateway_data', $gatewayData);
 
@@ -189,7 +189,11 @@ class Paymob_Main_Partner_Info
 					return true;
 				} else {
 					// Redirect with error message
-					$currentURL = self_admin_url('admin.php?page=wc-settings&tab=checkout&section=paymob-main&error-msg=an error has been occured, please try again');
+					$currentURL = add_query_arg(
+						'error-msg',
+						rawurlencode( 'an error has been occured, please try again' ),
+						self_admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob-main' )
+					);
 					self::safe_redirect($currentURL);
 
 				}
