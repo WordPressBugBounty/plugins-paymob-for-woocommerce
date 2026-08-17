@@ -4,106 +4,69 @@
  */
 class WC_Paymob_Loading {
 
-	/**
-	 * Whether load_gateways() has already run this request.
-	 *
-	 * @var bool
-	 */
-	private static $gateways_loaded = false;
-
 	public static function load() {
-		WC_Paymob_Tables::maybe_ensure_tables();
+		global $wpdb;
 
-		load_plugin_textdomain( 'paymob-for-woocommerce', false, PAYMOB_PLUGIN_NAME . '/i18n/languages' );
+		// Create table
+		WC_Paymob_Tables::create_paymob_gateways_table();
+		WC_Paymob_Tables::update_paymob_gateways_table();
+		WC_Paymob_Tables::create_paymob_pixel_table();
 
-		// Safety net: if bootstrap runs after WC collects gateway classes, append them here.
-		add_filter( 'woocommerce_payment_gateways', array( __CLASS__, 'register_gateways_fallback' ), 999 );
-
-		if ( is_admin() ) {
-			Paymob_Main_Partner_Info::partner_info();
-		}
-
-		if ( Paymob_Context::should_bootstrap_early() ) {
-			self::load_gateways();
-			return;
-		}
-
-		add_action( 'woocommerce_init', array( __CLASS__, 'maybe_load_gateways' ), -1 );
-		add_action( 'wp', array( __CLASS__, 'maybe_load_gateways' ), 1 );
-	}
-
-	/**
-	 * Load gateway hooks, sync, and per-gateway bootstrap when context requires it.
-	 */
-	public static function maybe_load_gateways() {
-		if ( self::$gateways_loaded ) {
-			return;
-		}
-
-		if ( ! Paymob_Context::should_load_gateways() ) {
-			return;
-		}
-
-		self::load_gateways();
-	}
-
-	/**
-	 * Heavy bootstrap: DB gateway rows, migration sync, API metadata, gateway instances.
-	 */
-	public static function load_gateways() {
-		if ( self::$gateways_loaded ) {
-			return;
-		}
-
-		self::$gateways_loaded = true;
-
-		PaymobAutoGenerate::ensure_generated_gateway_files();
+		Paymob_Main_Partner_Info::partner_info();
+		// Rebuild gateway rows when table was wiped (reinstall / disconnect) but keys remain.
+		self::ensure_paymob_gateways_table_populated();
+		// Gateways Files Creation on Updates
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
+		// print_r($gateways ); die;
 		WC_Paymob_HandelUpdate::handle_plugin_update( $gateways );
 		WC_Paymob_GatewayData::getPaymobGatewayData();
-
 		foreach ( $gateways as $gateway ) {
-			if ( empty( $gateway->gateway_id ) || 'paymob-main' === $gateway->gateway_id ) {
-				continue;
-			}
 			new Paymob_WooCommerce( $gateway->gateway_id );
 		}
+		// Load translation
+		load_plugin_textdomain( 'paymob-woocommerce', false, PAYMOB_PLUGIN_NAME . '/i18n/languages' );
 	}
 
 	/**
-	 * Fallback registration when bootstrap timing missed woocommerce_payment_gateways collection.
-	 *
-	 * @param array $gateways Registered gateway class names.
-	 * @return array
+	 * After uninstall/reinstall the paymob_gateways table can be empty while API keys remain.
+	 * Regenerate gateway rows so classic + Blocks checkout show payment methods again.
 	 */
-	public static function register_gateways_fallback( $gateways ) {
-		if ( ! Paymob_Context::should_load_gateways() ) {
-			return $gateways;
+	public static function ensure_paymob_gateways_table_populated() {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'paymob_gateways';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
 		}
 
-		self::load_gateways();
-
-		$db_gateways = PaymobAutoGenerate::get_db_gateways_data();
-		foreach ( $db_gateways as $row ) {
-			if ( empty( $row->gateway_id ) || 'paymob-main' === $row->gateway_id ) {
-				continue;
-			}
-
-			$class_name = ucwords( str_replace( '-', '_', $row->gateway_id ), '_' ) . '_Gateway';
-			if ( in_array( $class_name, $gateways, true ) ) {
-				continue;
-			}
-
-			$file = PAYMOB_PLUGIN_PATH . '/includes/gateways/class-gateway-' . $row->gateway_id . '.php';
-			if ( ! file_exists( $file ) ) {
-				continue;
-			}
-
-			include_once __DIR__ . '/../includes/gateways/class-paymob-payment.php';
-			include_once $file;
-			$gateways[] = $class_name;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		if ( $count > 0 ) {
+			return;
 		}
 
-		return $gateways;
+		$main = get_option( 'woocommerce_paymob-main_settings', array() );
+		if ( empty( $main['api_key'] ) || empty( $main['sec_key'] ) || empty( $main['pub_key'] ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'Paymob_Reset_gateways' ) ) {
+			return;
+		}
+
+		try {
+			Paymob_Reset_gateways::resetGateways(
+				array(
+					'apiKey' => $main['api_key'],
+					'pubKey' => $main['pub_key'],
+					'secKey' => $main['sec_key'],
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Paymob: gateway table rebuild failed — ' . $e->getMessage() );
+			}
+		}
 	}
 }
+

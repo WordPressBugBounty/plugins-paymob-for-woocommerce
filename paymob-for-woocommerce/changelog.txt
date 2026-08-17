@@ -3,6 +3,10 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+
+2026-08-16 - version 4.1.11
+- security  enhancement 
+
 2026-08-14 - version 4.1.10
 - checkout page  enhancement 
 

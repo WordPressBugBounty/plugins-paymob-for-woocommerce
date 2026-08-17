@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.11
+ * Version: 4.1.12
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-for-woocommerce
@@ -42,7 +42,7 @@ if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.11');
+	define( 'PAYMOB_VERSION', '4.1.12');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );

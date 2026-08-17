@@ -6,7 +6,7 @@ Tested up to: 7.1
 Requires PHP: 7.0
 WC requires at least: 4.0
 WC tested up to: 11.0
-Stable tag: 4.1.11
+Stable tag: 4.1.12
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Service link: https://paymob.com
@@ -183,8 +183,8 @@ Remember to save your changes for them to reflect on the checkout.
 
 
 == Changelog ==
-2026-08-16 - version 4.1.11
-- security  enhancement 
+2026-08-17 - version 4.1.12
+- checkout blocks  enhancement 
 
   
 
