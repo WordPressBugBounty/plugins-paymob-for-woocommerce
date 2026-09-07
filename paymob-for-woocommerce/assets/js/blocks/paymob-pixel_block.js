@@ -2338,25 +2338,25 @@ function clearPaymobPixelCheckoutAdjustments() {
     });
 
     function restoreOrderSummaryTotal(amount) {
-        var total = parseFloat(amount);
-        if (!(total >= 0) || isNaN(total)) {
-            return;
-        }
-        var formatted = 'EGP ' + total.toFixed(2);
+        // var total = parseFloat(amount);
+        // if (!(total >= 0) || isNaN(total)) {
+        //     return;
+        // }
+        // var formatted = 'EGP ' + total.toFixed(2);
 
-        // Blocks checkout Total row
-        document.querySelectorAll(
-            '.wc-block-components-totals-footer-item .wc-block-components-totals-item__value, .wc-block-components-totals-footer-item .wc-block-formatted-money-amount, .wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value'
-        ).forEach(function (el) {
-            el.textContent = formatted;
-        });
+        // // Blocks checkout Total row
+        // document.querySelectorAll(
+        //     '.wc-block-components-totals-footer-item .wc-block-components-totals-item__value, .wc-block-components-totals-footer-item .wc-block-formatted-money-amount, .wc-block-components-totals-footer-item-tax-value, .wc-block-components-totals-footer-item-value'
+        // ).forEach(function (el) {
+        //     el.textContent = formatted;
+        // });
 
-        // Classic checkout Total row
-        document.querySelectorAll(
-            'tr.order-total .woocommerce-Price-amount.amount bdi, tr.order-total .woocommerce-Price-amount.amount'
-        ).forEach(function (el) {
-            el.innerHTML = '<span class="woocommerce-Price-currencySymbol">EGP</span>' + total.toFixed(2);
-        });
+        // // Classic checkout Total row
+        // document.querySelectorAll(
+        //     'tr.order-total .woocommerce-Price-amount.amount bdi, tr.order-total .woocommerce-Price-amount.amount'
+        // ).forEach(function (el) {
+        //     el.innerHTML = '<span class="woocommerce-Price-currencySymbol">EGP</span>' + total.toFixed(2);
+        // });
     }
 
     function refreshBlocksCartStore() {
