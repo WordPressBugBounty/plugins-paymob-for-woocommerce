@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Paymob for WooCommerce
  * Description: PayMob Payment Gateway Integration for WooCommerce.
- * Version: 4.1.13
+ * Version: 4.1.14
  * Author: Paymob
  * Author URI: https://paymob.com
  * Text Domain: paymob-for-woocommerce
@@ -11,7 +11,7 @@
  * Requires at least: 5.0
  * Requires Plugins: woocommerce
  * WC requires at least: 4.0
- * WC tested up to: 11.0
+ * WC tested up to: 11.1
  * Tested up to: 7.1
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
@@ -25,7 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Early HTTP 403 when a log path is routed through PHP (Nginx often serves *.log as static files —
 // those legacy files are purged on plugins_loaded; PHP-guarded logs self-deny with 403).
 if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
-	$paymob_req_path = wp_parse_url( rawurldecode( (string) wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
+	$paymob_request_uri = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+	$paymob_req_path    = wp_parse_url( rawurldecode( $paymob_request_uri ), PHP_URL_PATH );
 	if ( is_string( $paymob_req_path )
 		&& (
 			preg_match( '#/wp-content/uploads/wc-logs/.+\.log$#i', $paymob_req_path )
@@ -42,7 +43,7 @@ if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
 }
 
 if ( ! defined( 'PAYMOB_VERSION' ) ) {
-	define( 'PAYMOB_VERSION', '4.1.13');
+	define( 'PAYMOB_VERSION', '4.1.14');
 }
 if ( ! defined( 'PAYMOB_PLUGIN' ) ) {
 	define( 'PAYMOB_PLUGIN', plugin_basename( __FILE__ ) );

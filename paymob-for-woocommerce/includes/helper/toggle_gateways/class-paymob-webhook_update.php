@@ -4,6 +4,10 @@ class Paymob_Webhook_Update {
     public static function save_webhook_callbacks_callback() {
         // Verify the nonce for security
         check_ajax_referer( 'your_nonce_action', '_ajax_nonce' );
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+            return;
+        }
         // Get the values sent from the AJAX request
         $processed_callback = sanitize_text_field( Paymob::filterVar( 'new_callback', 'POST' ) );
         $response_callback = sanitize_text_field( Paymob::filterVar( 'new_callback', 'POST' ) );

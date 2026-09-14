@@ -880,8 +880,8 @@ class Paymob {
 		if ( empty( $_SERVER['REQUEST_URI'] ) ) {
 			return;
 		}
-
-		$uri = rawurldecode( (string) wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$uri  = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$uri  = rawurldecode( $uri );
 		$path = wp_parse_url( $uri, PHP_URL_PATH );
 		if ( ! is_string( $path ) || '' === $path ) {
 			$path = $uri;

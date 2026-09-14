@@ -347,8 +347,21 @@ class Paymob_WooCommerce {
 	public function saveCardToken( $json_data ) {
 		global $wpdb;
 
+		$hmac = Paymob::filterVar( 'hmac', 'REQUEST' );
+		$obj  = isset( $json_data['obj'] ) && is_array( $json_data['obj'] ) ? $json_data['obj'] : array();
+		$token_str = ( isset( $obj['card_subtype'] ) ? $obj['card_subtype'] : '' )
+			. ( isset( $obj['created_at'] ) ? $obj['created_at'] : '' )
+			. ( isset( $obj['email'] ) ? $obj['email'] : '' )
+			. ( isset( $obj['id'] ) ? $obj['id'] : '' )
+			. ( isset( $obj['masked_pan'] ) ? $obj['masked_pan'] : '' )
+			. ( isset( $obj['merchant_id'] ) ? $obj['merchant_id'] : '' )
+			. ( isset( $obj['order_id'] ) ? $obj['order_id'] : '' )
+			. ( isset( $obj['token'] ) ? $obj['token'] : '' );
+		if ( empty( $hmac ) || hash_hmac( 'sha512', $token_str, $this->hmac_hidden ) !== $hmac ) {
+			die( esc_html( 'can not verify order' ) );
+		}
+
 		$table_name = $wpdb->prefix . 'paymob_cards_token';
-		$obj        = isset( $json_data['obj'] ) && is_array( $json_data['obj'] ) ? $json_data['obj'] : array();
 		$addlog     = Paymob::log_dir() . 'paymob-auth.log';
 		Paymob::addLogs( $this->gateway->debug, $addlog, ' In save Card Token Webhook', wp_json_encode( $json_data ) );
 
@@ -445,6 +458,10 @@ class Paymob_WooCommerce {
 		$type              = $json_data['type'];
 		$orderId           = Paymob::getIntentionId( $json_data['obj']['order']['merchant_order_id'] );
 		$merchant_order_id = $json_data['obj']['order']['merchant_order_id'];
+
+		if ( ! Paymob::verifyHmac( $this->hmac_hidden, $json_data, null, Paymob::filterVar( 'hmac', 'REQUEST' ) ) ) {
+			die( esc_html( "can not verify order: $orderId" ) );
+		}
 		
 		$order            = wc_get_order( $orderId );
 		$OrderIntensionId = $order->get_meta( 'PaymobIntentionId', true );

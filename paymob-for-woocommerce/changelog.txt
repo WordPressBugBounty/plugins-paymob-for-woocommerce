@@ -3,6 +3,9 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+2026-09-07 - version 4.1.13
+- currency issue
+
 2026-08-17 - version 4.1.12
 - checkout blocks  enhancement 
 

@@ -5,6 +5,10 @@ class Paymob_Reset_gateways {
 	public static function reset_paymob_gateways() {
 		// Verify nonce for security.
 		check_ajax_referer( 'reset_paymob_gateways', 'security' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
 
 		// Retrieve the main Paymob options.
 		$main_options    = get_option( 'woocommerce_paymob-main_settings' );

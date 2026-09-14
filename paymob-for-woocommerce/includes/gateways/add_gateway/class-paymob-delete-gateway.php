@@ -8,6 +8,10 @@ class Paymob_Delete_Gateway {
 
 		// Verify the nonce for security.
 		check_ajax_referer( 'delete_gateway_nonce', 'security' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
 		// Sanitize the gateway ID from the request.
 		$gateway_id = sanitize_text_field( Paymob::filterVar( 'gateway_id', 'POST' ) );
 

@@ -4,6 +4,10 @@ class Paymob_Manual_Setup_Save {
     public static function manual_setup_save_keys() {
         global $wpdb;
         check_ajax_referer( 'your_nonce_action', '_ajax_nonce' );
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+            return;
+        }
        
         $apiKey        =  sanitize_text_field( Paymob::filterVar( 'apiKey', 'POST' ) );
         $testSecretKey =  sanitize_text_field( Paymob::filterVar( 'testSecretKey', 'POST' ) );

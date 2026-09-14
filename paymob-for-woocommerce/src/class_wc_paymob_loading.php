@@ -17,7 +17,6 @@ class WC_Paymob_Loading {
 		self::ensure_paymob_gateways_table_populated();
 		// Gateways Files Creation on Updates
 		$gateways = PaymobAutoGenerate::get_db_gateways_data();
-		// print_r($gateways ); die;
 		WC_Paymob_HandelUpdate::handle_plugin_update( $gateways );
 		WC_Paymob_GatewayData::getPaymobGatewayData();
 		foreach ( $gateways as $gateway ) {
@@ -40,7 +39,7 @@ class WC_Paymob_Loading {
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}paymob_gateways" );
 		if ( $count > 0 ) {
 			return;
 		}
@@ -63,9 +62,7 @@ class WC_Paymob_Loading {
 				)
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Paymob: gateway table rebuild failed — ' . $e->getMessage() );
-			}
+			return;
 		}
 	}
 }

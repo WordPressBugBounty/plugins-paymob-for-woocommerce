@@ -4,6 +4,10 @@ class Paymob_Disconnect_Save {
     public static function disconnect_save_keys() {
         global $wpdb;
         check_ajax_referer( 'your_nonce_action', '_ajax_nonce' );
+        if ( ! current_user_can( 'manage_woocommerce' ) ) {
+            wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+            return;
+        }
         try{
             delete_option( 'woocommerce_paymob-main_settings' );
             delete_option( 'woocommerce_paymob_settings' );

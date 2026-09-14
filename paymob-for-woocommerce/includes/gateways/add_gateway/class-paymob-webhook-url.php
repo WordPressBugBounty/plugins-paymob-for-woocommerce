@@ -4,6 +4,10 @@ class Paymob_Webhook_Url {
 
 	public static function webhook_url() {
 		check_ajax_referer( 'your_nonce_action', '_ajax_nonce' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
 		$integration_id     = sanitize_text_field( Paymob::filterVar( 'integration_id', 'POST' ) );
         $mainOptions = get_option( 'woocommerce_paymob-main_settings' );
         $debug = isset( $mainOptions['debug'] ) ? $mainOptions['debug'] : '';

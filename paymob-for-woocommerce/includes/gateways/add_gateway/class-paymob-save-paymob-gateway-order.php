@@ -4,6 +4,10 @@ class Paymob_Save_Gateway_Order {
 
 	public static function save_paymob_gateway_order() {
 		check_ajax_referer( 'save_gateway_order', 'security' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
 		if ( ( Paymob::filterVar( 'order', 'POST' ) ) && is_array( Paymob::filterVar( 'order', 'POST' ) ) ) {
 			global $wpdb;
 			// Update the ordering column.

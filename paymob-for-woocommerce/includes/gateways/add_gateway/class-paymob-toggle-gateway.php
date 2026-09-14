@@ -4,6 +4,10 @@ class Paymob_Toggle_Gateway {
 
 	public static function toggle_gateway() {
 		check_ajax_referer( 'toggle_gateway_nonce', 'security' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+			return;
+		}
 
 		$gateway_id     = sanitize_text_field( Paymob::filterVar( 'gateway_id', 'POST' ) );
 		$current_status = get_option( 'woocommerce_' . $gateway_id . '_settings' )['enabled'];

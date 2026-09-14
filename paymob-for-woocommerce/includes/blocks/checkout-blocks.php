@@ -79,9 +79,7 @@ class Checkout_Blocks {
 				$payment_method_registry->register( $instance );
 				$registered[ $gateway_class ] = true;
 			} catch ( \Throwable $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Paymob Blocks: skipped ' . $gateway_class . ' — ' . $e->getMessage() );
-				}
+				continue;
 			}
 		}
 
@@ -96,13 +94,13 @@ class Checkout_Blocks {
 	private function get_gateway_block_classes() {
 		global $wpdb;
 
-		$classes  = array();
-		$table    = $wpdb->prefix . 'paymob_gateways';
+		$classes   = array();
+		$table     = $wpdb->prefix . 'paymob_gateways';
 		$has_table = ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table );
 
 		if ( $has_table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$gateways = $wpdb->get_results( 'SELECT class_name FROM ' . $table, OBJECT );
+			$gateways = $wpdb->get_results( "SELECT class_name FROM {$wpdb->prefix}paymob_gateways", OBJECT );
 			if ( is_array( $gateways ) ) {
 				foreach ( $gateways as $gateway ) {
 					if ( empty( $gateway->class_name ) ) {
