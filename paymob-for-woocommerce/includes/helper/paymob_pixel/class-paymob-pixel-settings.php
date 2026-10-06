@@ -16,55 +16,55 @@ class Paymob_Pixel_Settings {
             $bankInstallmentArray = array();
 
             // PRD: Bank Installment in Pixel Embedding Settings is Egypt-only.
-            // UI matches Cards (Select2 multiselect pills).
-            // if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
-            //     $bankInstallmentIDs = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
-            //     $bank_installment_count = count( $bankInstallmentIDs );
+            // One integration ID only. A single available ID is pre-selected.
+            if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
+                $bankInstallmentIDs = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
+                $bank_installment_count = count( $bankInstallmentIDs );
 
-            //     if ( $bank_installment_count > 0 ) {
-            //         $stored_bank = isset( $pixel_settings['bank_installment_integration_id'] ) ? $pixel_settings['bank_installment_integration_id'] : array();
-            //         if ( ! is_array( $stored_bank ) ) {
-            //             $stored_bank = ( '' === (string) $stored_bank ) ? array() : array( (string) $stored_bank );
-            //         }
-            //         $stored_bank = array_values(
-            //             array_filter(
-            //                 array_map( 'strval', $stored_bank ),
-            //                 function ( $id ) use ( $bankInstallmentIDs ) {
-            //                     return isset( $bankInstallmentIDs[ $id ] );
-            //                 }
-            //             )
-            //         );
+                if ( $bank_installment_count > 0 ) {
+                    $stored_bank = isset( $pixel_settings['bank_installment_integration_id'] ) ? $pixel_settings['bank_installment_integration_id'] : '';
+                    if ( ! is_array( $stored_bank ) ) {
+                        $stored_bank = ( '' === (string) $stored_bank ) ? array() : array( (string) $stored_bank );
+                    }
+                    $stored_bank = array_values(
+                        array_filter(
+                            array_map( 'strval', $stored_bank ),
+                            function ( $id ) use ( $bankInstallmentIDs ) {
+                                return isset( $bankInstallmentIDs[ $id ] );
+                            }
+                        )
+                    );
+                    $stored_bank_id = isset( $stored_bank[0] ) ? (string) $stored_bank[0] : '';
 
-            //         if ( 1 === $bank_installment_count ) {
-            //             // Only 1 integration → pre-select automatically and persist.
-            //             $single_bank_installment_id = (string) array_key_first( $bankInstallmentIDs );
-            //             $stored_bank                = array( $single_bank_installment_id );
-            //             if (
-            //                 ! isset( $pixel_settings['bank_installment_integration_id'] )
-            //                 || (array) $pixel_settings['bank_installment_integration_id'] !== $stored_bank
-            //             ) {
-            //                 $pixel_settings['bank_installment_integration_id'] = $stored_bank;
-            //                 update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
-            //             }
-            //         }
+                    if ( 1 === $bank_installment_count ) {
+                        $stored_bank_id = (string) array_key_first( $bankInstallmentIDs );
+                    }
 
-            //         $bankInstallmentArray = array(
-            //             'name'              => __( 'Bank Installment', 'paymob-for-woocommerce' ),
-            //             'type'              => 'multiselect',
-            //             'id'                => 'bank_installment_integration_id',
-            //             'options'           => $bankInstallmentIDs,
-            //             'desc_tip'          => true,
-            //             'custom_attributes' => array(
-            //                 'multiple' => 'multiple',
-            //             ),
-            //             'default'           => $stored_bank,
-            //         );
-            //     }
-            // } elseif ( ! empty( $pixel_settings['bank_installment_integration_id'] ) ) {
-            //     // Clear stale value for non-Egypt merchants.
-            //     $pixel_settings['bank_installment_integration_id'] = array();
-            //     update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
-            // }
+                    $stored_as_single = ( '' === $stored_bank_id ) ? array() : array( $stored_bank_id );
+                    if ( (array) ( isset( $pixel_settings['bank_installment_integration_id'] ) ? $pixel_settings['bank_installment_integration_id'] : array() ) !== $stored_as_single ) {
+                        $pixel_settings['bank_installment_integration_id'] = $stored_as_single;
+                        update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
+                    }
+
+                    $bank_options = $bankInstallmentIDs;
+                    if ( $bank_installment_count > 1 ) {
+                        $bank_options = array( '' => __( 'Select an Integration ID', 'paymob-for-woocommerce' ) ) + $bankInstallmentIDs;
+                    }
+
+                    $bankInstallmentArray = array(
+                        'name'     => __( 'Bank Installment', 'paymob-for-woocommerce' ),
+                        'type'     => 'select',
+                        'id'       => 'bank_installment_integration_id',
+                        'options'  => $bank_options,
+                        'desc_tip' => true,
+                        'default'  => $stored_bank_id,
+                    );
+                }
+            } elseif ( ! empty( $pixel_settings['bank_installment_integration_id'] ) ) {
+                // Clear stale value for non-Egypt merchants.
+                $pixel_settings['bank_installment_integration_id'] = array();
+                update_option( 'woocommerce_paymob-pixel_settings', $pixel_settings );
+            }
 
             if(!empty($applepayIDs) && count($applepayIDs)>1){
                 $appleArray=array(
@@ -103,6 +103,8 @@ class Paymob_Pixel_Settings {
                                     '.__( 'Feature enables consumers to complete their payments directly on your WooCommerce store. It is enabled by default on your store. To disable it, navigate to the Payment Integrations section and disable "paymob-pixel". If you wish to hide a specific payment method, simply avoid selecting its integration ID.<br/><br/>
                                     
                                     For card payments, select the required integration ID. By default, all integration IDs will be pre-selected. <br/><br/>
+
+                                    For Bank Installments, if only one integration ID is available, it will be pre-selected by default. If multiple integration IDs are available, please select the one you\'d like to use. <br/><br/>
                                     
                                     <span style="font-weight: bold; color: #007bff;">ℹ️ For Apple Pay and Google Pay:</span> Certain actions must be completed on Paymob\'s side. Please reach out to your account manager or <span style="white-space: nowrap;">contact us at <a href="mailto:support@paymob.com" style="color: #007bff; font-weight: bold;">support@paymob.com</a></span>. Make sure to receive confirmation from Paymob before enabling Apple Pay or Google Pay.', 'paymob-for-woocommerce' ).'
                                 </div>',
@@ -129,9 +131,9 @@ class Paymob_Pixel_Settings {
                         ),
                     'default' => isset($pixel_settings['cards_integration_id']) ? $pixel_settings['cards_integration_id'] : ''
                 ),
+                $bankInstallmentArray,
                 $appleArray,
                 $googleArray,
-                $bankInstallmentArray,
                 array(
                     'type' => 'sectionend',
                     'id' => 'payment_methods_end',

@@ -350,8 +350,8 @@ function updateCheckoutData(forcereload = false) {
 function loadScripts() {
     // alert(window.googleenabled);
     const paymobScript = document.createElement('script');
-    // paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.js";
-    paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@1.2.7/main.js";
+    paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@latest/main.js";
+    // paymobScript.src = "https://cdn.jsdelivr.net/npm/paymob-pixel@1.2.7/main.js";
     paymobScript.type = "module";
     paymobScript.async = true;
     document.head.appendChild(paymobScript);
@@ -401,6 +401,8 @@ function initializePaymobElement(key, cs) {
     var paymentMethods = [];
     if (pxl_object.cardsenabled == 1) {
         paymentMethods.push("card");
+    } else if (pxl_object.bankinstallmentenabled == 1) {
+        paymentMethods.push("card-installment");
     }
     if (pxl_object.googleenabled == 1) {
         paymentMethods.push("google-pay");

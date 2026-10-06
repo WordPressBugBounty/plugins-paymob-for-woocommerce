@@ -48,8 +48,8 @@ jQuery(document).ready(function ($) {
         $('#mainform').on('submit', paymobUnlockPixelSettingsForm);
     }
 
-    // Initialize Select2 for Cards + Bank Installment (same pill UI).
-    $('#cards_integration_id, #bank_installment_integration_id').select2({
+    // Cards stay multi-select. Bank Installment is a single dropdown.
+    $('#cards_integration_id').select2({
         placeholder: 'Select Integration ID(s)',
         allowClear: true,
         width: '100%', // Ensure full width

@@ -56,11 +56,13 @@ class Paymob_Widget_Settings {
 			$widget_theme = 'primary';
 		}
 
-		$bank_installment_ids   = self::get_bank_installment_integration_ids();
-		$selected_integration   = self::resolve_selected_integration_id( $stored_integration );
-		$integration_id_count   = count( $bank_installment_ids );
-		$has_integration_ids    = ! empty( $bank_installment_ids );
-		$integration_hint_text  = __( 'If you have a single Bank Installment Integration ID, it will be pre-selected automatically. For multiple IDs, select the one to use for the widget.', 'paymob-for-woocommerce' );
+		$bank_installment_ids      = self::get_bank_installment_integration_ids();
+		$existing_bank_ids         = self::get_existing_bank_installment_integration_ids();
+		$selected_integration      = self::resolve_selected_integration_id( $stored_integration );
+		$integration_id_count      = count( $bank_installment_ids );
+		$has_integration_ids       = ! empty( $bank_installment_ids );
+		$integrations_all_disabled = ! $has_integration_ids && ! empty( $existing_bank_ids );
+		$integration_hint_text     = __( 'If you have a single Bank Installment Integration ID, it will be pre-selected automatically. For multiple IDs, select the one to use for the widget.', 'paymob-for-woocommerce' );
 
 		if ( ! $has_integration_ids ) {
 			$selected_integration = '';
@@ -168,16 +170,29 @@ class Paymob_Widget_Settings {
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="#b54708" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</div>
 					<div class="paymob-aw-notice__body">
-						<strong><?php echo esc_html__( 'No Bank Installment Integration ID found', 'paymob-for-woocommerce' ); ?></strong>
-						<p>
-							<?php
-							printf(
-								/* translators: %s: Support email */
-								esc_html__( 'Please reach out to your account manager or contact us at %s to enable Bank Installment Plans on your account.', 'paymob-for-woocommerce' ),
-								'<a href="mailto:support@paymob.com">support@paymob.com</a>'
-							);
-							?>
-						</p>
+						<?php if ( $integrations_all_disabled ) : ?>
+							<strong><?php echo esc_html__( 'Bank Installment integration is disabled', 'paymob-for-woocommerce' ); ?></strong>
+							<p>
+								<?php
+								printf(
+									/* translators: %s: Payment Integrations settings link */
+									esc_html__( 'Your Bank Installment Integration ID(s) are currently disabled. To use the Affordability Widget, enable at least one in %s.', 'paymob-for-woocommerce' ),
+									'<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=paymob_list_gateways' ) ) . '">' . esc_html__( 'Payment Integrations', 'paymob-for-woocommerce' ) . '</a>'
+								);
+								?>
+							</p>
+						<?php else : ?>
+							<strong><?php echo esc_html__( 'No Bank Installment Integration ID found', 'paymob-for-woocommerce' ); ?></strong>
+							<p>
+								<?php
+								printf(
+									/* translators: %s: Support email */
+									esc_html__( 'Please reach out to your account manager or contact us at %s to enable Bank Installment Plans on your account.', 'paymob-for-woocommerce' ),
+									'<a href="mailto:support@paymob.com">support@paymob.com</a>'
+								);
+								?>
+							</p>
+						<?php endif; ?>
 					</div>
 				</div>
 			<?php endif; ?>
@@ -606,7 +621,7 @@ class Paymob_Widget_Settings {
 	 *
 	 * @return array<string, string>
 	 */
-	protected static function get_standalone_bank_installment_integration_ids() {
+	protected static function get_standalone_bank_installment_integration_ids( $enabled_only = true ) {
 		$ids = array();
 
 		if ( ! class_exists( 'PaymobAutoGenerate' ) ) {
@@ -631,7 +646,7 @@ class Paymob_Widget_Settings {
 			}
 
 			$gateway_options = get_option( 'woocommerce_' . $gateway->gateway_id . '_settings', array() );
-			if ( empty( $gateway_options['enabled'] ) || 'yes' !== $gateway_options['enabled'] ) {
+			if ( $enabled_only && ( empty( $gateway_options['enabled'] ) || 'yes' !== $gateway_options['enabled'] ) ) {
 				continue;
 			}
 
@@ -652,8 +667,8 @@ class Paymob_Widget_Settings {
 	 *
 	 * @return array<string, string>
 	 */
-	public static function get_multi_app_bank_installment_integration_ids() {
-		if ( ! self::is_paymob_multi_app_enabled() ) {
+	public static function get_multi_app_bank_installment_integration_ids( $enabled_only = true ) {
+		if ( $enabled_only && ! self::is_paymob_multi_app_enabled() ) {
 			return array();
 		}
 
@@ -669,7 +684,7 @@ class Paymob_Widget_Settings {
 			}
 		}
 
-		if ( empty( $enabled_ids ) ) {
+		if ( $enabled_only && empty( $enabled_ids ) ) {
 			return array();
 		}
 
@@ -689,7 +704,7 @@ class Paymob_Widget_Settings {
 				continue;
 			}
 
-			if ( ! in_array( $id, $enabled_ids, true ) ) {
+			if ( $enabled_only && ! in_array( $id, $enabled_ids, true ) ) {
 				continue;
 			}
 
@@ -717,9 +732,26 @@ class Paymob_Widget_Settings {
 	}
 
 	public static function get_bank_installment_integration_ids() {
-		$ids = self::get_standalone_bank_installment_integration_ids();
+		return self::collect_bank_installment_integration_ids( true );
+	}
 
-		foreach ( self::get_multi_app_bank_installment_integration_ids() as $integration_id => $label ) {
+	/**
+	 * Bank installment integration IDs present in Payment Integrations, including disabled ones.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_existing_bank_installment_integration_ids() {
+		return self::collect_bank_installment_integration_ids( false );
+	}
+
+	/**
+	 * @param bool $enabled_only When true, only IDs the merchant has turned on.
+	 * @return array<string, string>
+	 */
+	protected static function collect_bank_installment_integration_ids( $enabled_only ) {
+		$ids = self::get_standalone_bank_installment_integration_ids( $enabled_only );
+
+		foreach ( self::get_multi_app_bank_installment_integration_ids( $enabled_only ) as $integration_id => $label ) {
 			if ( ! isset( $ids[ $integration_id ] ) ) {
 				$ids[ $integration_id ] = $label;
 			}

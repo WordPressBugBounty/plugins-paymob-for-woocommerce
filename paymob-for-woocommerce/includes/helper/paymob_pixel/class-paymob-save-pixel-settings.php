@@ -19,27 +19,22 @@ class Paymob_Save_Pixel_Settings {
         $google_pay_integration_id = Paymob::filterVar('google_pay_integration_id', 'POST');
         $bank_installment_integration_id = Paymob::filterVar('bank_installment_integration_id', 'POST');
 
-        // PRD: Bank Installment is Egypt-only; 1 ID auto-selected, multiple require manual choice.
-        // Stored as an array (same shape as Cards) for Select2 multiselect UI.
+        // Bank Installment is a single integration ID. Stored as a one-element array.
         if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
             $bank_ids   = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
             $bank_count = count( $bank_ids );
             if ( 1 === $bank_count ) {
                 $bank_installment_integration_id = array( (string) array_key_first( $bank_ids ) );
             } elseif ( $bank_count > 1 ) {
-                if ( ! is_array( $bank_installment_integration_id ) ) {
-                    $bank_installment_integration_id = ( '' === (string) $bank_installment_integration_id )
-                        ? array()
-                        : array( (string) $bank_installment_integration_id );
+                if ( is_array( $bank_installment_integration_id ) ) {
+                    $bank_installment_integration_id = (string) reset( $bank_installment_integration_id );
                 }
-                $bank_installment_integration_id = array_values(
-                    array_filter(
-                        array_map( 'strval', $bank_installment_integration_id ),
-                        function ( $id ) use ( $bank_ids ) {
-                            return isset( $bank_ids[ $id ] );
-                        }
-                    )
-                );
+                $bank_installment_integration_id = (string) $bank_installment_integration_id;
+                if ( isset( $bank_ids[ $bank_installment_integration_id ] ) ) {
+                    $bank_installment_integration_id = array( $bank_installment_integration_id );
+                } else {
+                    $bank_installment_integration_id = array();
+                }
             } else {
                 $bank_installment_integration_id = array();
             }

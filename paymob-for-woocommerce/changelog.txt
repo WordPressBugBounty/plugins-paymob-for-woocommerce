@@ -3,6 +3,10 @@
 This file will contains only old changelogs. For newer versions, you can check readme.txt file.
 
 == Changelog ==
+
+2026-09-14 - version 4.1.14
+- security enhancement
+
 2026-09-07 - version 4.1.13
 - currency issue
 

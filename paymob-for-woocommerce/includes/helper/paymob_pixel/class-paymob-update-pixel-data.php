@@ -250,19 +250,23 @@ class Paymob_Update_Pixel_Data {
 		// PRD: Bank Installment on Pixel is Egypt-only.
 		if ( PaymobAutoGenerate::is_paymob_egypt_merchant() ) {
 			$bank_ids = PaymobAutoGenerate::get_pixel_bank_installment_integration_ids( false );
+			$chosen_bank_id = '';
 			if ( 1 === count( $bank_ids ) ) {
-				$bank_installment_integration_id = array( (string) array_key_first( $bank_ids ) );
-			}
-			if ( ! is_array( $bank_installment_integration_id ) ) {
-				$bank_installment_integration_id = ( '' === (string) $bank_installment_integration_id )
-					? array()
+				$chosen_bank_id = (string) array_key_first( $bank_ids );
+			} else {
+				$bank_candidates = is_array( $bank_installment_integration_id )
+					? $bank_installment_integration_id
 					: array( (string) $bank_installment_integration_id );
-			}
-			foreach ( $bank_installment_integration_id as $id ) {
-				$id = (string) $id;
-				if ( isset( $bank_ids[ $id ] ) ) {
-					$integration_ids[] = (int) $id;
+				foreach ( $bank_candidates as $id ) {
+					$id = (string) $id;
+					if ( isset( $bank_ids[ $id ] ) ) {
+						$chosen_bank_id = $id;
+						break;
+					}
 				}
+			}
+			if ( '' !== $chosen_bank_id ) {
+				$integration_ids[] = (int) $chosen_bank_id;
 			}
 		}
 		return $integration_ids;
